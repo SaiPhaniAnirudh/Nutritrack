@@ -513,14 +513,6 @@ class ViTFoodEngine:
             top_score = clip_results[0]['score']
 
             found, seen = [], set()
-            max_items = 5
-
-            # If top result is highly dominant (more than 2.0x the second score), enforce single food item
-            if len(clip_results) > 1:
-                ratio = clip_results[0]['score'] / max(1e-5, clip_results[1]['score'])
-                if ratio > 2.0:
-                    max_items = 1
-                    print(f"  [CLIP] top item is dominant (ratio {ratio:.2f}), limiting to 1 result")
 
             for r in clip_results:
                 score = r['score']
@@ -534,7 +526,7 @@ class ViTFoodEngine:
                     # Scale raw softmax score to user-friendly confidence
                     confidence = _scale_confidence(score, is_top=(len(found) == 0))
                     found.append((db_name, confidence))
-                if len(found) >= max_items:
+                if len(found) >= 5:
                     break
 
             print(f'  [CLIP] selected {len(found)}: {[(f[0], f[1]) for f in found]}')
