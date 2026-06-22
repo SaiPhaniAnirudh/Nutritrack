@@ -762,7 +762,7 @@ async function _callLLMAPI(imageB64, signal) {
   const backendUrl = window._BACKEND_URL
     ? `${window._BACKEND_URL}/api/ai/analyze`
     : '/api/ai/analyze';
-  const directUrl = window.LLM_SERVER_URL || 'http://localhost:5002/api/ai/analyze';
+  const directUrl = window.LLM_SERVER_URL || 'https://energyvenom-nutritrack-llm.hf.space/api/ai/analyze';
 
   const urls = [];
   if (window.location.hostname === 'saiphanianirudh.github.io' || window.location.hostname.endsWith('github.io')) {
