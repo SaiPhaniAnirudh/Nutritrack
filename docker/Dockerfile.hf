@@ -1,0 +1,39 @@
+FROM python:3.10-slim
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    procps \
+    git \
+    && rm -rf /var/lib/apt/apt-get/lists/*
+
+# Install Ollama CLI & runner
+RUN curl -L https://ollama.com/download/ollama-linux-amd64.tgz -o /tmp/ollama.tgz \
+    && tar -C /usr -xzf /tmp/ollama.tgz \
+    && rm /tmp/ollama.tgz
+
+# Set environment variables
+ENV OLLAMA_HOST=127.0.0.1:11434
+ENV OLLAMA_URL=http://127.0.0.1:11434
+ENV OLLAMA_MODEL=llava-phi3
+ENV HOME=/tmp
+
+# Create app directory
+WORKDIR /app
+
+# Copy python dependencies and install
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the AI server code and entrypoint script
+COPY llm/Llm_server.py .
+COPY docker/entrypoint.sh /app/entrypoint.sh
+
+# Give execution permissions to the entrypoint
+RUN chmod +x /app/entrypoint.sh
+
+# Expose Hugging Face default port
+EXPOSE 7860
+
+# Run entrypoint
+ENTRYPOINT ["/bin/bash", "/app/entrypoint.sh"]
