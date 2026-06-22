@@ -7,10 +7,8 @@ RUN apt-get update && apt-get install -y \
     git \
     && rm -rf /var/lib/apt/apt-get/lists/*
 
-# Install Ollama CLI & runner
-RUN curl -L https://ollama.com/download/ollama-linux-amd64.tgz -o /tmp/ollama.tgz \
-    && tar -C /usr -xzf /tmp/ollama.tgz \
-    && rm /tmp/ollama.tgz
+# Install Ollama CLI & runner via official script
+RUN curl -fsSL https://ollama.com/install.sh | sh
 
 # Set environment variables
 ENV OLLAMA_HOST=127.0.0.1:11434
