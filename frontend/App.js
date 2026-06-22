@@ -764,7 +764,14 @@ async function _callLLMAPI(imageB64, signal) {
     : '/api/ai/analyze';
   const directUrl = window.LLM_SERVER_URL || 'http://localhost:5002/api/ai/analyze';
 
-  const urls = [backendUrl, directUrl];
+  const urls = [];
+  if (window.location.hostname === 'saiphanianirudh.github.io' || window.location.hostname.endsWith('github.io')) {
+    // Static hosting (GitHub Pages) has no backend API, so query the HF Space directly to avoid a 404/timeout delay
+    urls.push(directUrl);
+  } else {
+    urls.push(backendUrl);
+    urls.push(directUrl);
+  }
   let lastError = null;
 
   for (const url of urls) {
@@ -833,7 +840,7 @@ async function scanWithAI() {
       <div class="scanning-pulse" style="font-size:2.5rem">🧠</div>
       <div style="font-size:0.85rem;opacity:0.6;margin-top:0.5rem">AI model analysing food…</div>
     </div>`;
-  const imageToSend = await _compressImage(scanImageB64);
+  const imageToSend = await _compressImage(scanImageB64, 150000);
   showScanStatus('🧠 Analysing with LLM…', 'info');
   try {
     const result = await _callLLMAPI(imageToSend, signal);
