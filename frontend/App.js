@@ -766,7 +766,7 @@ async function _callLLMAPI(imageB64, signal) {
 
   const urls = [];
   if (window.location.hostname === 'saiphanianirudh.github.io' || window.location.hostname.endsWith('github.io')) {
-    // Static hosting (GitHub Pages) has no backend API, so query the HF Space directly to avoid a 404/timeout delay
+    // Static hosting (GitHub Pages) — query HF Space directly
     urls.push(directUrl);
   } else {
     urls.push(backendUrl);
@@ -776,11 +776,46 @@ async function _callLLMAPI(imageB64, signal) {
 
   for (const url of urls) {
     try {
+      // ── Try SSE streaming endpoint first (prevents HF 60-second timeout) ──
+      const streamUrl = url.replace(/\/analyze$/, '/analyze/stream');
+      const streamRes = await fetch(streamUrl, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ image: imageB64 }),
+        signal,
+      });
+
+      if (streamRes.ok && streamRes.headers.get('content-type')?.includes('text/event-stream')) {
+        // Read SSE stream line-by-line; server sends heartbeats every 10s
+        const reader = streamRes.body.getReader();
+        const decoder = new TextDecoder();
+        let buf = '';
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buf += decoder.decode(value, { stream: true });
+          const lines = buf.split('\n');
+          buf = lines.pop();  // keep incomplete last line
+          for (const line of lines) {
+            if (!line.startsWith('data:')) continue;
+            const jsonStr = line.slice(5).trim();
+            if (!jsonStr) continue;
+            let evt;
+            try { evt = JSON.parse(jsonStr); } catch { continue; }
+            if (evt.status === 'thinking') continue;   // heartbeat — keep waiting
+            if (evt.error) throw new Error('SERVER_ERROR: ' + evt.error);
+            if (evt.result) return evt.result;         // 🎉 final answer
+          }
+        }
+        throw new Error('Stream ended without result');
+      }
+
+      // ── SSE not supported — fall back to regular fetch ──
       const response = await fetch(url, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ image: imageB64 }),
-        signal,                          // allows clearScan() to abort this request
+        signal,
       });
       if (!response.ok) {
         let msg = 'LLM_OFFLINE';
@@ -839,9 +874,10 @@ async function scanWithAI() {
     <div class="scan-result-placeholder">
       <div class="scanning-pulse" style="font-size:2.5rem">🧠</div>
       <div style="font-size:0.85rem;opacity:0.6;margin-top:0.5rem">AI model analysing food…</div>
+      <div style="font-size:0.72rem;opacity:0.4;margin-top:0.3rem">Free AI server — may take 1-2 min ⏳</div>
     </div>`;
   const imageToSend = await _compressImage(scanImageB64, 150000);
-  showScanStatus('🧠 Analysing with LLM…', 'info');
+  showScanStatus('🧠 Analysing with AI… (free server, please wait up to 2 min)', 'info');
   try {
     const result = await _callLLMAPI(imageToSend, signal);
     if (result.description === 'not_food' || result.not_food === true || !result.items || result.items.length === 0) {
