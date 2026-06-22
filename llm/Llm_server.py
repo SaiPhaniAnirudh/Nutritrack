@@ -111,6 +111,8 @@ NUTRITION_DB = {
     # ── Meat / protein ──
     'steak':          {'cal':271, 'pro':26, 'carb':0,  'fat':18, 'fiber':0,  'sugar':0, 'sodium':54,  'chol':77, 'serving':'1 steak (150g)'},
     'salad':          {'cal':100, 'pro':3,  'carb':12, 'fat':5,  'fiber':4,  'sugar':6, 'sodium':200, 'chol':0,  'serving':'1 bowl (150g)'},
+    'chicken nuggets':{'cal':296, 'pro':15, 'carb':16, 'fat':18, 'fiber':0.5,'sugar':0.1,'sodium':560, 'chol':45, 'serving':'6 pieces (100g)'},
+    'potato wedges':  {'cal':240, 'pro':3.5,'carb':34, 'fat':10, 'fiber':3.2,'sugar':0.5,'sodium':320, 'chol':0,  'serving':'1 portion (150g)'},
 }
 
 TIPS = {
@@ -126,6 +128,8 @@ TIPS = {
     'salad':          'Add protein (egg/chicken/paneer) to keep you fuller longer.',
     'ice cream':      'Treat yourself — just watch portion size.',
     'steak':          'Great protein source. Opt for lean cuts when possible.',
+    'chicken nuggets': 'Baked nuggets are lower in fat than fried. Enjoy with sauce in moderation.',
+    'potato wedges':   'Baked wedges have skins for fiber. Keep portions balanced.',
 }
 DEFAULT_TIP = 'A balanced meal includes protein, complex carbs, healthy fats and vegetables.'
 
@@ -347,6 +351,7 @@ _CLIP_CANDIDATES = [
     # ── Global fast food ─────────────────────────────────────────────────────
     'pizza', 'burger', 'hamburger', 'cheeseburger',
     'hot dog', 'french fries', 'tacos', 'sandwich',
+    'chicken nuggets', 'potato wedges',
     # ── Asian ────────────────────────────────────────────────────────────────
     'sushi', 'ramen', 'noodles', 'fried rice', 'pad thai', 'pho',
     'dumplings', 'spring rolls', 'bibimbap', 'baklava',
@@ -399,6 +404,9 @@ _CLIP_DB_MAP = {
     'coffee':            'lassi',
     'juice':             'lassi',
     'smoothie':          'lassi',
+    'chicken nuggets':   'chicken nuggets',
+    'potato wedges':     'potato wedges',
+    'nuggets':           'chicken nuggets',
 }
 
 
