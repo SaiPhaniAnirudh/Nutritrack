@@ -19,3 +19,7 @@ psycopg2-binary>=2.9.9
 # einops
 # torch
 # torchvision
+
+# ── Zero-shot classifier dependencies ──────────────────────────────────────
+sentencepiece
+protobuf
