@@ -430,6 +430,28 @@ def _scale_confidence(score: float, is_top: bool = False) -> int:
             return min(99, int(max(20, score * 100 * 4)))
 
 
+def _scale_siglip_confidence(score: float, is_top: bool = False) -> int:
+    """Scale raw SigLIP Sigmoid score to a user-friendly percentage (0-100)."""
+    if is_top:
+        if score >= 0.020:
+            return min(99, int(90 + (score - 0.020) * 110))
+        elif score >= 0.005:
+            return min(99, int(70 + (score - 0.005) * 1333))
+        elif score >= 0.001:
+            return min(99, int(45 + (score - 0.001) * 6250))
+        else:
+            return min(99, int(max(30, score * 1000 * 30)))
+    else:
+        if score >= 0.015:
+            return min(99, int(85 + (score - 0.015) * 140))
+        elif score >= 0.004:
+            return min(99, int(65 + (score - 0.004) * 1818))
+        elif score >= 0.0008:
+            return min(99, int(40 + (score - 0.0008) * 7812))
+        else:
+            return min(99, int(max(20, score * 1000 * 25)))
+
+
 class ViTFoodEngine:
     """
     CLIP zero-shot food classifier — covers ALL foods we define as candidates.
@@ -505,7 +527,7 @@ class ViTFoodEngine:
                 return _not_food('SigLIP/siglip-base-patch16-224', 'image_classifier', int((time.time() - t0) * 1000))
 
             # ── SigLIP zero-shot: score ALL candidate foods against image ──────────
-            clip_results = self.pipe_clip(img, candidate_labels=_CLIP_CANDIDATES)
+            clip_results = self.pipe_clip(img, candidate_labels=_CLIP_CANDIDATES, hypothesis_template="a photo of {}")
             elapsed = int((time.time() - t0) * 1000)
             print(f'  [SigLIP] {elapsed}ms — top5: '
                   f'{[(r["label"], round(r["score"]*100,1)) for r in clip_results[:5]]}')
@@ -518,13 +540,13 @@ class ViTFoodEngine:
                 score = r['score']
                 if len(found) > 0:
                     # Apply a relative and absolute threshold to secondary items
-                    if score < max(top_score * 0.15, 0.04):
+                    if score < max(top_score * 0.03, 0.0005):
                         break
                 db_name = self._db_name(r['label'])
                 if db_name not in seen:
                     seen.add(db_name)
                     # Scale raw score to user-friendly confidence
-                    confidence = _scale_confidence(score, is_top=(len(found) == 0))
+                    confidence = _scale_siglip_confidence(score, is_top=(len(found) == 0))
                     found.append((db_name, confidence))
                 if len(found) >= 5:
                     break
