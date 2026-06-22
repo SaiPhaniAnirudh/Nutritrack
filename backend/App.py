@@ -27,10 +27,19 @@ Run this backend for persistent cloud storage + multi-device sync.
 
 import os
 import re
+import sys
 import json
 import base64
 import requests
 from datetime import datetime, timezone, timedelta
+
+# Windows Console Unicode/Emoji support
+if sys.platform == 'win32':
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+        sys.stderr.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
 
 from flask import Flask, request, jsonify, send_from_directory
 from flask_compress import Compress
