@@ -509,7 +509,8 @@ class ViTFoodEngine:
             count_label = count_check[0]['label']
             count_score = count_check[0]['score']
             print(f"  [CLIP] count check: {count_label} ({count_score*100:.1f}%)")
-            is_single_food = (count_label == "a single food item" and count_score > 0.55)
+            # Only enforce single food if CLIP is highly confident (e.g. > 80% score)
+            is_single_food = (count_label == "a single food item" and count_score > 0.80)
 
             # ── CLIP zero-shot: score ALL candidate foods against image ──────────
             clip_results = self.pipe_clip(img, candidate_labels=_CLIP_CANDIDATES)
@@ -522,10 +523,10 @@ class ViTFoodEngine:
             found, seen = [], set()
             max_items = 1 if is_single_food else 5
 
-            # If top result is highly dominant (more than 2.5x the second score), enforce single food item
+            # If top result is highly dominant (more than 2.2x the second score), enforce single food item
             if len(clip_results) > 1:
                 ratio = clip_results[0]['score'] / max(1e-5, clip_results[1]['score'])
-                if ratio > 2.5:
+                if ratio > 2.2:
                     max_items = 1
                     print(f"  [CLIP] top item is dominant (ratio {ratio:.2f}), limiting to 1 result")
 
