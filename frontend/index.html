@@ -720,9 +720,8 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js" defer></script>
   <script>
-    // AI scan goes through Flask backend (port 5000) which proxies to Llm_server.py.
-    // Direct fallback to port 5002 is used only if backend is unreachable (local dev).
-    window.LLM_SERVER_URL = "http://" + (window.location.hostname || "127.0.0.1") + ":5002/api/ai/analyze";
+    // AI scan points to the Hugging Face Space LLM server
+    window.LLM_SERVER_URL = "https://energyvenom-nutritrack-llm.hf.space/api/ai/analyze";
     window._BACKEND_URL   = "";   // empty = use relative /api/ai/analyze (served by App.py on same port)
   </script>
   <script src="Foods.js"></script>
