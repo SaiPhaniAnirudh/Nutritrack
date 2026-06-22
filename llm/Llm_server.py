@@ -504,14 +504,6 @@ class ViTFoodEngine:
             if is_food_label == "a photo of something that is not food" and is_food_score > 0.60:
                 return _not_food('CLIP/clip-vit-base-patch32', 'image_classifier', int((time.time() - t0) * 1000))
 
-            # ── CLIP multiplicity check ─────────────────────────────────────
-            count_check = self.pipe_clip(img, candidate_labels=["a single food item", "multiple different food items"])
-            count_label = count_check[0]['label']
-            count_score = count_check[0]['score']
-            print(f"  [CLIP] count check: {count_label} ({count_score*100:.1f}%)")
-            # Only enforce single food if CLIP is highly confident (e.g. > 80% score)
-            is_single_food = (count_label == "a single food item" and count_score > 0.80)
-
             # ── CLIP zero-shot: score ALL candidate foods against image ──────────
             clip_results = self.pipe_clip(img, candidate_labels=_CLIP_CANDIDATES)
             elapsed = int((time.time() - t0) * 1000)
@@ -521,20 +513,20 @@ class ViTFoodEngine:
             top_score = clip_results[0]['score']
 
             found, seen = [], set()
-            max_items = 1 if is_single_food else 5
+            max_items = 5
 
-            # If top result is highly dominant (more than 2.2x the second score), enforce single food item
+            # If top result is highly dominant (more than 2.0x the second score), enforce single food item
             if len(clip_results) > 1:
                 ratio = clip_results[0]['score'] / max(1e-5, clip_results[1]['score'])
-                if ratio > 2.2:
+                if ratio > 2.0:
                     max_items = 1
                     print(f"  [CLIP] top item is dominant (ratio {ratio:.2f}), limiting to 1 result")
 
             for r in clip_results:
                 score = r['score']
                 if len(found) > 0:
-                    # Apply a slightly stricter threshold to secondary items
-                    if score < max(top_score * 0.20, 0.05):
+                    # Apply a relative and absolute threshold to secondary items
+                    if score < max(top_score * 0.15, 0.04):
                         break
                 db_name = self._db_name(r['label'])
                 if db_name not in seen:
