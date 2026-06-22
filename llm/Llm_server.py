@@ -20,7 +20,7 @@ Quick-start (Ollama path — recommended):
     4. python Llm_server.py
 """
 
-import io, os, re, sys, json, time, base64, argparse
+import io, os, re, sys, json, time, base64, argparse, threading, queue
 import requests as http_requests
 from dotenv import load_dotenv
 load_dotenv()
@@ -319,6 +319,258 @@ VISION_PROMPT = (
 )
 
 
+# ──────────────────────────────────────────────────────────────────────────────
+#  ENGINE 0 — CLIP ZERO-SHOT FOOD CLASSIFIER  (3-7 s CPU, no API key)
+#
+#  Uses openai/clip-vit-base-patch32 with zero-shot-image-classification.
+#  We provide our own candidate food labels — ALL foods from NUTRITION_DB
+#  plus extra Indian, Asian and global foods.
+#  No fixed category limit — works for any food we name!
+# ──────────────────────────────────────────────────────────────────────────────
+
+# ── Full candidate food list (what CLIP will score the image against) ────────
+# These ARE the NUTRITION_DB keys + extra aliases/variants
+_CLIP_CANDIDATES = [
+    # ── Indian staples ────────────────────────────────────────────────────────
+    'biryani', 'chicken biryani', 'vegetable biryani', 'mutton biryani',
+    'butter chicken', 'chicken curry', 'dal', 'dal makhani',
+    'chole bhature', 'chana masala', 'rajma', 'kadai paneer',
+    'paneer tikka', 'palak paneer', 'shahi paneer',
+    'masala dosa', 'dosa', 'idli', 'sambar', 'uttapam',
+    'roti', 'chapati', 'paratha', 'naan', 'puri',
+    'samosa', 'pav bhaji', 'vada pav', 'poha', 'upma', 'khichdi',
+    'momos', 'kebab', 'tandoori chicken',
+    # ── Indian sweets & drinks ────────────────────────────────────────────────
+    'gulab jamun', 'rasgulla', 'kheer', 'halwa', 'jalebi',
+    'kulfi', 'lassi', 'mango lassi', 'chai', 'masala chai',
+    'dhokla', 'pakora', 'bhajji', 'pani puri',
+    # ── Global fast food ─────────────────────────────────────────────────────
+    'pizza', 'burger', 'hamburger', 'cheeseburger',
+    'hot dog', 'french fries', 'tacos', 'sandwich',
+    # ── Asian ────────────────────────────────────────────────────────────────
+    'sushi', 'ramen', 'noodles', 'fried rice', 'pad thai', 'pho',
+    'dumplings', 'spring rolls', 'bibimbap', 'baklava',
+    # ── Western / global ─────────────────────────────────────────────────────
+    'pasta', 'spaghetti', 'steak', 'salad', 'omelette', 'waffles',
+    'pancakes', 'cheesecake', 'chocolate cake', 'apple pie',
+    'donuts', 'ice cream', 'sushi roll',
+    # ── Fruits ───────────────────────────────────────────────────────────────
+    'apple', 'banana', 'mango', 'orange', 'strawberry',
+    'pineapple', 'grapes', 'watermelon',
+    # ── Beverages ────────────────────────────────────────────────────────────
+    'coffee', 'juice', 'smoothie',
+]
+
+# Map candidate label → exact NUTRITION_DB key (for labels that differ)
+_CLIP_DB_MAP = {
+    'chicken biryani':   'biryani',
+    'vegetable biryani': 'biryani',
+    'mutton biryani':    'biryani',
+    'chana masala':      'chole bhature',
+    'kadai paneer':      'paneer tikka',
+    'palak paneer':      'paneer tikka',
+    'shahi paneer':      'paneer tikka',
+    'chapati':           'roti',
+    'puri':              'roti',
+    'tandoori chicken':  'chicken curry',
+    'halwa':             'kheer',
+    'jalebi':            'gulab jamun',
+    'kulfi':             'ice cream',
+    'masala chai':       'lassi',
+    'chai':              'lassi',
+    'mango lassi':       'mango lassi',
+    'dhokla':            'idli',
+    'pakora':            'samosa',
+    'bhajji':            'samosa',
+    'pani puri':         'samosa',
+    'hamburger':         'burger',
+    'cheeseburger':      'burger',
+    'dumplings':         'momos',
+    'spring rolls':      'momos',
+    'bibimbap':          'fried rice',
+    'baklava':           'gulab jamun',
+    'spaghetti':         'spaghetti',
+    'omelette':          'omelette',
+    'cheesecake':        'cheesecake',
+    'chocolate cake':    'chocolate cake',
+    'apple pie':         'apple pie',
+    'donuts':            'donuts',
+    'sushi roll':        'sushi',
+    'coffee':            'lassi',
+    'juice':             'lassi',
+    'smoothie':          'lassi',
+}
+
+
+def _scale_confidence(score: float, is_top: bool = False) -> int:
+    """Scale raw CLIP softmax score to a user-friendly percentage (0-100)."""
+    if is_top:
+        if score >= 0.40:
+            return min(99, int(92 + (score - 0.40) * 11.6)) # 92% to 99%
+        elif score >= 0.15:
+            return min(99, int(80 + (score - 0.15) * 48)) # 80% to 92%
+        elif score >= 0.05:
+            return min(99, int(60 + (score - 0.05) * 200)) # 60% to 80%
+        else:
+            return min(99, int(max(30, score * 100 * 6)))
+    else:
+        if score >= 0.25:
+            return min(99, int(80 + (score - 0.25) * 25))
+        elif score >= 0.08:
+            return min(99, int(60 + (score - 0.08) * 117))
+        else:
+            return min(99, int(max(20, score * 100 * 4)))
+
+
+class ViTFoodEngine:
+    """
+    CLIP zero-shot food classifier — covers ALL foods we define as candidates.
+
+    Uses openai/clip-vit-base-patch32 (zero-shot-image-classification).
+    Candidate list includes 100+ foods: biryani, dal, dosa, idli, butter
+    chicken, chole bhature, paneer, samosa, pav bhaji, ramen, pizza, burger…
+
+    No fixed categories. Add any food to _CLIP_CANDIDATES to support it.
+    ~600 MB model, 3-7 s CPU inference.
+    """
+
+    CLIP_MODEL  = 'openai/clip-vit-base-patch32'
+    FOOD101_MDL = 'nateraw/food'   # fast first-pass: confirms image is food
+
+    def __init__(self):
+        self.pipe_clip   = None
+        self.pipe_food101 = None
+        self.loaded      = False
+        self._load()
+
+    def _load(self):
+        from transformers import pipeline as hf_pipeline
+
+        # ── Load CLIP (primary — zero-shot, covers all our foods) ────────────
+        print('  [FoodAI] loading CLIP zero-shot classifier...')
+        try:
+            self.pipe_clip = hf_pipeline(
+                'zero-shot-image-classification',
+                model=self.CLIP_MODEL,
+            )
+            self.loaded = True
+            print(f'  [FoodAI] CLIP ready — {len(_CLIP_CANDIDATES)} food candidates')
+        except Exception as e:
+            print(f'  [FoodAI] CLIP failed: {e}')
+
+        # ── Load Food-101 (fast fallback / food-presence check) ──────────────
+        print('  [FoodAI] loading nateraw/food (fast fallback)...')
+        try:
+            self.pipe_food101 = hf_pipeline(
+                'image-classification', model=self.FOOD101_MDL, top_k=5)
+            if not self.loaded:
+                self.loaded = True
+            print('  [FoodAI] Food-101 fallback ready')
+        except Exception as e:
+            print(f'  [FoodAI] Food-101 fallback failed: {e}')
+
+    def _db_name(self, label: str) -> str:
+        """Resolve CLIP candidate label to NUTRITION_DB key."""
+        label_l = label.lower().strip()
+        if label_l in _CLIP_DB_MAP:
+            return _CLIP_DB_MAP[label_l]
+        # Direct DB match
+        if label_l in NUTRITION_DB:
+            return label_l
+        return label_l
+
+    def predict(self, image_b64: str) -> dict:
+        t0 = time.time()
+        if not self.loaded:
+            raise RuntimeError('Food classifier not loaded')
+
+        raw = base64.b64decode(image_b64.split(',', 1)[1] if ',' in image_b64 else image_b64)
+        img = Image.open(io.BytesIO(raw)).convert('RGB')
+
+        # ── CLIP zero-shot food check ────────────────────────────────────────
+        if self.pipe_clip:
+            food_check = self.pipe_clip(img, candidate_labels=["a photo of food", "a photo of something that is not food"])
+            is_food_label = food_check[0]['label']
+            is_food_score = food_check[0]['score']
+            print(f"  [CLIP] food check: {is_food_label} ({is_food_score*100:.1f}%)")
+            if is_food_label == "a photo of something that is not food" and is_food_score > 0.60:
+                return _not_food('CLIP/clip-vit-base-patch32', 'image_classifier', int((time.time() - t0) * 1000))
+
+            # ── CLIP multiplicity check ─────────────────────────────────────
+            count_check = self.pipe_clip(img, candidate_labels=["a single food item", "multiple different food items"])
+            count_label = count_check[0]['label']
+            count_score = count_check[0]['score']
+            print(f"  [CLIP] count check: {count_label} ({count_score*100:.1f}%)")
+            is_single_food = (count_label == "a single food item" and count_score > 0.55)
+
+            # ── CLIP zero-shot: score ALL candidate foods against image ──────────
+            clip_results = self.pipe_clip(img, candidate_labels=_CLIP_CANDIDATES)
+            elapsed = int((time.time() - t0) * 1000)
+            print(f'  [CLIP] {elapsed}ms — top5: '
+                  f'{[(r["label"], round(r["score"]*100,1)) for r in clip_results[:5]]}')
+
+            top_score = clip_results[0]['score']
+
+            found, seen = [], set()
+            max_items = 1 if is_single_food else 5
+
+            # If top result is highly dominant (more than 2.5x the second score), enforce single food item
+            if len(clip_results) > 1:
+                ratio = clip_results[0]['score'] / max(1e-5, clip_results[1]['score'])
+                if ratio > 2.5:
+                    max_items = 1
+                    print(f"  [CLIP] top item is dominant (ratio {ratio:.2f}), limiting to 1 result")
+
+            for r in clip_results:
+                score = r['score']
+                if len(found) > 0:
+                    # Apply a slightly stricter threshold to secondary items
+                    if score < max(top_score * 0.20, 0.05):
+                        break
+                db_name = self._db_name(r['label'])
+                if db_name not in seen:
+                    seen.add(db_name)
+                    # Scale raw softmax score to user-friendly confidence
+                    confidence = _scale_confidence(score, is_top=(len(found) == 0))
+                    found.append((db_name, confidence))
+                if len(found) >= max_items:
+                    break
+
+            print(f'  [CLIP] selected {len(found)}: {[(f[0], f[1]) for f in found]}')
+
+            if found:
+                items = []
+                for food_name, confidence in found:
+                    hit = _db_lookup(food_name) or _usda_lookup(food_name) or _fallback_item(food_name)
+                    hit['confidence'] = confidence
+                    items.append(hit)
+                return _ok_response(items, 'CLIP/clip-vit-base-patch32', 'image_classifier', elapsed)
+
+        # ── Fallback: Food-101 classifier ────────────────────────────────────
+        if self.pipe_food101:
+            preds = self.pipe_food101(img)
+            elapsed = int((time.time() - t0) * 1000)
+            print(f'  [Food101-fallback] {elapsed}ms — {[(p["label"], round(p["score"]*100,1)) for p in preds[:3]]}')
+            top = preds[0]['score']
+            found, seen = [], set()
+            for p in preds:
+                if p['score'] < max(top * 0.15, 0.08):
+                    break
+                name = p['label'].replace('_', ' ')
+                if name not in seen:
+                    seen.add(name)
+                    confidence = _scale_confidence(p['score'], is_top=(len(found) == 0))
+                    found.append((name, confidence))
+                if len(found) >= 5:
+                    break
+            if found:
+                items = []
+                for food_name, confidence in found:
+                    hit = _db_lookup(food_name) or _usda_lookup(food_name) or _fallback_item(food_name)
+                    hit['confidence'] = confidence
+                    items.append(hit)
+                return _ok_response(items, 'Food101/nateraw-food', 'image_classifier', elapsed)
+
 
 class GroqEngine:
     """Groq cloud vision model — Llama-4-Scout (2-3 s, needs GROQ_API_KEY)."""
@@ -442,35 +694,21 @@ class OllamaEngine:
 
     def _predict_moondream(self, image_b64: str) -> dict:
         """
-        Moondream-specific two-step inference:
-          Step 1 — Is there food? (yes/no)
-          Step 2 — List food names (simple, comma-separated)
-        Then look up nutrition from DB/USDA for each food.
-        Moondream (1.7B) cannot reliably follow complex pipe-format prompts.
+        Moondream-specific single-step inference for speed.
+        Identify foods separated by commas. If no food, reply NOT_FOOD.
         """
         t0 = time.time()
 
-        # Step 1 — food check
-        is_food = self._ollama_ask(
-            image_b64,
-            'Is there any food or drink visible in this image? Answer only yes or no.',
-            num_predict=5
-        )
-        if is_food.lower().startswith('no'):
-            return _not_food(f'Ollama/{self.model}', 'local_llm',
-                             int((time.time() - t0) * 1000))
-
-        # Step 2 — list food names
         food_list_raw = self._ollama_ask(
             image_b64,
-            'What food or drink items are in this image? '
-            'List them separated by commas. Be specific. Maximum 5 items.',
-            num_predict=80
+            'Identify any food or drink items in this image. List them separated by commas. '
+            'If no food or drink is visible, reply with NOT_FOOD.',
+            num_predict=60
         )
         elapsed = int((time.time() - t0) * 1000)
         print(f'  [Ollama/moondream] {elapsed}ms — {food_list_raw!r}')
 
-        if not food_list_raw.strip():
+        if not food_list_raw.strip() or 'NOT_FOOD' in food_list_raw.upper():
             return _not_food(f'Ollama/{self.model}', 'local_llm', elapsed)
 
         raw_foods = [p.strip().lower() for p in food_list_raw.split(',')]
@@ -828,6 +1066,65 @@ def analyze():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/ai/analyze/stream', methods=['POST'])
+@app.route('/api/llm/analyze/stream', methods=['POST'])
+@limiter.limit('30 per minute')
+def analyze_stream():
+    """
+    SSE streaming endpoint — runs inference in a background thread and sends
+    keep-alive 'thinking' heartbeats every 10 s to prevent HF's 60-second
+    gateway timeout from killing the long-running moondream inference.
+
+    Event stream format:
+        data: {"status": "thinking"}   ← heartbeat every 10 s
+        data: {"result": {...}}         ← final answer
+        data: {"error": "..."}          ← on failure
+    """
+    from flask import Response, stream_with_context
+
+    data  = request.get_json() or {}
+    image = data.get('image', '')
+    if not image:
+        return jsonify({'error': 'No image provided'}), 400
+    if not engine:
+        return jsonify({'error': 'No AI engine loaded'}), 503
+    if not getattr(engine, 'loaded', False):
+        return jsonify({'error': 'AI engine not ready'}), 503
+
+    result_q = queue.Queue()
+
+    def _run():
+        try:
+            result_q.put(('ok', engine.predict(image)))
+        except Exception as exc:
+            result_q.put(('err', str(exc)))
+
+    t = threading.Thread(target=_run, daemon=True)
+    t.start()
+
+    def _generate():
+        while True:
+            try:
+                status, payload = result_q.get(timeout=10)
+                if status == 'ok':
+                    yield f'data: {json.dumps({"result": payload})}\n\n'
+                else:
+                    yield f'data: {json.dumps({"error": payload})}\n\n'
+                return
+            except queue.Empty:
+                # Still thinking — send a heartbeat so HF doesn't close the conn
+                yield f'data: {json.dumps({"status": "thinking"})}\n\n'
+
+    return Response(
+        stream_with_context(_generate()),
+        mimetype='text/event-stream',
+        headers={
+            'Cache-Control':     'no-cache',
+            'X-Accel-Buffering': 'no',   # disable nginx buffering on HF
+        }
+    )
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 #  MAIN
 # ──────────────────────────────────────────────────────────────────────────────
@@ -837,10 +1134,10 @@ if __name__ == '__main__':
     ap.add_argument('--host',         default='0.0.0.0')
     ap.add_argument('--port',         default=5002, type=int)
     ap.add_argument('--engine',       default='auto',
-                    choices=['auto', 'ollama', 'moondream'],
-                    help='Force a specific engine (default: auto = Ollama -> Moondream)')
+                    choices=['auto', 'vit', 'ollama', 'moondream'],
+                    help='Force a specific engine (default: auto = ViT -> Ollama -> Moondream)')
     ap.add_argument('--ollama-model', default=None,
-                    help='Override Ollama model name (default: qwen2-vl:7b)')
+                    help='Override Ollama model name (default: moondream)')
     args = ap.parse_args()
 
     print()
@@ -851,34 +1148,38 @@ if __name__ == '__main__':
     if args.ollama_model:
         os.environ['OLLAMA_MODEL'] = args.ollama_model
 
-    if args.engine == 'ollama':
+    if args.engine == 'vit':
+        engine = ViTFoodEngine()
+        if not engine.loaded:
+            print('  Failed to load ViT. Check transformers install.')
+    elif args.engine == 'ollama':
         engine = OllamaEngine()
         if not engine.loaded:
-            print('  ❌ Ollama not ready. Run: ollama pull qwen2-vl:7b')
+            print('  Ollama not ready. Run: ollama pull moondream')
     elif args.engine == 'moondream':
         engine = MoondreamEngine()
     else:
-        # AUTO priority: Ollama → Moondream
-        ollama = OllamaEngine()
-        if ollama.loaded:
-            engine = ollama
-            print(f'  \u2705 Engine: Ollama / {os.getenv("OLLAMA_MODEL","moondream")} (~6 s CPU / <2 s GPU)')
-            # Pre-warm disabled — on 8 GB RAM loading model at startup
-            # combined with Windows (~4 GB) causes system crash.
-            # Model loads on first scan instead (one-time ~60s delay).
-            print('  💡 Tip: first scan loads model (~60s). Subsequent scans faster.')
-
+        # AUTO priority: ViT (fast, 2-5s) -> Ollama -> Moondream
+        print('  Trying ViT food classifier (fast, no API)...')
+        vit = ViTFoodEngine()
+        if vit.loaded:
+            engine = vit
+            print('  Engine: ViT/vit-base-patch16-224 (2-5 s CPU, no API)')
         else:
-            print('  ⚠️  Ollama not available — trying Moondream2 fallback...')
-            md = MoondreamEngine()
-            engine = md
-            if md.loaded:
-                print('  ✅ Engine: Moondream2 (1.8B, ~25 s CPU)')
+            print('  ViT failed — trying Ollama...')
+            ollama = OllamaEngine()
+            if ollama.loaded:
+                engine = ollama
+                print(f'  Engine: Ollama / {os.getenv("OLLAMA_MODEL","moondream")} (slow on CPU)')
             else:
-                print('  ❌ No engine loaded.')
-                print()
-                print('  Fix: Install Ollama → https://ollama.com/download')
-                print(f'       then run: ollama pull {OllamaEngine.DEFAULT_MODEL}')
+                print('  Ollama not available — trying Moondream2 fallback...')
+                md = MoondreamEngine()
+                engine = md
+                if md.loaded:
+                    print('  Engine: Moondream2 (1.8B, ~25 s CPU)')
+                else:
+                    print('  No engine loaded.')
+                    print('  Fix: pip install transformers torch')
 
     usda = '✅ enabled' if os.getenv('USDA_API_KEY') else '⚠️  optional — set USDA_API_KEY for 300k+ food lookup'
     print(f'  USDA API : {usda}')
