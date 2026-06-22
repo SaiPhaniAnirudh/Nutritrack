@@ -442,7 +442,7 @@ class ViTFoodEngine:
     ~600 MB model, 3-7 s CPU inference.
     """
 
-    CLIP_MODEL  = 'openai/clip-vit-base-patch32'
+    CLIP_MODEL  = 'google/siglip-base-patch16-224'
     FOOD101_MDL = 'nateraw/food'   # fast first-pass: confirms image is food
 
     def __init__(self):
@@ -454,17 +454,17 @@ class ViTFoodEngine:
     def _load(self):
         from transformers import pipeline as hf_pipeline
 
-        # ── Load CLIP (primary — zero-shot, covers all our foods) ────────────
-        print('  [FoodAI] loading CLIP zero-shot classifier...')
+        # ── Load SigLIP (primary — zero-shot, covers all our foods) ────────────
+        print('  [FoodAI] loading SigLIP zero-shot classifier...')
         try:
             self.pipe_clip = hf_pipeline(
                 'zero-shot-image-classification',
                 model=self.CLIP_MODEL,
             )
             self.loaded = True
-            print(f'  [FoodAI] CLIP ready — {len(_CLIP_CANDIDATES)} food candidates')
+            print(f'  [FoodAI] SigLIP ready — {len(_CLIP_CANDIDATES)} food candidates')
         except Exception as e:
-            print(f'  [FoodAI] CLIP failed: {e}')
+            print(f'  [FoodAI] SigLIP failed: {e}')
 
         # ── Load Food-101 (fast fallback / food-presence check) ──────────────
         print('  [FoodAI] loading nateraw/food (fast fallback)...')
@@ -495,19 +495,19 @@ class ViTFoodEngine:
         raw = base64.b64decode(image_b64.split(',', 1)[1] if ',' in image_b64 else image_b64)
         img = Image.open(io.BytesIO(raw)).convert('RGB')
 
-        # ── CLIP zero-shot food check ────────────────────────────────────────
+        # ── SigLIP zero-shot food check ────────────────────────────────────────
         if self.pipe_clip:
             food_check = self.pipe_clip(img, candidate_labels=["a photo of food", "a photo of something that is not food"])
             is_food_label = food_check[0]['label']
             is_food_score = food_check[0]['score']
-            print(f"  [CLIP] food check: {is_food_label} ({is_food_score*100:.1f}%)")
+            print(f"  [SigLIP] food check: {is_food_label} ({is_food_score*100:.1f}%)")
             if is_food_label == "a photo of something that is not food" and is_food_score > 0.60:
-                return _not_food('CLIP/clip-vit-base-patch32', 'image_classifier', int((time.time() - t0) * 1000))
+                return _not_food('SigLIP/siglip-base-patch16-224', 'image_classifier', int((time.time() - t0) * 1000))
 
-            # ── CLIP zero-shot: score ALL candidate foods against image ──────────
+            # ── SigLIP zero-shot: score ALL candidate foods against image ──────────
             clip_results = self.pipe_clip(img, candidate_labels=_CLIP_CANDIDATES)
             elapsed = int((time.time() - t0) * 1000)
-            print(f'  [CLIP] {elapsed}ms — top5: '
+            print(f'  [SigLIP] {elapsed}ms — top5: '
                   f'{[(r["label"], round(r["score"]*100,1)) for r in clip_results[:5]]}')
 
             top_score = clip_results[0]['score']
@@ -523,13 +523,13 @@ class ViTFoodEngine:
                 db_name = self._db_name(r['label'])
                 if db_name not in seen:
                     seen.add(db_name)
-                    # Scale raw softmax score to user-friendly confidence
+                    # Scale raw score to user-friendly confidence
                     confidence = _scale_confidence(score, is_top=(len(found) == 0))
                     found.append((db_name, confidence))
                 if len(found) >= 5:
                     break
 
-            print(f'  [CLIP] selected {len(found)}: {[(f[0], f[1]) for f in found]}')
+            print(f'  [SigLIP] selected {len(found)}: {[(f[0], f[1]) for f in found]}')
 
             if found:
                 items = []
@@ -537,7 +537,7 @@ class ViTFoodEngine:
                     hit = _db_lookup(food_name) or _usda_lookup(food_name) or _fallback_item(food_name)
                     hit['confidence'] = confidence
                     items.append(hit)
-                return _ok_response(items, 'CLIP/clip-vit-base-patch32', 'image_classifier', elapsed)
+                return _ok_response(items, 'SigLIP/siglip-base-patch16-224', 'image_classifier', elapsed)
 
         # ── Fallback: Food-101 classifier ────────────────────────────────────
         if self.pipe_food101:
