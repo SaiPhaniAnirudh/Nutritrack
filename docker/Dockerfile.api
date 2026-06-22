@@ -1,0 +1,24 @@
+# ──────────────────────────────────────────────────────────────────────────────
+#  docker/Dockerfile.api  —  NutriTrack Flask REST API (backend/App.py)
+# ──────────────────────────────────────────────────────────────────────────────
+
+FROM python:3.11-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy backend + frontend (backend/App.py serves frontend/index.html as static)
+COPY backend/ ./backend/
+COPY frontend/ ./frontend/
+
+RUN mkdir -p backend/instance
+
+EXPOSE 5000
+
+# Use gunicorn in production; App.py is inside backend/
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "2", "--timeout", "120", "--chdir", "backend", "App:app"]

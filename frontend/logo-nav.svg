@@ -1,0 +1,45 @@
+<svg width="30" height="30" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="nBowl" x1="0.3" y1="0" x2="0.7" y2="1"><stop offset="0%" stop-color="#D4D4D4"/><stop offset="100%" stop-color="#9A9A9A"/></linearGradient>
+            <linearGradient id="nTape" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#C87800"/><stop offset="50%" stop-color="#F0B020"/><stop offset="100%" stop-color="#C87800"/></linearGradient>
+            <linearGradient id="nLett" x1="0" y1="0" x2="0.5" y2="1"><stop offset="0%" stop-color="#78C840"/><stop offset="100%" stop-color="#4A9820"/></linearGradient>
+          </defs>
+          <!-- fork simplified -->
+          <g opacity="0.88">
+            <rect x="52" y="115" width="8" height="50" rx="4" fill="#D8D8D8"/>
+            <rect x="53" y="88" width="6" height="32" rx="3" fill="#D8D8D8"/>
+            <rect x="48" y="62" width="16" height="7" rx="2" fill="#D8D8D8"/>
+            <rect x="48.5" y="42" width="3.5" height="23" rx="2" fill="#D8D8D8"/>
+            <rect x="54" y="40" width="3.5" height="25" rx="2" fill="#D8D8D8"/>
+            <rect x="59.5" y="42" width="3.5" height="23" rx="2" fill="#D8D8D8"/>
+          </g>
+          <!-- spoon simplified -->
+          <g opacity="0.88">
+            <rect x="140" y="115" width="8" height="50" rx="4" fill="#D8D8D8"/>
+            <rect x="141" y="90" width="6" height="28" rx="3" fill="#D8D8D8"/>
+            <ellipse cx="144" cy="72" rx="10" ry="15" fill="#D8D8D8"/>
+            <ellipse cx="143" cy="71" rx="6" ry="9" fill="rgba(255,255,255,0.22)"/>
+          </g>
+          <!-- bowl -->
+          <path d="M42 105 Q42 148 100 152 Q158 148 158 105 Z" fill="url(#nBowl)"/>
+          <ellipse cx="100" cy="105" rx="58" ry="14" fill="#BDBDBD"/>
+          <ellipse cx="100" cy="105" rx="58" ry="14" fill="rgba(255,255,255,0.35)" opacity="0.5"/>
+          <!-- lettuce -->
+          <path d="M70 104 Q62 80 74 68 Q82 60 90 74 Q94 62 100 64 Q108 60 112 74 Q118 62 130 70 Q140 82 132 102" fill="url(#nLett)"/>
+          <!-- avocado -->
+          <ellipse cx="84" cy="97" rx="13" ry="9" fill="#5A8820"/>
+          <ellipse cx="84" cy="97" rx="8" ry="5.5" fill="#7AC028" opacity="0.8"/>
+          <!-- orange -->
+          <ellipse cx="106" cy="94" rx="15" ry="12" fill="#F0A818"/>
+          <ellipse cx="106" cy="94" rx="10" ry="8" fill="#F8C828" opacity="0.5"/>
+          <!-- tomatoes -->
+          <circle cx="94" cy="88" r="8.5" fill="#E82020"/>
+          <circle cx="116" cy="86" r="7.5" fill="#E82020"/>
+          <!-- measuring tape -->
+          <path d="M38 116 Q32 128 44 138 Q62 150 100 152 Q138 150 156 138 Q168 128 162 116" stroke="url(#nTape)" stroke-width="11" fill="none" stroke-linecap="round"/>
+          <path d="M38 116 Q28 122 32 132 Q34 138 40 136" stroke="url(#nTape)" stroke-width="10" fill="none" stroke-linecap="round"/>
+          <path d="M162 116 Q172 122 170 132 Q168 140 160 138" stroke="url(#nTape)" stroke-width="10" fill="none" stroke-linecap="round"/>
+          <!-- green dots -->
+          <circle cx="35" cy="108" r="3.5" fill="#68B828" opacity="0.85"/>
+          <circle cx="165" cy="108" r="3" fill="#68B828" opacity="0.85"/>
+        </svg>

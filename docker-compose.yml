@@ -1,0 +1,111 @@
+version: "3.9"
+
+# ──────────────────────────────────────────────────────────────────────────────
+#  NutriTrack — docker-compose.yml
+#
+#  Services:
+#    ollama   — llava-phi3 model server (GPU-accelerated if available)
+#    llm      — NutriTrack AI inference proxy (Llm_server.py)
+#    api      — NutriTrack Flask backend (App.py)
+#
+#  Quick start:
+#    docker compose up -d
+#    open http://localhost:5000
+#
+#  First run note:
+#    Ollama will download llava-phi3 (~2.9 GB) on first start.
+#    This is a one-time download — the model is cached in the ollama-data volume.
+# ──────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── 1. Ollama model server ──────────────────────────────────────────────────
+  ollama:
+    image: ollama/ollama:latest
+    container_name: nutritrack-ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    # Uncomment the deploy block below if you have an NVIDIA GPU:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # ── 2. Model pull job (runs once, then exits) ───────────────────────────────
+  ollama-pull:
+    image: ollama/ollama:latest
+    container_name: nutritrack-ollama-pull
+    depends_on:
+      ollama:
+        condition: service_healthy
+    volumes:
+      - ollama-data:/root/.ollama
+    entrypoint: ["ollama", "pull", "llava-phi3"]
+    restart: "no"
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+
+  # ── 3. NutriTrack AI inference server (Llm_server.py) ──────────────────────
+  llm:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.llm
+    container_name: nutritrack-llm
+    restart: unless-stopped
+    depends_on:
+      ollama:
+        condition: service_healthy
+    ports:
+      - "5002:5002"
+    environment:
+      - OLLAMA_URL=http://ollama:11434
+      - OLLAMA_MODEL=llava-phi3
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5002/api/health"]
+      interval: 20s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # ── 4. NutriTrack Flask API (App.py) ───────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    container_name: nutritrack-api
+    restart: unless-stopped
+    depends_on:
+      llm:
+        condition: service_healthy
+    ports:
+      - "5000:5000"
+    environment:
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-change-me-in-production}
+      - DATABASE_URL=${DATABASE_URL:-sqlite:///nutritrack.db}
+      - LLM_SERVER_URL=http://llm:5002
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5000}
+    volumes:
+      - db-data:/app/instance
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 20s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  ollama-data:
+    driver: local
+  db-data:
+    driver: local

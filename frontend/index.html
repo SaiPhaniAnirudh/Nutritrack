@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#3ecf8e">
+  <meta name="description" content="AI-powered nutrition tracking with food photo scanning, macro tracking, and personalised diet planning.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="NutriTrack">
+  <title>NutriTrack — AI Food Intelligence</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+  <link rel="apple-touch-icon" href="icons/icon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="Style.css">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;0,9..144,900;1,9..144,300&family=DM+Sans:wght@300;400;500&display=swap"
+    rel="stylesheet" media="print" onload="this.media='all'">
+  <script>
+    // Safety net: hide loader as soon as possible
+    // App.js will also call hideLoader() when it starts
+    window.addEventListener('load', function () {
+      var el = document.getElementById('pageLoader');
+      if (el) { el.style.opacity = '0'; el.style.visibility = 'hidden'; }
+    });
+    // Also hide after 3 seconds max no matter what
+    setTimeout(function () {
+      var el = document.getElementById('pageLoader');
+      if (el) { el.style.opacity = '0'; el.style.visibility = 'hidden'; el.style.pointerEvents = 'none'; }
+    }, 3000);
+  </script>
+</head>
+
+<body>
+
+  <!-- ══ GLOBAL LOADING OVERLAY ══ -->
+  <div id="pageLoader" class="page-loader">
+    <div class="loader-inner">
+      <div class="loader-logo-wrap">
+        <img src="logo-loader.svg" alt="Loader Logo" width="80" height="80" />
+      </div>
+      <div class="loader-brand">NutriTrack</div>
+      <div class="loader-dots"><span></span><span></span><span></span></div>
+      <div class="loader-msg" id="loaderMsg">Loading…</div>
+    </div>
+  </div>
+
+  <!-- NON-FOOD ALERT POPUP -->
+  <div id="nonFoodModal" class="modal-overlay" style="display:none">
+    <div class="modal-box">
+      <div class="modal-icon-big">🚫</div>
+      <h3 class="modal-title">No Food Detected</h3>
+      <p class="modal-body">The image doesn't appear to contain recognisable food. Please upload a clear photo of your
+        meal for accurate nutrition analysis.</p>
+      <div class="modal-tips">
+        <div class="modal-tip">📸 Point camera directly at the food</div>
+        <div class="modal-tip">💡 Make sure food fills most of the frame</div>
+        <div class="modal-tip">🚫 Avoid photos with people or non-food items</div>
+      </div>
+      <!-- FIX: added type="button" -->
+      <button type="button" class="modal-btn" onclick="closeNonFoodModal()">Try Again</button>
+    </div>
+  </div>
+
+  <!-- PLAN MY DIET — FULL PANEL -->
+  <div id="dietPlanModal" class="dp-overlay" onclick="dpOverlayClick(event)">
+    <div class="dp-panel" id="dpPanel">
+
+      <!-- sticky header -->
+      <div class="dp-header">
+        <div class="dp-header-left">
+          <div class="dp-logo">🥗</div>
+          <div>
+            <div class="dp-title">Plan My Diet</div>
+            <div class="dp-subtitle" id="dpSubtitle">Your personalised nutrition plan</div>
+          </div>
+        </div>
+        <!-- FIX: added type="button" -->
+        <button type="button" class="dp-close" onclick="closeDietModal()">✕</button>
+      </div>
+
+      <!-- scrollable body -->
+      <div class="dp-body">
+
+        <!-- ── HERO STATS ROW ── -->
+        <div class="dp-hero" id="dpHero"></div>
+
+        <!-- ── TAB BAR ── -->
+        <div class="dp-tabs">
+          <!-- FIX: added type="button" to all tab buttons -->
+          <button type="button" class="dp-tab active" onclick="dpSwitchTab('overview',this)">Overview</button>
+          <button type="button" class="dp-tab" onclick="dpSwitchTab('meals',this)">Meal Plan</button>
+          <button type="button" class="dp-tab" onclick="dpSwitchTab('macros',this)">Macros</button>
+          <button type="button" class="dp-tab" onclick="dpSwitchTab('habits',this)">Habits</button>
+        </div>
+
+        <!-- tab panels -->
+        <div id="dpTab-overview" class="dp-tab-panel active"></div>
+        <div id="dpTab-meals" class="dp-tab-panel"></div>
+        <div id="dpTab-macros" class="dp-tab-panel"></div>
+        <div id="dpTab-habits" class="dp-tab-panel"></div>
+
+      </div><!-- /dp-body -->
+
+      <!-- sticky footer -->
+      <div class="dp-footer">
+        <!-- FIX: added type="button" -->
+        <button type="button" class="dp-footer-btn" onclick="closeDietModal()">Close</button>
+        <button type="button" class="dp-footer-btn dp-footer-primary"
+          onclick="showPage('profile', document.querySelector('.nav-btn:last-child')); closeDietModal()">Edit Goals in
+          Profile →</button>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <!-- ════════════════════════════════════════
+     AUTH
+════════════════════════════════════════ -->
+  <div id="authSection">
+    <div class="auth-wrapper">
+      <div class="auth-card">
+
+        <!-- App Logo — single h1 for the page -->
+        <div class="auth-logo">
+          <div class="logo-mark">
+            <img src="logo-auth.svg" alt="Auth Logo" width="58" height="58" />
+          </div>
+          <h1>NutriTrack</h1>
+          <p>AI-powered food intelligence</p>
+        </div>
+
+        <div class="auth-tab-row">
+          <!-- FIX: converted div onclick → button for accessibility -->
+          <button type="button" class="auth-tab active" onclick="switchTab('login')">Sign In</button>
+          <button type="button" class="auth-tab" onclick="switchTab('register')">Create Account</button>
+        </div>
+
+        <div id="authError" class="auth-error"></div>
+
+        <!-- Login -->
+        <div id="loginForm">
+          <div class="field-group">
+            <label for="loginEmail">Email Address</label>
+            <input type="email" id="loginEmail" placeholder="you@example.com">
+          </div>
+          <div class="field-group">
+            <label for="loginPassword">Password</label>
+            <input type="password" id="loginPassword" placeholder="••••••••">
+          </div>
+          <!-- FIX: added type="button" -->
+          <button type="button" class="submit-btn" onclick="handleLogin()">Sign In →</button>
+        </div>
+
+        <!-- Register — 3-step -->
+        <div id="registerForm" style="display:none;">
+
+          <!-- STEP 1: Account -->
+          <div id="regStep1">
+            <div class="step-indicator">
+              <div class="step-dot active">1</div>
+              <div class="step-line"></div>
+              <div class="step-dot">2</div>
+              <div class="step-line"></div>
+              <div class="step-dot">3</div>
+            </div>
+            <p class="step-label">Step 1 of 3 — Account Details</p>
+
+            <div class="field-group">
+              <label for="regName">Full Name <span class="req-star">*</span></label>
+              <input type="text" id="regName" placeholder="Anirudh Kumar">
+            </div>
+            <div class="field-group">
+              <label for="regEmail">Email Address <span class="req-star">*</span></label>
+              <input type="email" id="regEmail" placeholder="you@example.com" oninput="validateEmailField(this)">
+              <div id="emailValidationMsg"
+                style="font-size:0.7rem;margin-top:0.35rem;padding:0.3rem 0.5rem;border-radius:6px;display:none;"></div>
+            </div>
+            <div class="field-group">
+              <label for="regPassword">Password <span class="req-star">*</span></label>
+              <input type="password" id="regPassword" placeholder="Min 8 characters"
+                oninput="validatePasswordField(this)">
+              <div id="passwordStrengthBar" style="margin-top:0.5rem;display:none;">
+                <div style="height:3px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden;">
+                  <div id="passwordStrengthFill"
+                    style="height:100%;width:0%;transition:width 0.3s,background 0.3s;border-radius:2px;"></div>
+                </div>
+                <div id="passwordStrengthLabel"
+                  style="font-size:0.68rem;margin-top:0.3rem;color:rgba(184,201,186,0.5);"></div>
+              </div>
+            </div>
+            <div class="field-group">
+              <label for="regPasswordConfirm">Confirm Password <span class="req-star">*</span></label>
+              <input type="password" id="regPasswordConfirm" placeholder="Re-enter password"
+                oninput="validateConfirmPassword(this)">
+              <div id="confirmPasswordMsg" style="font-size:0.7rem;margin-top:0.35rem;display:none;"></div>
+            </div>
+            <!-- FIX: added type="button" -->
+            <button type="button" class="submit-btn" onclick="goToStep2()">Continue →</button>
+          </div>
+
+          <!-- STEP 2: Body Stats -->
+          <div id="regStep2" style="display:none;">
+            <div class="step-indicator">
+              <div class="step-dot done">✓</div>
+              <div class="step-line filled"></div>
+              <div class="step-dot active">2</div>
+              <div class="step-line"></div>
+              <div class="step-dot">3</div>
+            </div>
+            <p class="step-label">Step 2 of 3 — Body Stats</p>
+
+            <div class="field-group">
+              <label for="regAge">Age <span class="req-star">*</span></label>
+              <input type="number" id="regAge" placeholder="e.g. 24" min="10" max="100">
+            </div>
+            <div class="goals-row">
+              <div class="field-group" style="margin-bottom:0">
+                <label for="regWeight">Weight <span class="req-star">*</span></label>
+                <div class="input-unit-row">
+                  <input type="number" id="regWeight" placeholder="e.g. 70" min="20" max="300">
+                  <select id="regWeightUnit" class="unit-select">
+                    <option value="kg">kg</option>
+                    <option value="lbs">lbs</option>
+                  </select>
+                </div>
+              </div>
+              <div class="field-group" style="margin-bottom:0">
+                <label for="regHeight">Height <span class="req-star">*</span></label>
+                <div class="input-unit-row">
+                  <input type="number" id="regHeight" placeholder="e.g. 175" min="50" max="280">
+                  <select id="regHeightUnit" class="unit-select">
+                    <option value="cm">cm</option>
+                    <option value="ft">ft</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div class="field-group" style="margin-top:1.1rem">
+              <label>Gender <span class="req-star">*</span></label>
+              <div class="radio-chip-row">
+                <label class="radio-chip"><input type="radio" name="gender" value="male"> 👨 Male</label>
+                <label class="radio-chip"><input type="radio" name="gender" value="female"> 👩 Female</label>
+                <label class="radio-chip"><input type="radio" name="gender" value="other"> 🧑 Other</label>
+              </div>
+            </div>
+            <div class="field-group">
+              <label>Your Goal <span class="req-star">*</span></label>
+              <div class="radio-chip-row">
+                <label class="radio-chip"><input type="radio" name="dietGoal" value="lose"> 🔥 Lose Weight</label>
+                <label class="radio-chip"><input type="radio" name="dietGoal" value="maintain"> ⚖️ Maintain</label>
+                <label class="radio-chip"><input type="radio" name="dietGoal" value="gain"> 💪 Gain Weight</label>
+                <label class="radio-chip"><input type="radio" name="dietGoal" value="bulk"> 🏋️ Bulk Up</label>
+              </div>
+            </div>
+            <div class="field-group">
+              <label>Diet Type <span class="req-star">*</span></label>
+              <div class="radio-chip-row">
+                <label class="radio-chip"><input type="radio" name="dietType" value="nonveg" checked> 🍖 Non-Veg</label>
+                <label class="radio-chip"><input type="radio" name="dietType" value="veg"> 🌱 Pure Veg</label>
+                <label class="radio-chip"><input type="radio" name="dietType" value="eggetarian"> 🥚 Eggetarian</label>
+                <label class="radio-chip"><input type="radio" name="dietType" value="vegan"> 🌿 Vegan</label>
+              </div>
+            </div>
+            <div class="step-btns">
+              <!-- FIX: added type="button" -->
+              <button type="button" class="submit-btn back-btn" onclick="goToStep(1)">← Back</button>
+              <button type="button" class="submit-btn" onclick="goToStep3()">Continue →</button>
+            </div>
+          </div>
+
+          <!-- STEP 3: Goals preview -->
+          <div id="regStep3" style="display:none;">
+            <div class="step-indicator">
+              <div class="step-dot done">✓</div>
+              <div class="step-line filled"></div>
+              <div class="step-dot done">✓</div>
+              <div class="step-line filled"></div>
+              <div class="step-dot active">3</div>
+            </div>
+            <p class="step-label">Step 3 of 3 — Daily Goals</p>
+            <p style="font-size:0.82rem;color:var(--mist);margin-bottom:1rem;line-height:1.5">
+              Auto-calculated from your stats. Adjust any time in Profile.
+            </p>
+            <div id="autoGoalsPreview" class="auto-goals-preview"></div>
+            <div class="goals-row" style="margin-top:1rem">
+              <div class="field-group" style="margin-bottom:0">
+                <label for="goalCalories">Calorie Goal <span style="opacity:0.5">(kcal)</span></label>
+                <input type="number" id="goalCalories" placeholder="2000" min="500" max="10000">
+              </div>
+              <div class="field-group" style="margin-bottom:0">
+                <label for="goalProtein">Protein Goal <span style="opacity:0.5">(g)</span></label>
+                <input type="number" id="goalProtein" placeholder="150" min="10" max="500">
+              </div>
+            </div>
+            <div class="step-btns" style="margin-top:1.2rem">
+              <!-- FIX: added type="button" -->
+              <button type="button" class="submit-btn back-btn" onclick="goToStep(2)">← Back</button>
+              <button type="button" class="submit-btn" onclick="handleRegister()">Create Account →</button>
+            </div>
+          </div>
+
+        </div><!-- /registerForm -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════
+     MAIN APP
+════════════════════════════════════════ -->
+  <div id="mainApp">
+
+    <!-- TOP NAV -->
+    <nav class="topnav">
+      <div class="nav-brand">
+        <div class="mark">
+          <img src="logo-nav.svg" alt="Nav Logo" width="30" height="30" />
+        </div>
+        <!-- FIX: changed to span — h1 already used in auth section above -->
+        <span class="nav-brand-name">NutriTrack</span>
+      </div>
+      <div class="nav-center">
+        <!-- FIX: added type="button" to all nav buttons -->
+        <button type="button" class="nav-btn active" onclick="showPage('dashboard', this)">Dashboard</button>
+        <button type="button" class="nav-btn" onclick="showPage('track', this)">Track Food</button>
+        <button type="button" class="nav-btn" onclick="showPage('history', this)">History</button>
+        <button type="button" class="nav-btn" onclick="showPage('profile', this)">Profile</button>
+      </div>
+      <div class="nav-right">
+        <!-- FIX: added type="button" -->
+        <button type="button" class="diet-widget" id="dietWidget" onclick="openDietModal()">
+          <span class="diet-widget-icon">🥗</span>
+          <div class="diet-widget-text">
+            <span class="diet-widget-label">Plan My Diet</span>
+            <span class="diet-widget-tag" id="dietWidgetTag">Set up profile</span>
+          </div>
+        </button>
+        <div class="user-chip">
+          <div class="user-avatar" id="navAvatar">A</div>
+          <span id="navName">User</span>
+        </div>
+        <!-- FIX: added type="button" -->
+        <button type="button" class="logout-link" onclick="handleLogout()">Sign out</button>
+      </div>
+    </nav>
+
+    <!-- ══════════════════════
+       DASHBOARD
+  ══════════════════════ -->
+    <div class="page active" id="page-dashboard">
+      <div class="greeting">
+        <h2>Good <span id="timeGreet">morning</span>, <span id="greetName">there</span> 👋</h2>
+        <p id="greetDate"></p>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-card" style="--accent: #F5A623">
+          <div class="icon">🔥</div>
+          <div><span class="val" id="dashCals">0</span><span class="unit"> kcal</span></div>
+          <div class="label">Calories Today</div>
+          <div class="goal-bar-wrap">
+            <div class="goal-bar-bg">
+              <div class="goal-bar-fill" id="calBar" style="width:0%;background:#F5A623"></div>
+            </div>
+          </div>
+        </div>
+        <div class="stat-card" style="--accent: #7fb8d4">
+          <div class="icon">💪</div>
+          <div><span class="val" id="dashProtein">0</span><span class="unit">g</span></div>
+          <div class="label">Protein</div>
+          <div class="goal-bar-wrap">
+            <div class="goal-bar-bg">
+              <div class="goal-bar-fill" id="protBar" style="width:0%;background:#7fb8d4"></div>
+            </div>
+          </div>
+        </div>
+        <div class="stat-card" style="--accent: #c4a87f">
+          <div class="icon">🌾</div>
+          <div><span class="val" id="dashCarbs">0</span><span class="unit">g</span></div>
+          <div class="label">Carbohydrates</div>
+          <div class="goal-bar-wrap">
+            <div class="goal-bar-bg">
+              <div class="goal-bar-fill" id="carbBar" style="width:0%;background:#c4a87f"></div>
+            </div>
+          </div>
+        </div>
+        <div class="stat-card" style="--accent: #F4613A">
+          <div class="icon">🫒</div>
+          <div><span class="val" id="dashFat">0</span><span class="unit">g</span></div>
+          <div class="label">Healthy Fats</div>
+          <div class="goal-bar-wrap">
+            <div class="goal-bar-bg">
+              <div class="goal-bar-fill" id="fatBar" style="width:0%;background:#F4613A"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="stats-row-secondary">
+        <div class="stat-card" id="fiber-card" style="--accent: var(--fiber-color)">
+          <div class="icon">🌿</div>
+          <div><span class="val" id="dashFiber">0</span><span class="unit">g</span></div>
+          <div class="label">Fiber</div>
+          <div class="goal-bar-wrap">
+            <div class="goal-bar-bg">
+              <div class="goal-bar-fill" id="fiberBar" style="width:0%;background:var(--fiber-color)"></div>
+            </div>
+          </div>
+        </div>
+        <div class="stat-card" id="sugar-card" style="--accent: var(--sugar-color)">
+          <div class="icon">🍬</div>
+          <div><span class="val" id="dashSugar">0</span><span class="unit">g</span></div>
+          <div class="label">Sugar</div>
+          <div class="goal-bar-wrap">
+            <div class="goal-bar-bg">
+              <div class="goal-bar-fill" id="sugarBar" style="width:0%;background:var(--sugar-color)"></div>
+            </div>
+          </div>
+        </div>
+        <div class="stat-card" id="sodium-card" style="--accent: var(--sodium-color)">
+          <div class="icon">🧂</div>
+          <div><span class="val" id="dashSodium">0</span><span class="unit">mg</span></div>
+          <div class="label">Salt</div>
+          <div class="goal-bar-wrap">
+            <div class="goal-bar-bg">
+              <div class="goal-bar-fill" id="sodiumBar" style="width:0%;background:var(--sodium-color)"></div>
+            </div>
+          </div>
+        </div>
+        <div class="stat-card" id="chol-card" style="--accent: var(--chol-color)">
+          <div class="icon">❤️</div>
+          <div><span class="val" id="dashChol">0</span><span class="unit">mg</span></div>
+          <div class="label">Cholesterol</div>
+          <div class="goal-bar-wrap">
+            <div class="goal-bar-bg">
+              <div class="goal-bar-fill" id="cholBar" style="width:0%;background:var(--chol-color)"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="main-grid">
+        <div class="glass-card">
+          <div class="card-title">
+            <div class="dot"></div>Today's Food Log
+          </div>
+          <div class="food-log-list" id="dashFoodLog">
+            <div class="empty-log">
+              <div class="empty-icon">🍽️</div>
+              <p>No meals logged today.<br>Head to Track Food to get started.</p>
+            </div>
+          </div>
+        </div>
+        <div class="glass-card">
+          <div class="card-title">
+            <div class="dot"></div>Macro Split
+          </div>
+          <div class="chart-wrap"><canvas id="macroChart"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════
+       TRACK FOOD
+  ══════════════════════ -->
+    <div class="page" id="page-track">
+      <div class="greeting" style="margin-bottom:1.4rem">
+        <h2>Track <span>Your Food</span></h2>
+        <p>Scan food with AI camera, or search from 550+ foods</p>
+      </div>
+
+      <div class="glass-card" style="margin-bottom:1.2rem;padding:0.9rem 1.3rem;">
+        <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+          <span
+            style="font-size:0.7rem;color:var(--mist);text-transform:uppercase;letter-spacing:0.08em;font-weight:600;white-space:nowrap">Meal</span>
+          <div class="meal-type-row" style="margin-bottom:0;flex:1">
+            <!-- FIX: added type="button" to all meal chips -->
+            <button type="button" class="meal-chip" onclick="setMeal('breakfast',this)">🌅 Breakfast</button>
+            <button type="button" class="meal-chip" onclick="setMeal('lunch',    this)">☀️ Lunch</button>
+            <button type="button" class="meal-chip" onclick="setMeal('dinner',   this)">🌙 Dinner</button>
+            <button type="button" class="meal-chip" onclick="setMeal('snack',    this)">🍎 Snack</button>
+            <span id="mealTimeHint"
+              style="font-size:0.65rem;color:rgba(184,201,186,0.4);margin-left:0.3rem;align-self:center;white-space:nowrap"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="scan-grid">
+        <div class="glass-card">
+          <div class="card-title">
+            <div class="dot"></div>✨ Scan Food with AI
+          </div>
+
+          <div class="cam-area" id="camArea">
+            <div class="cam-placeholder" id="camPlaceholder">
+              <div class="cam-icon">📷</div>
+              <p>Take a photo or upload one<br>AI will identify the food</p>
+            </div>
+            <video id="camVideo" autoplay playsinline muted></video>
+            <img id="scanPreview" alt="Food to scan">
+          </div>
+
+          <div class="scan-btn-row" id="scanActionRow">
+            <!-- FIX: added type="button" to all scan buttons -->
+            <button type="button" class="scan-btn green" onclick="startScanCamera()">📷 Camera</button>
+            <button type="button" class="scan-btn orange" onclick="pickScanPhoto()">🖼️ Choose Photo</button>
+          </div>
+          <div class="scan-btn-row" id="scanCamRow" style="display:none">
+            <button type="button" class="scan-btn gold" onclick="takeScanPhoto()">📸 Take Photo</button>
+            <button type="button" class="scan-btn muted" onclick="stopScanCamera()">✕ Stop</button>
+          </div>
+          <div class="scan-btn-row" id="scanReadyRow" style="display:none">
+            <button type="button" class="scan-btn gold" id="scanNowBtn" onclick="scanWithAI()">✨ Scan with AI</button>
+            <button type="button" class="scan-btn muted" onclick="clearScan()">✕ Clear</button>
+          </div>
+
+          <canvas id="scanCanvas" style="display:none"></canvas>
+          <div id="scanStatus" class="scan-status"></div>
+        </div>
+
+        <!-- RIGHT: AI result -->
+        <div class="glass-card">
+          <div class="card-title">
+            <div class="dot"></div>⚡ AI Result
+          </div>
+          <div id="scanResult">
+            <div class="scan-result-placeholder">
+              <div style="font-size:2.5rem;opacity:0.2">⚡</div>
+              <div style="font-size:0.85rem;font-weight:500;opacity:0.5">No scan yet</div>
+              <div style="font-size:0.72rem;opacity:0.35;line-height:1.6;margin-top:0.3rem">
+                Take or upload a food photo,<br>then click <strong>Scan with AI</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Search & Add Food -->
+      <div class="glass-card" style="margin-top:1.2rem">
+        <div class="card-title">
+          <div class="dot"></div>Search &amp; Add Food
+        </div>
+        <div style="display:flex;align-items:center;gap:0.8rem;flex-wrap:wrap;margin-bottom:1rem;">
+          <div class="search-wrap" style="flex:1;min-width:220px;margin-bottom:0">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="foodSearch" placeholder="Search 550+ foods — biryani, sushi, pasta, apple…"
+              oninput="searchFoods(this.value)">
+          </div>
+          <div class="search-count" id="searchCount" style="white-space:nowrap;font-size:0.78rem;color:var(--mist)">
+          </div>
+        </div>
+        <div class="cat-filter-row" id="catFilters" style="margin-bottom:0.8rem"></div>
+        <div class="food-results food-results-wide" id="foodResults"></div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════
+       HISTORY
+  ══════════════════════ -->
+    <div class="page" id="page-history">
+      <div class="greeting" style="margin-bottom:1.5rem">
+        <h2>Your <span>History</span></h2>
+        <p>Past 30 days of nutrition data</p>
+      </div>
+      <div class="history-grid">
+        <div class="glass-card">
+          <div class="card-title">
+            <div class="dot"></div>Monthly Calories
+          </div>
+          <div class="chart-wrap"><canvas id="weekChart"></canvas></div>
+          <table class="history-table" id="historyTable" style="margin-top:1.5rem">
+            <thead>
+              <tr>
+                <th scope="col">Food</th>
+                <th scope="col">Meal</th>
+                <th scope="col">Calories</th>
+                <th scope="col">Fiber · Salt</th>
+                <th scope="col">Date</th>
+              </tr>
+            </thead>
+            <tbody id="historyBody"></tbody>
+          </table>
+        </div>
+        <div class="glass-card">
+          <div class="card-title">
+            <div class="dot"></div>Totals This Month
+          </div>
+          <div id="weeklyStats"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════
+       PROFILE
+  ══════════════════════ -->
+    <div class="page" id="page-profile">
+      <div class="greeting" style="margin-bottom:1.5rem">
+        <h2>Your <span>Profile</span></h2>
+        <p>Manage your goals and account</p>
+      </div>
+      <div class="profile-grid">
+        <div class="glass-card">
+          <div class="profile-avatar-section">
+            <div class="big-avatar" id="profileAvatar">A</div>
+            <div class="profile-name" id="profileName">User</div>
+            <div class="profile-email" id="profileEmail"></div>
+            <div id="profileBodyStats" class="body-stats-chips"></div>
+            <div class="profile-stats">
+              <div class="profile-stat">
+                <div class="n" id="totalMeals">0</div>
+                <div class="l">Meals Logged</div>
+              </div>
+              <div class="profile-stat">
+                <div class="n" id="totalDays">0</div>
+                <div class="l">Days Tracked</div>
+              </div>
+              <div class="profile-stat">
+                <div class="n" id="avgCals">0</div>
+                <div class="l">Avg Cal/Day</div>
+              </div>
+              <div class="profile-stat">
+                <div class="n" id="streakDays">0</div>
+                <div class="l">Day Streak</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="glass-card">
+          <div class="card-title">
+            <div class="dot"></div>Daily Goals
+          </div>
+          <div class="goal-editor">
+            <div class="goal-row">
+              <div>
+                <div class="goal-label">🔥 Calories</div>
+                <div class="goal-sub">kcal per day</div>
+              </div>
+              <input class="goal-input" type="number" id="editCalGoal" value="2000">
+            </div>
+            <div class="goal-row">
+              <div>
+                <div class="goal-label">💪 Protein</div>
+                <div class="goal-sub">grams per day</div>
+              </div>
+              <input class="goal-input" type="number" id="editProtGoal" value="150">
+            </div>
+            <div class="goal-row">
+              <div>
+                <div class="goal-label">🌾 Carbs</div>
+                <div class="goal-sub">grams per day</div>
+              </div>
+              <input class="goal-input" type="number" id="editCarbGoal" value="275">
+            </div>
+            <div class="goal-row">
+              <div>
+                <div class="goal-label">🫒 Fat</div>
+                <div class="goal-sub">grams per day</div>
+              </div>
+              <input class="goal-input" type="number" id="editFatGoal" value="78">
+            </div>
+            <div class="goal-row">
+              <div>
+                <div class="goal-label">🌿 Fiber</div>
+                <div class="goal-sub">grams per day · aim high</div>
+              </div>
+              <input class="goal-input" type="number" id="editFiberGoal" value="28">
+            </div>
+            <div class="goal-row">
+              <div>
+                <div class="goal-label">🍬 Sugar</div>
+                <div class="goal-sub">grams per day · limit</div>
+              </div>
+              <input class="goal-input" type="number" id="editSugarGoal" value="50">
+            </div>
+            <div class="goal-row">
+              <div>
+                <div class="goal-label">🧂 Salt</div>
+                <div class="goal-sub">mg sodium · limit</div>
+              </div>
+              <input class="goal-input" type="number" id="editSodiumGoal" value="2300">
+            </div>
+            <div class="goal-row">
+              <div>
+                <div class="goal-label">❤️ Cholesterol</div>
+                <div class="goal-sub">mg per day · limit</div>
+              </div>
+              <input class="goal-input" type="number" id="editCholGoal" value="300">
+            </div>
+            <div class="goal-row">
+              <div>
+                <div class="goal-label">🌱 Diet Type</div>
+                <div class="goal-sub">affects meal plan & recommendations</div>
+              </div>
+              <select class="goal-input" id="editDietType" style="width:130px;font-size:0.82rem;padding:6px 8px">
+                <option value="nonveg">🍖 Non-Veg</option>
+                <option value="veg">🌱 Pure Veg</option>
+                <option value="eggetarian">🥚 Eggetarian</option>
+                <option value="vegan">🌿 Vegan</option>
+              </select>
+            </div>
+            <!-- FIX: added type="button" -->
+            <button type="button" class="save-goals-btn" onclick="saveGoals()">Save Goals</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /mainApp -->
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js" defer></script>
+  <script>
+    // AI scan goes through Flask backend (port 5000) which proxies to Llm_server.py.
+    // Direct fallback to port 5002 is used only if backend is unreachable (local dev).
+    window.LLM_SERVER_URL = "http://" + (window.location.hostname || "127.0.0.1") + ":5002/api/ai/analyze";
+    window._BACKEND_URL   = "";   // empty = use relative /api/ai/analyze (served by App.py on same port)
+  </script>
+  <script src="Foods.js"></script>
+  <script src="App.js"></script>
+
+  <!-- PWA Install Prompt Banner -->
+  <div id="pwaInstallBanner" style="
+    display:none; position:fixed; bottom:1.2rem; left:50%; transform:translateX(-50%);
+    background:linear-gradient(135deg,rgba(62,207,142,0.15),rgba(62,207,142,0.08));
+    backdrop-filter:blur(20px); border:1px solid rgba(62,207,142,0.25);
+    border-radius:16px; padding:0.9rem 1.4rem; z-index:9999;
+    max-width:420px; width:calc(100% - 2rem);
+    box-shadow:0 8px 32px rgba(0,0,0,0.4); animation:slideUp 0.4s ease;
+  ">
+    <div style="display:flex;align-items:center;gap:0.8rem;">
+      <img src="icons/icon.svg" alt="NutriTrack" width="40" height="40" style="border-radius:10px;">
+      <div style="flex:1">
+        <div style="font-weight:600;font-size:0.88rem;color:#e8f5e9;">Install NutriTrack</div>
+        <div style="font-size:0.72rem;color:rgba(184,201,186,0.7);margin-top:2px;">Add to home screen for quick access</div>
+      </div>
+      <!-- FIX: added type="button" to PWA buttons -->
+      <button type="button" id="pwaInstallBtn" style="
+        background:#3ecf8e;color:#0a0f0d;border:none;border-radius:10px;
+        padding:0.5rem 1rem;font-weight:600;font-size:0.8rem;cursor:pointer;
+        white-space:nowrap;
+      ">Install</button>
+      <button type="button" id="pwaDismissBtn" style="
+        background:none;border:none;color:rgba(184,201,186,0.5);
+        font-size:1.2rem;cursor:pointer;padding:0.2rem 0.4rem;
+      ">✕</button>
+    </div>
+  </div>
+
+  <style>
+    @keyframes slideUp {
+      from { opacity:0; transform:translateX(-50%) translateY(20px); }
+      to   { opacity:1; transform:translateX(-50%) translateY(0); }
+    }
+  </style>
+
+  <!-- Service Worker Registration & PWA Install -->
+  <script>
+    // Register service worker
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(reg => console.log('[PWA] Service worker registered:', reg.scope))
+          .catch(err => console.log('[PWA] SW registration failed:', err));
+      });
+    }
+
+    // PWA Install Prompt
+    let _deferredPrompt = null;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      _deferredPrompt = e;
+      // Show install banner (only if not dismissed before)
+      if (!localStorage.getItem('pwa-install-dismissed')) {
+        const banner = document.getElementById('pwaInstallBanner');
+        if (banner) banner.style.display = 'block';
+      }
+    });
+
+    // Install button click
+    document.addEventListener('DOMContentLoaded', () => {
+      const installBtn = document.getElementById('pwaInstallBtn');
+      const dismissBtn = document.getElementById('pwaDismissBtn');
+      const banner = document.getElementById('pwaInstallBanner');
+
+      if (installBtn) {
+        installBtn.addEventListener('click', async () => {
+          if (!_deferredPrompt) return;
+          _deferredPrompt.prompt();
+          const result = await _deferredPrompt.userChoice;
+          console.log('[PWA] Install result:', result.outcome);
+          _deferredPrompt = null;
+          if (banner) banner.style.display = 'none';
+        });
+      }
+
+      if (dismissBtn) {
+        dismissBtn.addEventListener('click', () => {
+          if (banner) banner.style.display = 'none';
+          localStorage.setItem('pwa-install-dismissed', 'true');
+        });
+      }
+    });
+
+    // Detect successful install
+    window.addEventListener('appinstalled', () => {
+      console.log('[PWA] App installed successfully!');
+      const banner = document.getElementById('pwaInstallBanner');
+      if (banner) banner.style.display = 'none';
+      _deferredPrompt = null;
+    });
+  </script>
+
+</body>
+
+</html>

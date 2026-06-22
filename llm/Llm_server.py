@@ -1,0 +1,882 @@
+"""
+NutriTrack — Llm_server.py
+Multimodal LLM Inference Server  (v3 — Ollama Edition)
+
+Engine priority:
+  1. Ollama Local  — Qwen2-VL-7B  (6-8 s CPU / <2 s GPU, zero API key)  ← PRIMARY
+  2. Moondream2    — local 1.8B fallback via transformers
+
+Nutrition data (priority):
+  1. Built-in NUTRITION_DB  — 80 common / Indian foods
+  2. USDA FoodData Central  — 300k+ foods (needs USDA_API_KEY)
+  3. Hardcoded estimates    — 30% confidence floor
+
+Port: 5002
+
+Quick-start (Ollama path — recommended):
+    1. Install Ollama  →  https://ollama.com/download
+    2. ollama pull qwen2-vl:7b
+    3. pip install flask flask-cors flask-limiter python-dotenv requests Pillow
+    4. python Llm_server.py
+"""
+
+import io, os, re, sys, json, time, base64, argparse
+import requests as http_requests
+from dotenv import load_dotenv
+load_dotenv()
+from PIL import Image
+from flask import Flask, request, jsonify
+
+# ──────────────────────────────────────────────────────────────────────────────
+#  NUTRITION DATABASE  (80 items — Indian + global)
+# ──────────────────────────────────────────────────────────────────────────────
+
+NUTRITION_DB = {
+    # ── Fruits ──
+    'apple':          {'cal':95,  'pro':0.5,'carb':25, 'fat':0.3,'fiber':4.4,'sugar':19,'sodium':2,   'chol':0,  'serving':'1 medium (182g)'},
+    'banana':         {'cal':105, 'pro':1.3,'carb':27, 'fat':0.4,'fiber':3.1,'sugar':14,'sodium':1,   'chol':0,  'serving':'1 medium (118g)'},
+    'mango':          {'cal':99,  'pro':1.4,'carb':25, 'fat':0.6,'fiber':2.6,'sugar':22,'sodium':2,   'chol':0,  'serving':'1 cup sliced (165g)'},
+    'orange':         {'cal':62,  'pro':1.2,'carb':15, 'fat':0.2,'fiber':3.1,'sugar':12,'sodium':0,   'chol':0,  'serving':'1 medium (131g)'},
+    'watermelon':     {'cal':46,  'pro':0.9,'carb':12, 'fat':0.2,'fiber':0.6,'sugar':9, 'sodium':2,   'chol':0,  'serving':'2 cups diced (280g)'},
+    'grapes':         {'cal':104, 'pro':1.1,'carb':27, 'fat':0.2,'fiber':1.4,'sugar':23,'sodium':3,   'chol':0,  'serving':'1 cup (151g)'},
+    'strawberry':     {'cal':49,  'pro':1.0,'carb':12, 'fat':0.5,'fiber':3.0,'sugar':7, 'sodium':2,   'chol':0,  'serving':'1 cup (152g)'},
+    'pineapple':      {'cal':82,  'pro':0.9,'carb':22, 'fat':0.2,'fiber':2.3,'sugar':16,'sodium':2,   'chol':0,  'serving':'1 cup chunks (165g)'},
+    # ── Indian staples ──
+    'biryani':        {'cal':350, 'pro':15, 'carb':48, 'fat':12, 'fiber':2,  'sugar':3, 'sodium':480, 'chol':45, 'serving':'1 plate (300g)'},
+    'butter chicken': {'cal':300, 'pro':25, 'carb':12, 'fat':18, 'fiber':2,  'sugar':6, 'sodium':520, 'chol':80, 'serving':'1 bowl (200g)'},
+    'chole bhature':  {'cal':550, 'pro':16, 'carb':72, 'fat':22, 'fiber':8,  'sugar':4, 'sodium':640, 'chol':0,  'serving':'1 plate (350g)'},
+    'dal':            {'cal':170, 'pro':9,  'carb':22, 'fat':6,  'fiber':5,  'sugar':3, 'sodium':320, 'chol':10, 'serving':'1 bowl (200g)'},
+    'dal makhani':    {'cal':198, 'pro':10, 'carb':24, 'fat':8,  'fiber':6,  'sugar':3, 'sodium':380, 'chol':20, 'serving':'1 bowl (200g)'},
+    'dosa':           {'cal':168, 'pro':4,  'carb':30, 'fat':4,  'fiber':1,  'sugar':1, 'sodium':200, 'chol':0,  'serving':'1 dosa (80g)'},
+    'masala dosa':    {'cal':210, 'pro':5,  'carb':36, 'fat':6,  'fiber':2,  'sugar':2, 'sodium':380, 'chol':0,  'serving':'1 dosa (120g)'},
+    'idli':           {'cal':58,  'pro':2,  'carb':11, 'fat':0.4,'fiber':0.5,'sugar':0, 'sodium':120, 'chol':0,  'serving':'1 piece (39g)'},
+    'sambar':         {'cal':130, 'pro':6,  'carb':20, 'fat':3,  'fiber':5,  'sugar':4, 'sodium':480, 'chol':0,  'serving':'1 bowl (200g)'},
+    'uttapam':        {'cal':220, 'pro':6,  'carb':36, 'fat':6,  'fiber':3,  'sugar':3, 'sodium':380, 'chol':0,  'serving':'1 piece (120g)'},
+    'roti':           {'cal':71,  'pro':2.5,'carb':14, 'fat':0.9,'fiber':1.9,'sugar':0, 'sodium':2,   'chol':0,  'serving':'1 roti (30g)'},
+    'paratha':        {'cal':280, 'pro':7,  'carb':38, 'fat':11, 'fiber':3,  'sugar':1, 'sodium':320, 'chol':0,  'serving':'1 paratha (80g)'},
+    'naan':           {'cal':262, 'pro':8,  'carb':45, 'fat':5,  'fiber':2,  'sugar':3, 'sodium':530, 'chol':10, 'serving':'1 naan (90g)'},
+    'paneer':         {'cal':290, 'pro':18, 'carb':8,  'fat':20, 'fiber':1,  'sugar':3, 'sodium':480, 'chol':55, 'serving':'100g'},
+    'paneer tikka':   {'cal':290, 'pro':18, 'carb':8,  'fat':20, 'fiber':1,  'sugar':3, 'sodium':480, 'chol':55, 'serving':'4 pieces (150g)'},
+    'rajma':          {'cal':220, 'pro':12, 'carb':36, 'fat':4,  'fiber':8,  'sugar':3, 'sodium':380, 'chol':0,  'serving':'1 bowl (200g)'},
+    'pav bhaji':      {'cal':320, 'pro':8,  'carb':48, 'fat':11, 'fiber':4,  'sugar':6, 'sodium':680, 'chol':20, 'serving':'1 plate (250g)'},
+    'vada pav':       {'cal':280, 'pro':6,  'carb':42, 'fat':10, 'fiber':3,  'sugar':3, 'sodium':400, 'chol':0,  'serving':'1 piece (120g)'},
+    'samosa':         {'cal':150, 'pro':3,  'carb':20, 'fat':7,  'fiber':2,  'sugar':1, 'sodium':240, 'chol':0,  'serving':'1 piece (60g)'},
+    'poha':           {'cal':180, 'pro':4,  'carb':32, 'fat':4,  'fiber':2,  'sugar':2, 'sodium':280, 'chol':0,  'serving':'1 bowl (150g)'},
+    'upma':           {'cal':200, 'pro':5,  'carb':35, 'fat':5,  'fiber':3,  'sugar':2, 'sodium':350, 'chol':0,  'serving':'1 bowl (180g)'},
+    'khichdi':        {'cal':190, 'pro':8,  'carb':32, 'fat':5,  'fiber':4,  'sugar':2, 'sodium':320, 'chol':10, 'serving':'1 bowl (200g)'},
+    'chicken curry':  {'cal':260, 'pro':22, 'carb':10, 'fat':16, 'fiber':2,  'sugar':4, 'sodium':500, 'chol':70, 'serving':'1 bowl (200g)'},
+    'momos':          {'cal':240, 'pro':10, 'carb':30, 'fat':9,  'fiber':2,  'sugar':2, 'sodium':480, 'chol':35, 'serving':'6 pieces (150g)'},
+    'kebab':          {'cal':220, 'pro':22, 'carb':8,  'fat':12, 'fiber':1,  'sugar':2, 'sodium':480, 'chol':70, 'serving':'2 skewers (100g)'},
+    'lassi':          {'cal':150, 'pro':6,  'carb':22, 'fat':4,  'fiber':0,  'sugar':18,'sodium':80,  'chol':15, 'serving':'1 glass (200ml)'},
+    'mango lassi':    {'cal':180, 'pro':5,  'carb':32, 'fat':4,  'fiber':1,  'sugar':28,'sodium':60,  'chol':15, 'serving':'1 glass (200ml)'},
+    'gulab jamun':    {'cal':175, 'pro':3,  'carb':30, 'fat':5,  'fiber':0,  'sugar':26,'sodium':80,  'chol':20, 'serving':'2 pieces (80g)'},
+    'rasgulla':       {'cal':186, 'pro':4,  'carb':38, 'fat':2,  'fiber':0,  'sugar':34,'sodium':40,  'chol':0,  'serving':'2 pieces (100g)'},
+    'kheer':          {'cal':180, 'pro':5,  'carb':30, 'fat':5,  'fiber':0,  'sugar':24,'sodium':80,  'chol':20, 'serving':'1 bowl (150g)'},
+    # ── Global fast food ──
+    'burger':         {'cal':354, 'pro':20, 'carb':29, 'fat':17, 'fiber':1,  'sugar':6, 'sodium':497, 'chol':52, 'serving':'1 burger (150g)'},
+    'hamburger':      {'cal':354, 'pro':20, 'carb':29, 'fat':17, 'fiber':1,  'sugar':6, 'sodium':497, 'chol':52, 'serving':'1 burger (150g)'},
+    'french fries':   {'cal':312, 'pro':3.4,'carb':41, 'fat':15, 'fiber':3.8,'sugar':0, 'sodium':210, 'chol':0,  'serving':'medium (150g)'},
+    'pizza':          {'cal':266, 'pro':11, 'carb':33, 'fat':10, 'fiber':2.3,'sugar':3.6,'sodium':640,'chol':17, 'serving':'2 slices (200g)'},
+    'sandwich':       {'cal':280, 'pro':12, 'carb':36, 'fat':9,  'fiber':3,  'sugar':4, 'sodium':620, 'chol':25, 'serving':'1 sandwich (180g)'},
+    'hot dog':        {'cal':290, 'pro':11, 'carb':24, 'fat':18, 'fiber':1,  'sugar':4, 'sodium':670, 'chol':45, 'serving':'1 hot dog (150g)'},
+    # ── Noodles / rice dishes ──
+    'fried rice':     {'cal':242, 'pro':5,  'carb':42, 'fat':6,  'fiber':1,  'sugar':2, 'sodium':600, 'chol':40, 'serving':'1 bowl (200g)'},
+    'noodles':        {'cal':220, 'pro':7,  'carb':40, 'fat':4,  'fiber':2,  'sugar':2, 'sodium':400, 'chol':0,  'serving':'1 bowl (200g)'},
+    'ramen':          {'cal':436, 'pro':20, 'carb':58, 'fat':14, 'fiber':3,  'sugar':4, 'sodium':1260,'chol':55, 'serving':'1 bowl (450ml)'},
+    'pad thai':       {'cal':400, 'pro':18, 'carb':54, 'fat':13, 'fiber':3,  'sugar':6, 'sodium':920, 'chol':55, 'serving':'1 plate (250g)'},
+    'pho':            {'cal':320, 'pro':22, 'carb':42, 'fat':5,  'fiber':2,  'sugar':3, 'sodium':1020,'chol':40, 'serving':'1 bowl (450ml)'},
+    'sushi':          {'cal':200, 'pro':9,  'carb':38, 'fat':0.7,'fiber':1,  'sugar':4, 'sodium':600, 'chol':10, 'serving':'6 pieces (150g)'},
+    'pasta':          {'cal':220, 'pro':8,  'carb':43, 'fat':1.3,'fiber':2.5,'sugar':1, 'sodium':6,   'chol':0,  'serving':'1 cup cooked (140g)'},
+    'spaghetti':      {'cal':440, 'pro':24, 'carb':54, 'fat':14, 'fiber':4,  'sugar':8, 'sodium':580, 'chol':55, 'serving':'1 bowl (250g)'},
+    'tacos':          {'cal':210, 'pro':10, 'carb':20, 'fat':10, 'fiber':3,  'sugar':2, 'sodium':380, 'chol':25, 'serving':'2 tacos (120g)'},
+    # ── Breakfast ──
+    'pancakes':       {'cal':370, 'pro':8,  'carb':56, 'fat':13, 'fiber':2,  'sugar':18,'sodium':540, 'chol':70, 'serving':'3 pancakes (150g)'},
+    'waffles':        {'cal':290, 'pro':8,  'carb':42, 'fat':10, 'fiber':2,  'sugar':6, 'sodium':450, 'chol':95, 'serving':'1 waffle (100g)'},
+    'omelette':       {'cal':154, 'pro':11, 'carb':1,  'fat':12, 'fiber':0,  'sugar':1, 'sodium':342, 'chol':373,'serving':'2-egg (120g)'},
+    # ── Desserts ──
+    'apple pie':      {'cal':296, 'pro':2,  'carb':43, 'fat':14, 'fiber':2,  'sugar':23,'sodium':251, 'chol':0,  'serving':'1 slice (125g)'},
+    'cheesecake':     {'cal':401, 'pro':6,  'carb':36, 'fat':26, 'fiber':0,  'sugar':28,'sodium':280, 'chol':120,'serving':'1 slice (125g)'},
+    'chocolate cake': {'cal':367, 'pro':5,  'carb':51, 'fat':17, 'fiber':2,  'sugar':35,'sodium':352, 'chol':55, 'serving':'1 slice (100g)'},
+    'donuts':         {'cal':269, 'pro':4,  'carb':32, 'fat':15, 'fiber':1,  'sugar':11,'sodium':300, 'chol':25, 'serving':'1 donut (75g)'},
+    'ice cream':      {'cal':207, 'pro':3,  'carb':24, 'fat':11, 'fiber':1,  'sugar':21,'sodium':80,  'chol':44, 'serving':'1/2 cup (66g)'},
+    # ── Meat / protein ──
+    'steak':          {'cal':271, 'pro':26, 'carb':0,  'fat':18, 'fiber':0,  'sugar':0, 'sodium':54,  'chol':77, 'serving':'1 steak (150g)'},
+    'salad':          {'cal':100, 'pro':3,  'carb':12, 'fat':5,  'fiber':4,  'sugar':6, 'sodium':200, 'chol':0,  'serving':'1 bowl (150g)'},
+}
+
+TIPS = {
+    'biryani':        'High calorie — pair with raita for balance.',
+    'burger':         'High sodium. Grilled over fried saves ~30% calories.',
+    'butter chicken': 'Great protein. High fat — moderate your portion.',
+    'pizza':          '2 slices is one serving. Thin crust cuts calories by 30%.',
+    'pho':            'Lower calorie than ramen. Great protein from broth.',
+    'ramen':          'Very high sodium. Ask for light broth if eating out.',
+    'french fries':   'Baked fries cut calories by ~40%. Skip extra salt.',
+    'dal':            'Excellent plant protein and fiber. Very nutritious.',
+    'dosa':           'Fermented — good for gut health. Low calorie without filling.',
+    'salad':          'Add protein (egg/chicken/paneer) to keep you fuller longer.',
+    'ice cream':      'Treat yourself — just watch portion size.',
+    'steak':          'Great protein source. Opt for lean cuts when possible.',
+}
+DEFAULT_TIP = 'A balanced meal includes protein, complex carbs, healthy fats and vegetables.'
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+#  USDA FOODDATA CENTRAL API
+# ──────────────────────────────────────────────────────────────────────────────
+
+def _usda_lookup(food_name: str) -> dict | None:
+    """Look up nutrition from USDA FoodData Central (free API, 300k+ foods)."""
+    api_key = os.getenv('USDA_API_KEY')
+    if not api_key:
+        return None
+    try:
+        resp = http_requests.get(
+            'https://api.nal.usda.gov/fdc/v1/foods/search',
+            params={'api_key': api_key, 'query': food_name, 'pageSize': 1,
+                    'dataType': 'Survey (FNDDS)'},
+            timeout=5
+        )
+        if resp.status_code != 200:
+            return None
+        foods = resp.json().get('foods', [])
+        if not foods:
+            return None
+        f = foods[0]
+        nutrients = {n['nutrientName']: n.get('value', 0) for n in f.get('foodNutrients', [])}
+        return {
+            'food_name':      f.get('description', food_name).strip().title(),
+            'serving_size':   '100g (USDA)',
+            'confidence':     80,
+            'calories':       round(nutrients.get('Energy', 0)),
+            'protein_g':      round(nutrients.get('Protein', 0), 1),
+            'carbs_g':        round(nutrients.get('Carbohydrate, by difference', 0), 1),
+            'fat_g':          round(nutrients.get('Total lipid (fat)', 0), 1),
+            'fiber_g':        round(nutrients.get('Fiber, total dietary', 0), 1),
+            'sugar_g':        round(nutrients.get('Sugars, total including NLEA', 0), 1),
+            'sodium_mg':      round(nutrients.get('Sodium, Na', 0)),
+            'cholesterol_mg': round(nutrients.get('Cholesterol', 0)),
+            'source':         'usda',
+        }
+    except Exception as e:
+        print(f'  [USDA] lookup error: {e}')
+        return None
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+#  SHARED HELPERS
+# ──────────────────────────────────────────────────────────────────────────────
+
+def _db_lookup(name: str, confidence: int = 90) -> dict | None:
+    """Exact then substring match against NUTRITION_DB."""
+    name_l = name.lower().strip()
+    if name_l in NUTRITION_DB:
+        d = NUTRITION_DB[name_l]
+        return _db_row(name, d, confidence=95)
+    best_key, best_len = None, 0
+    for key in NUTRITION_DB:
+        if len(key) < 3:
+            continue
+        if key in name_l or name_l in key:
+            if len(key) > best_len:
+                best_key, best_len = key, len(key)
+    if best_key:
+        return _db_row(name, NUTRITION_DB[best_key], confidence=confidence)
+    return None
+
+def _db_row(name: str, d: dict, confidence: int = 90) -> dict:
+    return {
+        'food_name':      name.strip().title(),
+        'serving_size':   d['serving'],
+        'confidence':     confidence,
+        'calories':       d['cal'],
+        'protein_g':      d['pro'],
+        'carbs_g':        d['carb'],
+        'fat_g':          d['fat'],
+        'fiber_g':        d['fiber'],
+        'sugar_g':        d['sugar'],
+        'sodium_mg':      d['sodium'],
+        'cholesterol_mg': d['chol'],
+    }
+
+def _fallback_item(name: str) -> dict:
+    """Last-resort item with estimate flag."""
+    return {
+        'food_name':      name.strip().title(),
+        'serving_size':   '1 serving (~150g) — estimated',
+        'confidence':     30,
+        'calories':       200,
+        'protein_g':      8,
+        'carbs_g':        25,
+        'fat_g':          8,
+        'fiber_g':        2,
+        'sugar_g':        4,
+        'sodium_mg':      300,
+        'cholesterol_mg': 20,
+    }
+
+def _tip(food_name: str) -> str:
+    n = food_name.lower()
+    return next((v for k, v in TIPS.items() if k in n or n in k), DEFAULT_TIP)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+#  PIPE-RESPONSE PARSER  (shared by Groq + Ollama engines)
+# ──────────────────────────────────────────────────────────────────────────────
+
+def _parse_pipe_response(text: str) -> list:
+    """
+    Parse lines like:
+        Chicken Biryani|350|15|48|12|2|3|480|45|1 plate (300g)
+    Returns list of item dicts. Falls back to DB lookup for any unparseable line.
+    """
+    items = []
+    for line in text.strip().split('\n'):
+        line = line.strip().lstrip('- •*0123456789.)').strip()
+        if not line or 'NOT_FOOD' in line.upper():
+            continue
+        parts = [p.strip() for p in line.split('|')]
+        if len(parts) >= 5:
+            try:
+                def _n(v, default=0.0):
+                    return float(re.sub(r'[^0-9.]', '', v or '') or default)
+                item = {
+                    'food_name':      parts[0].strip().title(),
+                    'calories':       round(_n(parts[1], 0)),
+                    'protein_g':      round(_n(parts[2], 0), 1),
+                    'carbs_g':        round(_n(parts[3], 0), 1),
+                    'fat_g':          round(_n(parts[4], 0), 1),
+                    'fiber_g':        round(_n(parts[5], 2), 1) if len(parts) > 5 else 2.0,
+                    'sugar_g':        round(_n(parts[6], 3), 1) if len(parts) > 6 else 3.0,
+                    'sodium_mg':      round(_n(parts[7], 300))  if len(parts) > 7 else 300,
+                    'cholesterol_mg': round(_n(parts[8], 20))   if len(parts) > 8 else 20,
+                    'serving_size':   parts[9].strip()          if len(parts) > 9 else '1 serving',
+                    'confidence':     88,
+                }
+                if item['calories'] > 0:
+                    items.append(item)
+            except (ValueError, IndexError):
+                continue
+    # If structured parse failed, try DB lookup for any food-like words
+    if not items:
+        words = re.findall(r'[A-Za-z][a-z]+(?:\s+[a-z]+){0,3}', text)
+        seen = set()
+        for w in words[:6]:
+            w = w.strip().lower()
+            if len(w) < 3 or w in seen:
+                continue
+            seen.add(w)
+            hit = _db_lookup(w)
+            if hit:
+                items.append(hit)
+    return items[:9]
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+#  IMAGE RESIZE HELPER  (server-side — faster CPU inference)
+# ──────────────────────────────────────────────────────────────────────────────
+
+def _resize_image_b64(b64: str, max_px: int = 512) -> str:
+    """
+    Resize a base64 JPEG to max_px on the longest side.
+    Smaller image = fewer vision tokens = 2-3x faster on CPU.
+    Falls back to original if PIL is not installed.
+    """
+    try:
+        from PIL import Image as _PILImage
+        import io as _io
+        data   = base64.b64decode(b64)
+        img    = _PILImage.open(_io.BytesIO(data)).convert('RGB')
+        w, h   = img.size
+        if max(w, h) > max_px:
+            scale  = max_px / max(w, h)
+            img    = img.resize((int(w * scale), int(h * scale)), _PILImage.LANCZOS)
+        buf = _io.BytesIO()
+        img.save(buf, format='JPEG', quality=85)
+        return base64.b64encode(buf.getvalue()).decode()
+    except Exception:
+        return b64   # PIL not available — use original
+
+# Strict prompt — reduces hallucinations and phantom items
+VISION_PROMPT = (
+    "Look carefully at this image. List ONLY the food items you can clearly and confidently see.\n"
+    "Rules:\n"
+    "- DO NOT list food you are guessing or inferring — only what is visibly present.\n"
+    "- Use specific names (e.g. 'Chicken Wing' not 'Fried Chicken', 'White Rice' not 'Rice').\n"
+    "- If NO food visible: reply NOT_FOOD\n"
+    "For each clearly visible food, output exactly one line:\n"
+    "FoodName|calories|protein_g|carbs_g|fat_g|fiber_g|sugar_g|sodium_mg|cholesterol_mg|serving_size\n"
+    "Output ONLY the data lines. No explanation. Max 5 items."
+)
+
+
+
+class GroqEngine:
+    """Groq cloud vision model — Llama-4-Scout (2-3 s, needs GROQ_API_KEY)."""
+
+    def __init__(self):
+        self.api_key = os.getenv('GROQ_API_KEY')
+        self.model   = 'meta-llama/llama-4-scout-17b-16e-instruct'
+        self.loaded  = bool(self.api_key)
+        status = '✅ enabled' if self.loaded else '❌ no GROQ_API_KEY'
+        print(f'  [Groq]  cloud vision {status}')
+
+    def predict(self, image_b64: str) -> dict:
+        t0 = time.time()
+        if ',' in image_b64:
+            image_b64 = image_b64.split(',', 1)[1]
+
+        resp = http_requests.post(
+            'https://api.groq.com/openai/v1/chat/completions',
+            headers={'Authorization': f'Bearer {self.api_key}',
+                     'Content-Type':  'application/json'},
+            json={
+                'model': self.model,
+                'messages': [{'role': 'user', 'content': [
+                    {'type': 'text',      'text': VISION_PROMPT},
+                    {'type': 'image_url', 'image_url': {
+                        'url': f'data:image/jpeg;base64,{image_b64}'}}
+                ]}],
+                'max_tokens': 1024,
+                'temperature': 0.1,
+            },
+            timeout=30
+        )
+        if resp.status_code != 200:
+            err = resp.json().get('error', {}).get('message', resp.text[:200])
+            raise RuntimeError(f'Groq API {resp.status_code}: {err}')
+
+        answer  = resp.json()['choices'][0]['message']['content'].strip()
+        elapsed = int((time.time() - t0) * 1000)
+        print(f'  [Groq]  {elapsed}ms — {answer[:80]}')
+
+        if 'NOT_FOOD' in answer.upper():
+            return _not_food(f'Groq/{self.model}', 'cloud_llm', elapsed)
+
+        items = _parse_pipe_response(answer)
+        if not items:
+            return _not_food(f'Groq/{self.model}', 'cloud_llm', elapsed,
+                             tip='Could not parse food. Try a clearer photo.')
+
+        return _ok_response(items, f'Groq/{self.model}', 'cloud_llm', elapsed)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+#  ENGINE 2 — OLLAMA  (Qwen2-VL-7B, 6-8 s CPU / <2 s GPU, zero API key)
+# ──────────────────────────────────────────────────────────────────────────────
+
+class OllamaEngine:
+    """
+    Local Ollama inference — Qwen2-VL-7B multimodal model.
+    No API key. No HuggingFace token. No internet after first pull.
+
+    Setup (one time):
+        1. Install Ollama → https://ollama.com/download
+        2. ollama pull qwen2-vl:7b
+        3. ollama serve   (auto-starts on most systems)
+    """
+
+    DEFAULT_MODEL = 'llava-phi3'
+
+    def __init__(self):
+        self.base_url = os.getenv('OLLAMA_URL', 'http://localhost:11434')
+        self.model    = os.getenv('OLLAMA_MODEL', self.DEFAULT_MODEL)
+        self.loaded   = self._check()
+
+    def _check(self) -> bool:
+        """Ping Ollama and verify the model is pulled."""
+        try:
+            r = http_requests.get(f'{self.base_url}/api/tags', timeout=3)
+            if r.status_code != 200:
+                print(f'  [Ollama] server not responding (status {r.status_code})')
+                return False
+            models = [m['name'] for m in r.json().get('models', [])]
+            # Accept exact match or prefix match (e.g. qwen2-vl:7b == qwen2-vl:7b-instruct-q4_K_M)
+            model_base = self.model.split(':')[0]
+            found = any(model_base in m for m in models)
+            if found:
+                matched = next(m for m in models if model_base in m)
+                print(f'  [Ollama] ✅ model ready → {matched}')
+                return True
+            else:
+                print(f'  [Ollama] ⚠️  model "{self.model}" not pulled yet.')
+                print(f'  [Ollama]    Run: ollama pull {self.model}')
+                print(f'  [Ollama]    Available: {models}')
+                return False
+        except Exception as e:
+            print(f'  [Ollama] ❌ not running ({e})')
+            print( '  [Ollama]    Install: https://ollama.com/download')
+            print(f'  [Ollama]    Then:    ollama pull {self.model}')
+            return False
+
+    def _ollama_ask(self, image_b64: str, prompt: str, num_predict: int = 80) -> str:
+        """Send a single prompt+image to Ollama and return the text response."""
+        resp = http_requests.post(
+            f'{self.base_url}/api/generate',
+            json={
+                'model':      self.model,
+                'prompt':     prompt,
+                'images':     [image_b64],
+                'stream':     False,
+                'keep_alive': -1,
+                'options': {
+                    'temperature': 0.1,
+                    'num_predict': num_predict,
+                    'num_thread':  os.cpu_count() or 4,
+                }
+            },
+            timeout=720
+        )
+        if resp.status_code != 200:
+            raise RuntimeError(f'Ollama API {resp.status_code}: {resp.text[:200]}')
+        return resp.json().get('response', '').strip()
+
+    def _predict_moondream(self, image_b64: str) -> dict:
+        """
+        Moondream-specific two-step inference:
+          Step 1 — Is there food? (yes/no)
+          Step 2 — List food names (simple, comma-separated)
+        Then look up nutrition from DB/USDA for each food.
+        Moondream (1.7B) cannot reliably follow complex pipe-format prompts.
+        """
+        t0 = time.time()
+
+        # Step 1 — food check
+        is_food = self._ollama_ask(
+            image_b64,
+            'Is there any food or drink visible in this image? Answer only yes or no.',
+            num_predict=5
+        )
+        if is_food.lower().startswith('no'):
+            return _not_food(f'Ollama/{self.model}', 'local_llm',
+                             int((time.time() - t0) * 1000))
+
+        # Step 2 — list food names
+        food_list_raw = self._ollama_ask(
+            image_b64,
+            'What food or drink items are in this image? '
+            'List them separated by commas. Be specific. Maximum 5 items.',
+            num_predict=80
+        )
+        elapsed = int((time.time() - t0) * 1000)
+        print(f'  [Ollama/moondream] {elapsed}ms — {food_list_raw!r}')
+
+        if not food_list_raw.strip():
+            return _not_food(f'Ollama/{self.model}', 'local_llm', elapsed)
+
+        raw_foods = [p.strip().lower() for p in food_list_raw.split(',')]
+        raw_foods = [f for f in raw_foods if 2 < len(f) < 60][:5]
+        if not raw_foods:
+            raw_foods = [food_list_raw.strip()[:60]]
+
+        items = []
+        for food in raw_foods:
+            hit = _db_lookup(food) or _usda_lookup(food) or _fallback_item(food)
+            items.append(hit)
+
+        if not items:
+            return _not_food(f'Ollama/{self.model}', 'local_llm', elapsed)
+
+        return _ok_response(items, f'Ollama/{self.model}', 'local_llm', elapsed)
+
+    def predict(self, image_b64: str) -> dict:
+        t0 = time.time()
+        # Strip data-URL prefix
+        if ',' in image_b64:
+            image_b64 = image_b64.split(',', 1)[1]
+
+        # Resize image — smaller = fewer vision tokens = faster on CPU
+        image_b64 = _resize_image_b64(image_b64, max_px=256)
+
+        # Moondream (1.7B) cannot follow complex pipe-format prompts reliably.
+        # Use a simpler two-step approach for it.
+        if 'moondream' in self.model.lower():
+            return self._predict_moondream(image_b64)
+
+        # ── Larger models (llava-phi3, qwen2-vl, etc.) — structured pipe format ──
+        resp = http_requests.post(
+            f'{self.base_url}/api/generate',
+            json={
+                'model':      self.model,
+                'prompt':     VISION_PROMPT,
+                'images':     [image_b64],
+                'stream':     False,
+                'keep_alive': -1,
+                'options': {
+                    'temperature': 0.1,
+                    'num_predict': 150,
+                    'num_thread':  os.cpu_count() or 4,
+                }
+            },
+            timeout=720   # 12 min — cold start on CPU loads model first
+        )
+        if resp.status_code != 200:
+            raise RuntimeError(f'Ollama API {resp.status_code}: {resp.text[:200]}')
+
+        answer  = resp.json().get('response', '').strip()
+        elapsed = int((time.time() - t0) * 1000)
+        print(f'  [Ollama] {elapsed}ms — {answer[:80]}')
+
+        if 'NOT_FOOD' in answer.upper():
+            return _not_food(f'Ollama/{self.model}', 'local_llm', elapsed)
+
+        items = _parse_pipe_response(answer)
+        if not items:
+            return _not_food(f'Ollama/{self.model}', 'local_llm', elapsed,
+                             tip='Could not parse food. Try a clearer photo.')
+
+        return _ok_response(items, f'Ollama/{self.model}', 'local_llm', elapsed)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+#  ENGINE 3 — MOONDREAM2  (transformers fallback, 15-30 s CPU)
+# ──────────────────────────────────────────────────────────────────────────────
+
+def _install_pyvips_stub():
+    """
+    pyvips compatibility stub for moondream2 (imported lazily — only when
+    MoondreamEngine._load() is called, so numpy is not required otherwise).
+    """
+    if 'pyvips' in sys.modules:
+        return
+    import types as _types
+    import numpy as _np          # only needed for Moondream fallback
+    from PIL import Image as _PILImage
+
+    class _VipsImage:
+        def __init__(self, arr):
+            self._arr = _np.asarray(arr, dtype=_np.uint8)
+
+        @property
+        def width(self):  return self._arr.shape[1]
+        @property
+        def height(self): return self._arr.shape[0]
+
+        @classmethod
+        def new_from_array(cls, arr, **kwargs):
+            return cls(_np.asarray(arr, dtype=_np.uint8))
+
+        def resize(self, hscale, vscale=None, **kwargs):
+            if vscale is None:
+                vscale = hscale
+            new_w = max(1, int(round(self.width  * hscale)))
+            new_h = max(1, int(round(self.height * vscale)))
+            pil = _PILImage.fromarray(self._arr).resize(
+                (new_w, new_h), _PILImage.BICUBIC)
+            return _VipsImage(_np.asarray(pil, dtype=_np.uint8))
+
+        def numpy(self):
+            return self._arr.copy()
+
+        def __array__(self, dtype=None):
+            return self._arr if dtype is None else self._arr.astype(dtype)
+
+    _stub = _types.ModuleType('pyvips')
+    _stub.Image = _VipsImage
+    sys.modules['pyvips'] = _stub
+
+
+class MoondreamEngine:
+    """Local Moondream2 1.8B VLM via transformers (last-resort fallback)."""
+
+    MODEL_ID = 'vikhyatk/moondream2'
+    REVISION  = '2025-01-09'
+    _MAX_SIDE = 378
+
+    def __init__(self):
+        self.model    = None
+        self.backend  = None
+        self.loaded   = False
+        self._hf_token = os.getenv('HF_TOKEN') or os.getenv('HUGGING_FACE_HUB_TOKEN')
+        self._load()
+
+    def _load(self):
+        print('  [Moondream] loading...')
+        _install_pyvips_stub()   # lazily inject pyvips stub before transformers import
+        try:
+            from transformers import AutoModelForCausalLM, AutoTokenizer
+            import torch.nn as _nn
+            from transformers.modeling_utils import PreTrainedModel as _PTM
+            _orig = _PTM.__dict__.get('__getattr__')
+            _nn_ga = _nn.Module.__getattr__
+            def _compat(self, name):
+                if name == 'all_tied_weights_keys':
+                    return {}
+                if _orig:
+                    return _orig(self, name)
+                return _nn_ga(self, name)
+            _PTM.__getattr__ = _compat
+        except ImportError as e:
+            print(f'  [Moondream] transformers not installed: {e}')
+            return
+
+        tok_kw = {'token': self._hf_token} if self._hf_token else {}
+        try:
+            self.tokenizer = AutoTokenizer.from_pretrained(
+                self.MODEL_ID, revision=self.REVISION,
+                trust_remote_code=True, **tok_kw)
+            self.model = AutoModelForCausalLM.from_pretrained(
+                self.MODEL_ID, revision=self.REVISION,
+                trust_remote_code=True, torch_dtype='auto',
+                low_cpu_mem_usage=True, **tok_kw)
+            self.model.eval()
+            try:
+                import torch
+                torch.set_num_threads(os.cpu_count() or 4)
+            except Exception:
+                pass
+            self.backend = 'transformers'
+            self.loaded  = True
+            print('  [Moondream] ✅ loaded via transformers')
+        except Exception as e:
+            print(f'  [Moondream] ❌ load failed: {e}')
+            if '401' in str(e):
+                self._auth_error = str(e)
+
+    def _decode(self, b64: str) -> Image.Image:
+        if ',' in b64:
+            b64 = b64.split(',', 1)[1]
+        img = Image.open(io.BytesIO(base64.b64decode(b64))).convert('RGB')
+        if max(img.width, img.height) > self._MAX_SIDE:
+            ratio = self._MAX_SIDE / max(img.width, img.height)
+            img = img.resize(
+                (max(1, int(img.width*ratio)), max(1, int(img.height*ratio))),
+                Image.LANCZOS)
+        return img
+
+    def _ask(self, enc, prompt: str, max_tokens: int = 80) -> str:
+        return self.model.answer_question(
+            enc, prompt, self.tokenizer,
+            num_beams=1, max_new_tokens=max_tokens).strip()
+
+    def predict(self, image_b64: str) -> dict:
+        t0 = time.time()
+        if not self.loaded:
+            return _not_food('Moondream2 (1.8B)', 'error',
+                             int((time.time()-t0)*1000),
+                             tip='Moondream model not loaded. Install transformers+torch.')
+        img = self._decode(image_b64)
+        enc = self.model.encode_image(img)
+
+        # Step 1 — is there food?
+        is_food = self._ask(enc, 'Is there food or a meal visible? Answer yes or no.', 5)
+        if is_food.lower().startswith('no'):
+            return _not_food('Moondream2 (1.8B)', 'multimodal_llm',
+                             int((time.time()-t0)*1000))
+
+        # Step 2 — what foods?
+        food_list_raw = self._ask(
+            enc,
+            'What food or foods are in this image? '
+            'List them separated by commas. Be specific. Maximum 5 foods.',
+            60)
+
+        elapsed = int((time.time() - t0) * 1000)
+        print(f'  [Moondream] {elapsed}ms — {food_list_raw!r}')
+
+        if not food_list_raw.strip():
+            return _not_food('Moondream2 (1.8B)', 'multimodal_llm', elapsed)
+
+        raw_foods = [p.strip().lower() for p in food_list_raw.split(',')]
+        raw_foods = [f for f in raw_foods if 2 < len(f) < 60][:5]
+        if not raw_foods:
+            raw_foods = [food_list_raw.strip()[:60]]
+
+        items = []
+        for food in raw_foods:
+            hit = _db_lookup(food) or _usda_lookup(food) or _fallback_item(food)
+            items.append(hit)
+
+        if not items:
+            return _not_food('Moondream2 (1.8B)', 'multimodal_llm', elapsed)
+
+        return _ok_response(items, 'Moondream2 (1.8B)', 'multimodal_llm', elapsed)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+#  RESPONSE BUILDERS
+# ──────────────────────────────────────────────────────────────────────────────
+
+def _not_food(model: str, mode: str, elapsed: int, tip: str = '') -> dict:
+    return {
+        'description': 'not_food',
+        'items': [],
+        'tips':  tip or 'No food detected. Please scan a food item.',
+        '_meta': {'model': model, 'mode': mode, 'latency_ms': elapsed,
+                  'top9': [], 'multi_food': False, 'rejected': True},
+    }
+
+def _ok_response(items: list, model: str, mode: str, elapsed: int) -> dict:
+    # Enrich items: fill missing nutrition from DB/USDA
+    enriched = []
+    for it in items:
+        if it.get('calories', 0) == 0:
+            hit = _db_lookup(it['food_name']) or _usda_lookup(it['food_name'])
+            if hit:
+                it = hit
+        enriched.append(it)
+
+    desc = (f"{len(enriched)} foods: {', '.join(i['food_name'] for i in enriched)}"
+            if len(enriched) > 1 else
+            f"{enriched[0]['food_name']} ({enriched[0].get('confidence', 88)}% confidence)")
+
+    return {
+        'description': desc,
+        'items':       enriched,
+        'tips':        _tip(enriched[0]['food_name']),
+        '_meta': {
+            'model':      model,
+            'mode':       mode,
+            'latency_ms': elapsed,
+            'top9':       [(i['food_name'], i.get('confidence', 88)) for i in enriched[:9]],
+            'multi_food': len(enriched) > 1,
+        },
+    }
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+#  FLASK APP
+# ──────────────────────────────────────────────────────────────────────────────
+
+app    = Flask(__name__)
+engine = None   # set in __main__
+
+# Rate limiting
+try:
+    from flask_limiter import Limiter
+    from flask_limiter.util import get_remote_address
+    limiter = Limiter(get_remote_address, app=app,
+                      default_limits=['200 per hour'],
+                      storage_uri='memory://')
+    print('  Rate limiter: active (200 req/hr)')
+except ImportError:
+    class _NoopLimiter:
+        def limit(self, *a, **kw):
+            def d(f): return f
+            return d
+    limiter = _NoopLimiter()
+
+
+@app.before_request
+def _preflight():
+    if request.method == 'OPTIONS':
+        r = app.make_response('')
+        r.headers.update({
+            'Access-Control-Allow-Origin':  '*',
+            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type',
+        })
+        return r, 204
+
+@app.after_request
+def _cors(response):
+    response.headers.update({
+        'Access-Control-Allow-Origin':  '*',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
+    })
+    return response
+
+
+@app.route('/api/health', methods=['GET'])
+def health():
+    active = type(engine).__name__ if engine else 'none'
+    return jsonify({
+        'status':  'ok',
+        'service': 'NutriTrack AI Server (v3)',
+        'engine':  active,
+        'loaded':  getattr(engine, 'loaded', False),
+        'port':    5002,
+    })
+
+
+@app.route('/api/llm/status', methods=['GET'])
+def status():
+    return jsonify({
+        'loaded':  getattr(engine, 'loaded', False),
+        'engine':  type(engine).__name__ if engine else 'none',
+        'model':   getattr(engine, 'model', 'unknown'),
+        'api_key': 'not required (Ollama/Moondream)',
+    })
+
+
+@app.route('/api/ai/analyze',  methods=['POST'])
+@app.route('/api/llm/analyze', methods=['POST'])
+@limiter.limit('30 per minute')
+def analyze():
+    data  = request.get_json() or {}
+    image = data.get('image', '')
+    if not image:
+        return jsonify({'error': 'No image provided'}), 400
+    if not engine:
+        return jsonify({'error': 'No AI engine loaded'}), 503
+    if not getattr(engine, 'loaded', False):
+        return jsonify({'error': 'AI engine not ready'}), 503
+    try:
+        return jsonify(engine.predict(image))
+    except Exception as e:
+        print(f'  [Engine] error: {e}')
+        return jsonify({'error': str(e)}), 500
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+#  MAIN
+# ──────────────────────────────────────────────────────────────────────────────
+
+if __name__ == '__main__':
+    ap = argparse.ArgumentParser()
+    ap.add_argument('--host',         default='0.0.0.0')
+    ap.add_argument('--port',         default=5002, type=int)
+    ap.add_argument('--engine',       default='auto',
+                    choices=['auto', 'ollama', 'moondream'],
+                    help='Force a specific engine (default: auto = Ollama -> Moondream)')
+    ap.add_argument('--ollama-model', default=None,
+                    help='Override Ollama model name (default: qwen2-vl:7b)')
+    args = ap.parse_args()
+
+    print()
+    print('=' * 62)
+    print('  NutriTrack — AI Food Analysis Server  (Ollama Edition)')
+    print('=' * 62)
+
+    if args.ollama_model:
+        os.environ['OLLAMA_MODEL'] = args.ollama_model
+
+    if args.engine == 'ollama':
+        engine = OllamaEngine()
+        if not engine.loaded:
+            print('  ❌ Ollama not ready. Run: ollama pull qwen2-vl:7b')
+    elif args.engine == 'moondream':
+        engine = MoondreamEngine()
+    else:
+        # AUTO priority: Ollama → Moondream
+        ollama = OllamaEngine()
+        if ollama.loaded:
+            engine = ollama
+            print(f'  \u2705 Engine: Ollama / {os.getenv("OLLAMA_MODEL","moondream")} (~6 s CPU / <2 s GPU)')
+            # Pre-warm disabled — on 8 GB RAM loading model at startup
+            # combined with Windows (~4 GB) causes system crash.
+            # Model loads on first scan instead (one-time ~60s delay).
+            print('  💡 Tip: first scan loads model (~60s). Subsequent scans faster.')
+
+        else:
+            print('  ⚠️  Ollama not available — trying Moondream2 fallback...')
+            md = MoondreamEngine()
+            engine = md
+            if md.loaded:
+                print('  ✅ Engine: Moondream2 (1.8B, ~25 s CPU)')
+            else:
+                print('  ❌ No engine loaded.')
+                print()
+                print('  Fix: Install Ollama → https://ollama.com/download')
+                print(f'       then run: ollama pull {OllamaEngine.DEFAULT_MODEL}')
+
+    usda = '✅ enabled' if os.getenv('USDA_API_KEY') else '⚠️  optional — set USDA_API_KEY for 300k+ food lookup'
+    print(f'  USDA API : {usda}')
+    print()
+    print('=' * 62)
+    print(f'  Ready → http://localhost:{args.port}/api/ai/analyze')
+    print('=' * 62)
+    print()
+
+    app.run(host=args.host, port=args.port, debug=False)

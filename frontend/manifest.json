@@ -1,0 +1,27 @@
+{
+  "name": "NutriTrack — AI Food Intelligence",
+  "short_name": "NutriTrack",
+  "description": "AI-powered nutrition tracking with food photo scanning, macro tracking, and personalised diet planning.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0f0d",
+  "theme_color": "#3ecf8e",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["health", "food", "lifestyle"],
+  "prefer_related_applications": false
+}

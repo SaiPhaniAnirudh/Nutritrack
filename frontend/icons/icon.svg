@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0d1a14"/>
+      <stop offset="100%" stop-color="#0a0f0d"/>
+    </linearGradient>
+    <linearGradient id="bowl" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#3ecf8e"/>
+      <stop offset="100%" stop-color="#2ba06e"/>
+    </linearGradient>
+    <linearGradient id="leaf" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#6ee7b7"/>
+      <stop offset="100%" stop-color="#3ecf8e"/>
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="512" height="512" rx="96" fill="url(#bg)"/>
+  <!-- Bowl -->
+  <ellipse cx="256" cy="290" rx="130" ry="85" fill="url(#bowl)" opacity="0.9"/>
+  <ellipse cx="256" cy="260" rx="130" ry="40" fill="#0a0f0d" opacity="0.3"/>
+  <!-- Steam lines -->
+  <path d="M200 200 Q210 170 200 140" stroke="#3ecf8e" stroke-width="6" fill="none" opacity="0.4" stroke-linecap="round"/>
+  <path d="M256 190 Q266 155 256 120" stroke="#3ecf8e" stroke-width="6" fill="none" opacity="0.5" stroke-linecap="round"/>
+  <path d="M312 200 Q302 170 312 140" stroke="#3ecf8e" stroke-width="6" fill="none" opacity="0.4" stroke-linecap="round"/>
+  <!-- Leaf -->
+  <path d="M310 230 Q350 190 340 140 Q300 160 290 210 Z" fill="url(#leaf)" opacity="0.85"/>
+  <path d="M310 230 Q325 185 340 140" stroke="#0a0f0d" stroke-width="2" fill="none" opacity="0.3"/>
+  <!-- AI sparkle -->
+  <g transform="translate(370, 130)" opacity="0.9">
+    <path d="M0,-18 L4,-4 L18,0 L4,4 L0,18 L-4,4 L-18,0 L-4,-4 Z" fill="#fbbf24"/>
+  </g>
+  <g transform="translate(150, 155) scale(0.5)" opacity="0.6">
+    <path d="M0,-18 L4,-4 L18,0 L4,4 L0,18 L-4,4 L-18,0 L-4,-4 Z" fill="#fbbf24"/>
+  </g>
+</svg>

@@ -1,0 +1,30 @@
+# ──────────────────────────────────────────────────────────────────────────────
+#  docker/Dockerfile.llm  —  NutriTrack AI inference server (llm/Llm_server.py)
+#
+#  Thin image: only Flask + requests + Pillow.
+#  The heavy model weights live in Ollama, not here.
+# ──────────────────────────────────────────────────────────────────────────────
+
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# System deps (curl for health-check)
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Python deps — only what Llm_server.py actually needs
+RUN pip install --no-cache-dir \
+    flask==3.0.3 \
+    flask-cors==4.0.1 \
+    flask-limiter==3.5.0 \
+    python-dotenv==1.0.1 \
+    requests==2.32.3 \
+    Pillow
+
+COPY llm/Llm_server.py .
+COPY .env.example .env
+
+EXPOSE 5002
+
+CMD ["python", "Llm_server.py", "--engine", "auto"]
