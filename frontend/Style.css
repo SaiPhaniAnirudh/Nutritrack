@@ -732,4 +732,19 @@ body {
 }
 .nw-high   { background:var(--coral-light);color:var(--coral);border-color:rgba(244,97,58,0.3); }
 .nw-medium { background:var(--citrus-light);color:var(--citrus-deep);border-color:rgba(245,166,35,0.3); }
-.nw-low    { background:var(--kiwi-light);color:var(--kiwi-deep);border-color:rgba(45,158,107,0.25); }
+.nw-low    { background:var(--kiwi-light);color:var(--kiwi-deep);border-color:rgba(45,158,107,0.25); }
+
+/* ── GLOBAL FOOTER ── */
+.app-footer {
+  text-align: center;
+  padding: 2.5rem 1.5rem;
+  border-top: 1px solid var(--border-soft);
+  margin-top: 2rem;
+  width: 100%;
+}
+.app-footer p {
+  font-size: 0.8rem;
+  color: var(--ink-30);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
