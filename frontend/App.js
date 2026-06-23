@@ -425,8 +425,14 @@ const PAGE_NAMES = {
 function showPage(id, btn) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.mob-nav-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('page-' + id).classList.add('active');
   if (btn) btn.classList.add('active');
+
+  // Keep mobile bottom nav in sync
+  const mobBtn = document.getElementById('mobBtn-' + id);
+  if (mobBtn) mobBtn.classList.add('active');
+
   if (id === 'dashboard') refreshDashboard();
   if (id === 'track')     { autoSelectMeal(); searchFoods(document.getElementById('foodSearch').value || ''); }
   if (id === 'history')   renderHistory();
@@ -1384,13 +1390,16 @@ function saveGoals() {
 // ─────────────────────────────────────────────────
 function _updateDietWidget() {
   const tag = document.getElementById('dietWidgetTag');
-  if (!tag || !currentUser) return;
+  const mobTag = document.getElementById('mobDietWidgetTag');
+  if (!currentUser) return;
   const map = { lose:'Fat Loss', maintain:'Maintenance', gain:'Lean Gain', bulk:'Bulk & Build' };
   const vegBadge = currentUser.dietType === 'veg'        ? ' 🌱'
                  : currentUser.dietType === 'vegan'      ? ' 🌿'
                  : currentUser.dietType === 'eggetarian' ? ' 🥚'
                  : '';
-  tag.textContent = (map[currentUser.dietGoal] || 'View Plan →') + vegBadge;
+  const text = (map[currentUser.dietGoal] || 'View Plan →') + vegBadge;
+  if (tag) tag.textContent = text;
+  if (mobTag) mobTag.textContent = text;
 }
 
 function dpOverlayClick(e) {

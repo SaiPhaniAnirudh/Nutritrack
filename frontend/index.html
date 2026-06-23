@@ -358,6 +358,17 @@
         <p id="greetDate"></p>
       </div>
 
+      <!-- MOBILE DIET PLAN BANNER (Visible on mobile/tablet only) -->
+      <div class="mobile-diet-banner" onclick="openDietModal()">
+        <div class="mdb-icon">🥗</div>
+        <div class="mdb-content">
+          <h3>Plan My Diet</h3>
+          <p id="mobDietWidgetTag">Personalised meal plans & targets</p>
+        </div>
+        <div class="mdb-arrow">→</div>
+      </div>
+
+
       <div class="stats-row">
         <div class="stat-card" style="--accent: #F5A623">
           <div class="icon">🔥</div>
@@ -719,26 +730,32 @@
     <!-- ══ MOBILE BOTTOM NAV ══ -->
     <nav class="mobile-nav" id="mobileNav">
       <button type="button" class="mob-nav-btn active" id="mobBtn-dashboard"
-        onclick="showPage('dashboard', this); setMobActive(this)">
+        onclick="showPage('dashboard', this)">
         <span class="mob-nav-icon">📊</span>
         <span class="mob-nav-label">Dashboard</span>
       </button>
       <button type="button" class="mob-nav-btn" id="mobBtn-track"
-        onclick="showPage('track', this); setMobActive(this)">
+        onclick="showPage('track', this)">
         <span class="mob-nav-icon">🍽️</span>
         <span class="mob-nav-label">Track</span>
       </button>
+      <button type="button" class="mob-nav-btn" id="mobBtn-diet"
+        onclick="openDietModal()">
+        <span class="mob-nav-icon">🥗</span>
+        <span class="mob-nav-label">Plan Diet</span>
+      </button>
       <button type="button" class="mob-nav-btn" id="mobBtn-history"
-        onclick="showPage('history', this); setMobActive(this)">
+        onclick="showPage('history', this)">
         <span class="mob-nav-icon">📈</span>
         <span class="mob-nav-label">History</span>
       </button>
       <button type="button" class="mob-nav-btn" id="mobBtn-profile"
-        onclick="showPage('profile', this); setMobActive(this)">
+        onclick="showPage('profile', this)">
         <span class="mob-nav-icon">👤</span>
         <span class="mob-nav-label">Profile</span>
       </button>
     </nav>
+
 
   </div><!-- /mainApp -->
 
