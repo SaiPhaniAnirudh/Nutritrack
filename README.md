@@ -15,6 +15,8 @@
 - 📊 **30-Day Progress History** — Daily calorie budget bars, weekly macro breakdowns, and consecutive streak tracking.
 - 🔒 **Secure Offline Auth** — Multi-device register/login with passwords hashed using SHA-256 (WebCrypto API).
 - 📱 **Progressive Web App (PWA)** — Install directly onto your mobile home screen with full offline capability and service worker caching.
+- 📱 **Responsive Mobile Design** — Bottom navigation bar with dynamic active-tab sync, and a dashboard quick-access banner for mobile diet planning.
+- 🛡️ **SigLIP Food-Only Rejection Guard** — Built-in zero-shot classifier that automatically filters out non-food uploads (e.g. hands, body parts, or household items) before wasting LLM API cycles.
 
 ---
 
@@ -47,6 +49,19 @@
 | **Ollama / llava-phi3** | ~15–20s (CPU) / <2s (GPU) | **~85% (High)** | 100% Local | None (Default) |
 | **Groq Cloud (Llama 3)** | ~2–3s | **~88% (High)** | Cloud API | `GROQ_API_KEY` |
 | **Moondream2** | ~30s+ (CPU) | **~50% (Low)** | 100% Local | `HF_TOKEN` (Fallback) |
+
+---
+
+## 🌐 Production Deployments
+
+The live, public version of the project is distributed across the following cloud infrastructure:
+
+1. **Frontend & REST API Backend (Render):** Flask-based web service serving the static frontend assets and managing the user databases and JWT sessions.
+   - Live Web Application URL: `https://nutritrack-k96f.onrender.com/`
+   - Runtime: Python (Gunicorn WSGI)
+   - Configuration: Guided by [gunicorn.conf.py](file:///c:/Users/pc/OneDrive/Desktop/nutritrack/gunicorn.conf.py) to dynamically bind to `$PORT` assigned by Render, preventing startup timeouts.
+2. **AI Inference Server (Hugging Face Spaces):** Python service hosted on Hugging Face spaces executing zero-shot image validation and LLM extraction.
+   - Public Space API URL: `https://energyvenom-nutritrack-llm.hf.space`
 
 ---
 
