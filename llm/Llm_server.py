@@ -549,7 +549,9 @@ class ViTFoodEngine:
                 score = r['score']
                 if len(found) > 0:
                     # Apply a relative and absolute threshold to secondary items
-                    if score < max(top_score * 0.03, 0.0005):
+                    # Increased relative threshold from 0.03 to 0.20 and absolute floor from 0.0005 to 0.002
+                    # to prevent low-probability background noise and false positives from being reported.
+                    if score < max(top_score * 0.20, 0.002):
                         break
                 db_name = self._db_name(r['label'])
                 if db_name not in seen:
