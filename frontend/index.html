@@ -173,7 +173,7 @@
 
             <div class="field-group">
               <label for="regName">Full Name <span class="req-star">*</span></label>
-              <input type="text" id="regName" placeholder="Anirudh Kumar">
+              <input type="text" id="regName" placeholder="e.g. Rahul Sharma">
             </div>
             <div class="field-group">
               <label for="regEmail">Email Address <span class="req-star">*</span></label>
@@ -716,6 +716,30 @@
       <p>&copy; 2026 Sai Phani Anirudh. All rights reserved. | NutriTrack</p>
     </footer>
 
+    <!-- ══ MOBILE BOTTOM NAV ══ -->
+    <nav class="mobile-nav" id="mobileNav">
+      <button type="button" class="mob-nav-btn active" id="mobBtn-dashboard"
+        onclick="showPage('dashboard', this); setMobActive(this)">
+        <span class="mob-nav-icon">📊</span>
+        <span class="mob-nav-label">Dashboard</span>
+      </button>
+      <button type="button" class="mob-nav-btn" id="mobBtn-track"
+        onclick="showPage('track', this); setMobActive(this)">
+        <span class="mob-nav-icon">🍽️</span>
+        <span class="mob-nav-label">Track</span>
+      </button>
+      <button type="button" class="mob-nav-btn" id="mobBtn-history"
+        onclick="showPage('history', this); setMobActive(this)">
+        <span class="mob-nav-icon">📈</span>
+        <span class="mob-nav-label">History</span>
+      </button>
+      <button type="button" class="mob-nav-btn" id="mobBtn-profile"
+        onclick="showPage('profile', this); setMobActive(this)">
+        <span class="mob-nav-icon">👤</span>
+        <span class="mob-nav-label">Profile</span>
+      </button>
+    </nav>
+
   </div><!-- /mainApp -->
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js" defer></script>
@@ -723,6 +747,12 @@
     // AI scan points to the Hugging Face Space LLM server
     window.LLM_SERVER_URL = "https://energyvenom-nutritrack-llm.hf.space/api/ai/analyze";
     window._BACKEND_URL   = "";   // empty = use relative /api/ai/analyze (served by App.py on same port)
+
+    // Mobile nav active highlight helper
+    function setMobActive(btn) {
+      document.querySelectorAll('.mob-nav-btn').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+    }
   </script>
   <script src="Foods.js"></script>
   <script src="App.js"></script>

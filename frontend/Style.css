@@ -747,4 +747,126 @@ body {
   color: var(--ink-30);
   font-weight: 500;
   letter-spacing: 0.02em;
-}
+}
+
+/* ══════════════════════════════════════════════════
+   MOBILE BOTTOM NAVIGATION BAR
+   Visible only on screens ≤ 900px
+══════════════════════════════════════════════════ */
+.mobile-nav {
+  display: none; /* hidden on desktop */
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 500;
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid var(--border-soft);
+  box-shadow: 0 -4px 24px rgba(0,0,0,0.08);
+  /* Safe area for iPhone home bar */
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.mob-nav-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 10px 4px 8px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 0;
+  transition: all 0.2s;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  position: relative;
+  /* Tap highlight ripple */
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mob-nav-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 3px;
+  border-radius: 0 0 3px 3px;
+  background: var(--kiwi);
+  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mob-nav-btn.active::before {
+  width: 32px;
+}
+
+.mob-nav-icon {
+  font-size: 1.35rem;
+  line-height: 1;
+  transition: transform 0.2s;
+}
+
+.mob-nav-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--ink-30);
+  letter-spacing: 0.03em;
+  transition: color 0.2s;
+  text-transform: uppercase;
+}
+
+.mob-nav-btn.active .mob-nav-label {
+  color: var(--kiwi-deep);
+  font-weight: 700;
+}
+
+.mob-nav-btn.active .mob-nav-icon {
+  transform: translateY(-2px) scale(1.08);
+}
+
+.mob-nav-btn:active .mob-nav-icon {
+  transform: scale(0.9);
+}
+
+@media (max-width: 900px) {
+  /* Show mobile bottom nav */
+  .mobile-nav {
+    display: flex;
+  }
+
+  /* Push page content up so it doesn't hide behind the 72px bottom bar */
+  #mainApp .page {
+    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px) + 1rem);
+  }
+
+  /* Keep top nav brand visible but remove the desktop nav links */
+  /* (nav-center is already display:none in the existing 900px breakpoint) */
+
+  /* Make the top nav more compact on mobile */
+  .topnav {
+    padding: 0.7rem 1rem;
+  }
+
+  /* Hide sign out button text — too crowded on mobile; user can sign out from Profile page */
+  .logout-link {
+    display: none;
+  }
+
+  /* Show "Sign Out" as part of profile page instead on mobile */
+  /* User chip stays visible so they know who is logged in */
+}
+
+@media (max-width: 480px) {
+  .mob-nav-label {
+    font-size: 0.58rem;
+  }
+  .mob-nav-icon {
+    font-size: 1.25rem;
+  }
+}
+

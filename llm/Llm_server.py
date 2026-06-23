@@ -523,7 +523,8 @@ class ViTFoodEngine:
             is_food_label = food_check[0]['label']
             is_food_score = food_check[0]['score']
             print(f"  [SigLIP] food check: {is_food_label} ({is_food_score*100:.1f}%)")
-            if is_food_label == "a photo of something that is not food" and is_food_score > 0.60:
+            # Lowered threshold 0.60 → 0.45 so hands, body parts, objects are rejected more strictly
+            if is_food_label == "a photo of something that is not food" and is_food_score > 0.45:
                 return _not_food('SigLIP/siglip-base-patch16-224', 'image_classifier', int((time.time() - t0) * 1000))
 
             # ── SigLIP zero-shot: score ALL candidate foods against image ──────────
@@ -533,6 +534,14 @@ class ViTFoodEngine:
                   f'{[(r["label"], round(r["score"]*100,1)) for r in clip_results[:5]]}')
 
             top_score = clip_results[0]['score']
+
+            # Minimum food confidence floor — if even the best food label scores
+            # below this threshold, nothing food-like was meaningfully identified.
+            # SigLIP sigmoid scores are typically >0.005 for a clear food match.
+            MIN_FOOD_SCORE = 0.002
+            if top_score < MIN_FOOD_SCORE:
+                print(f'  [SigLIP] top food score {top_score:.5f} below floor {MIN_FOOD_SCORE} → not_food')
+                return _not_food('SigLIP/siglip-base-patch16-224', 'image_classifier', elapsed)
 
             found, seen = [], set()
 
