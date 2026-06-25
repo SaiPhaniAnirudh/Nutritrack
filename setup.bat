@@ -41,7 +41,7 @@ echo [3/4] Checking .env...
 if not exist ".env" (
     copy .env.example .env >nul
     echo  .env created from .env.example
-    echo  Edit .env to add optional API keys (e.g., GROQ_API_KEY)
+    echo  Edit .env to customize settings if needed
 ) else (
     echo  .env already exists
 )

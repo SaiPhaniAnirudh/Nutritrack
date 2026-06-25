@@ -37,9 +37,9 @@
                                  ▼ (Port 5002)
    ┌──────────────────────────────────────────────────────────┐
    │             llm/Llm_server.py (AI Inference Hub)         │
-   ├─────────────────────────────┬────────────────────────────┤
-   │  • Primary: Ollama/Llava    │  • Cloud: Groq (Optional)  │
-   └─────────────────────────────┘
+   ├──────────────────────────────────────────────────────────┤
+   │  • Local Ollama / Moondream2 (Fallback)                  │
+   └──────────────────────────────────────────────────────────┘
 ```
 
 ### AI Inference Engines
@@ -47,7 +47,6 @@
 | Engine | Latency | Accuracy | Cloud/Local | Required Config |
 |---|---|---|---|---|
 | **Ollama / llava-phi3** | ~15–20s (CPU) / <2s (GPU) | **~85% (High)** | 100% Local | None (Default) |
-| **Groq Cloud (Llama 3)** | ~2–3s | **~88% (High)** | Cloud API | `GROQ_API_KEY` |
 | **Moondream2** | ~30s+ (CPU) | **~50% (Low)** | 100% Local | `HF_TOKEN` (Fallback) |
 
 ---
@@ -196,9 +195,6 @@ JWT_SECRET_KEY=f99e7c0b4fb910106b690099840c1f9b17c6e8a175201b15a889ce793bf01324
 # Local Ollama Configurations
 OLLAMA_URL=http://localhost:11434
 OLLAMA_MODEL=llava-phi3
-
-# Optional: Groq Cloud API for ultra-fast (2s) cloud fallback inference
-# GROQ_API_KEY=gsk_...
 
 # Optional: Persistent production database url (default is SQLite)
 # DATABASE_URL=postgresql://user:pass@localhost:5432/nutritrack

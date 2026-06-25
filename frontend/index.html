@@ -621,6 +621,15 @@
             <div class="profile-name" id="profileName">User</div>
             <div class="profile-email" id="profileEmail"></div>
             <div id="profileBodyStats" class="body-stats-chips"></div>
+            
+            <!-- Install PWA Card in Profile -->
+            <div id="pwaProfileInstallCard" style="display:none; margin: 1rem 0; padding: 1.2rem; background: var(--kiwi-light); border: 1.5px dashed rgba(45,158,107,0.3); border-radius: var(--radius-md); text-align: center;">
+              <div style="font-size: 1.5rem; margin-bottom: 0.4rem;">📲</div>
+              <div style="font-weight: 700; font-size: 0.9rem; color: var(--kiwi-deep); margin-bottom: 0.2rem;">Run NutriTrack as an App</div>
+              <div style="font-size: 0.72rem; color: var(--ink-50); margin-bottom: 0.8rem; line-height: 1.45;">Install on your home screen for quick, offline-capable diet tracking.</div>
+              <button type="button" id="pwaProfileInstallBtn" class="save-goals-btn" style="padding: 8px 16px; font-size: 0.82rem; width: auto; background: linear-gradient(135deg,var(--kiwi),var(--kiwi-deep)); margin: 0 auto; display: block;">Install Now</button>
+            </div>
+
             <div class="profile-stats">
               <div class="profile-stat">
                 <div class="n" id="totalMeals">0</div>
@@ -825,34 +834,69 @@
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       _deferredPrompt = e;
-      // Show install banner (only if not dismissed before)
-      if (!localStorage.getItem('pwa-install-dismissed')) {
+      
+      // Show install banner (only if not dismissed within the last 24 hours)
+      const dismissedTime = localStorage.getItem('pwa-install-dismissed');
+      let shouldShowBanner = true;
+      if (dismissedTime === 'installed') {
+        shouldShowBanner = false;
+      } else if (dismissedTime) {
+        const elapsed = Date.now() - parseInt(dismissedTime, 10);
+        if (elapsed < 24 * 60 * 60 * 1000) { // 24 hours snooze
+          shouldShowBanner = false;
+        }
+      }
+
+      if (shouldShowBanner) {
         const banner = document.getElementById('pwaInstallBanner');
         if (banner) banner.style.display = 'block';
+      }
+
+      // Always show persistent profile install card if app is installable and not installed
+      const profileInstallCard = document.getElementById('pwaProfileInstallCard');
+      if (profileInstallCard && dismissedTime !== 'installed') {
+        profileInstallCard.style.display = 'block';
       }
     });
 
     // Install button click
     document.addEventListener('DOMContentLoaded', () => {
       const installBtn = document.getElementById('pwaInstallBtn');
+      const profileInstallBtn = document.getElementById('pwaProfileInstallBtn');
       const dismissBtn = document.getElementById('pwaDismissBtn');
       const banner = document.getElementById('pwaInstallBanner');
+      const profileInstallCard = document.getElementById('pwaProfileInstallCard');
+
+      async function triggerInstall() {
+        if (!_deferredPrompt) return;
+        _deferredPrompt.prompt();
+        const result = await _deferredPrompt.userChoice;
+        console.log('[PWA] Install result:', result.outcome);
+        if (result.outcome === 'accepted') {
+          localStorage.setItem('pwa-install-dismissed', 'installed');
+          if (banner) banner.style.display = 'none';
+          if (profileInstallCard) profileInstallCard.style.display = 'none';
+        } else {
+          // If dismissed/cancelled, save dismissal timestamp for banner so it doesn't show for 24h
+          localStorage.setItem('pwa-install-dismissed', Date.now().toString());
+          if (banner) banner.style.display = 'none';
+        }
+        _deferredPrompt = null;
+      }
 
       if (installBtn) {
-        installBtn.addEventListener('click', async () => {
-          if (!_deferredPrompt) return;
-          _deferredPrompt.prompt();
-          const result = await _deferredPrompt.userChoice;
-          console.log('[PWA] Install result:', result.outcome);
-          _deferredPrompt = null;
-          if (banner) banner.style.display = 'none';
-        });
+        installBtn.addEventListener('click', triggerInstall);
+      }
+
+      if (profileInstallBtn) {
+        profileInstallBtn.addEventListener('click', triggerInstall);
       }
 
       if (dismissBtn) {
         dismissBtn.addEventListener('click', () => {
           if (banner) banner.style.display = 'none';
-          localStorage.setItem('pwa-install-dismissed', 'true');
+          // Save dismissal timestamp (24-hour snooze)
+          localStorage.setItem('pwa-install-dismissed', Date.now().toString());
         });
       }
     });
@@ -860,8 +904,11 @@
     // Detect successful install
     window.addEventListener('appinstalled', () => {
       console.log('[PWA] App installed successfully!');
+      localStorage.setItem('pwa-install-dismissed', 'installed');
       const banner = document.getElementById('pwaInstallBanner');
       if (banner) banner.style.display = 'none';
+      const profileInstallCard = document.getElementById('pwaProfileInstallCard');
+      if (profileInstallCard) profileInstallCard.style.display = 'none';
       _deferredPrompt = null;
     });
   </script>

@@ -245,47 +245,6 @@ TIPS = {
 DEFAULT_TIP = 'A balanced meal includes protein, complex carbs, healthy fats and vegetables.'
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-#  USDA FOODDATA CENTRAL API
-# ──────────────────────────────────────────────────────────────────────────────
-
-def _usda_lookup(food_name: str) -> dict | None:
-    """Look up nutrition from USDA FoodData Central (free API, 300k+ foods)."""
-    api_key = os.getenv('USDA_API_KEY')
-    if not api_key:
-        return None
-    try:
-        resp = http_requests.get(
-            'https://api.nal.usda.gov/fdc/v1/foods/search',
-            params={'api_key': api_key, 'query': food_name, 'pageSize': 1,
-                    'dataType': 'Survey (FNDDS)'},
-            timeout=5
-        )
-        if resp.status_code != 200:
-            return None
-        foods = resp.json().get('foods', [])
-        if not foods:
-            return None
-        f = foods[0]
-        nutrients = {n['nutrientName']: n.get('value', 0) for n in f.get('foodNutrients', [])}
-        return {
-            'food_name':      f.get('description', food_name).strip().title(),
-            'serving_size':   '100g (USDA)',
-            'confidence':     80,
-            'calories':       round(nutrients.get('Energy', 0)),
-            'protein_g':      round(nutrients.get('Protein', 0), 1),
-            'carbs_g':        round(nutrients.get('Carbohydrate, by difference', 0), 1),
-            'fat_g':          round(nutrients.get('Total lipid (fat)', 0), 1),
-            'fiber_g':        round(nutrients.get('Fiber, total dietary', 0), 1),
-            'sugar_g':        round(nutrients.get('Sugars, total including NLEA', 0), 1),
-            'sodium_mg':      round(nutrients.get('Sodium, Na', 0)),
-            'cholesterol_mg': round(nutrients.get('Cholesterol', 0)),
-            'source':         'usda',
-        }
-    except Exception as e:
-        print(f'  [USDA] lookup error: {e}')
-        return None
-
 
 # ──────────────────────────────────────────────────────────────────────────────
 #  SHARED HELPERS
@@ -704,7 +663,7 @@ class ViTFoodEngine:
             if found:
                 items = []
                 for food_name, confidence in found:
-                    hit = _db_lookup(food_name) or _usda_lookup(food_name) or _fallback_item(food_name)
+                    hit = _db_lookup(food_name) or _fallback_item(food_name)
                     hit['confidence'] = confidence
                     items.append(hit)
                 return _ok_response(items, 'SigLIP/siglip-base-patch16-224', 'image_classifier', elapsed)
@@ -729,60 +688,10 @@ class ViTFoodEngine:
             if found:
                 items = []
                 for food_name, confidence in found:
-                    hit = _db_lookup(food_name) or _usda_lookup(food_name) or _fallback_item(food_name)
+                    hit = _db_lookup(food_name) or _fallback_item(food_name)
                     hit['confidence'] = confidence
                     items.append(hit)
                 return _ok_response(items, 'Food101/nateraw-food', 'image_classifier', elapsed)
-
-
-class GroqEngine:
-    """Groq cloud vision model — Llama-4-Scout (2-3 s, needs GROQ_API_KEY)."""
-
-    def __init__(self):
-        self.api_key = os.getenv('GROQ_API_KEY')
-        self.model   = 'meta-llama/llama-4-scout-17b-16e-instruct'
-        self.loaded  = bool(self.api_key)
-        status = '✅ enabled' if self.loaded else '❌ no GROQ_API_KEY'
-        print(f'  [Groq]  cloud vision {status}')
-
-    def predict(self, image_b64: str) -> dict:
-        t0 = time.time()
-        if ',' in image_b64:
-            image_b64 = image_b64.split(',', 1)[1]
-
-        resp = http_requests.post(
-            'https://api.groq.com/openai/v1/chat/completions',
-            headers={'Authorization': f'Bearer {self.api_key}',
-                     'Content-Type':  'application/json'},
-            json={
-                'model': self.model,
-                'messages': [{'role': 'user', 'content': [
-                    {'type': 'text',      'text': VISION_PROMPT},
-                    {'type': 'image_url', 'image_url': {
-                        'url': f'data:image/jpeg;base64,{image_b64}'}}
-                ]}],
-                'max_tokens': 1024,
-                'temperature': 0.1,
-            },
-            timeout=30
-        )
-        if resp.status_code != 200:
-            err = resp.json().get('error', {}).get('message', resp.text[:200])
-            raise RuntimeError(f'Groq API {resp.status_code}: {err}')
-
-        answer  = resp.json()['choices'][0]['message']['content'].strip()
-        elapsed = int((time.time() - t0) * 1000)
-        print(f'  [Groq]  {elapsed}ms — {answer[:80]}')
-
-        if 'NOT_FOOD' in answer.upper():
-            return _not_food(f'Groq/{self.model}', 'cloud_llm', elapsed)
-
-        items = _parse_pipe_response(answer)
-        if not items:
-            return _not_food(f'Groq/{self.model}', 'cloud_llm', elapsed,
-                             tip='Could not parse food. Try a clearer photo.')
-
-        return _ok_response(items, f'Groq/{self.model}', 'cloud_llm', elapsed)
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -881,7 +790,7 @@ class OllamaEngine:
 
         items = []
         for food in raw_foods:
-            hit = _db_lookup(food) or _usda_lookup(food) or _fallback_item(food)
+            hit = _db_lookup(food) or _fallback_item(food)
             items.append(hit)
 
         if not items:
@@ -1094,7 +1003,7 @@ class MoondreamEngine:
 
         items = []
         for food in raw_foods:
-            hit = _db_lookup(food) or _usda_lookup(food) or _fallback_item(food)
+            hit = _db_lookup(food) or _fallback_item(food)
             items.append(hit)
 
         if not items:
@@ -1117,11 +1026,11 @@ def _not_food(model: str, mode: str, elapsed: int, tip: str = '') -> dict:
     }
 
 def _ok_response(items: list, model: str, mode: str, elapsed: int) -> dict:
-    # Enrich items: fill missing nutrition from DB/USDA
+    # Enrich items: fill missing nutrition from DB
     enriched = []
     for it in items:
         if it.get('calories', 0) == 0:
-            hit = _db_lookup(it['food_name']) or _usda_lookup(it['food_name'])
+            hit = _db_lookup(it['food_name'])
             if hit:
                 it = hit
         enriched.append(it)
@@ -1344,8 +1253,7 @@ if __name__ == '__main__':
                     print('  No engine loaded.')
                     print('  Fix: pip install transformers torch')
 
-    usda = '✅ enabled' if os.getenv('USDA_API_KEY') else '⚠️  optional — set USDA_API_KEY for 300k+ food lookup'
-    print(f'  USDA API : {usda}')
+
     print()
     print('=' * 62)
     print(f'  Ready → http://localhost:{args.port}/api/ai/analyze')
