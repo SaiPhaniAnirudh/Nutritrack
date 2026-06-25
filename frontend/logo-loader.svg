@@ -73,4 +73,9 @@
         <circle cx="38" cy="118" r="2.5" fill="#78C838" opacity="0.5"/>
         <circle cx="166" cy="108" r="3.5" fill="#68B828" opacity="0.75"/>
         <circle cx="162" cy="120" r="2.2" fill="#78C838" opacity="0.5"/>
-      </svg>
+      </svg>ath d="M142 45 V135" stroke="#FAFAF8" stroke-width="2" stroke-linecap="round" opacity="0.25"/>
+
+    <!-- Sparks -->
+    <path d="M152 45 L156 55 L166 59 L156 63 L152 73 L148 63 L138 59 L148 55 Z" fill="url(#sparkGrad)"/>
+  </g>
+</svg>

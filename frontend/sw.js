@@ -16,9 +16,10 @@ const APP_SHELL = [
   '/App.js',
   '/Foods.js',
   '/manifest.json',
-  '/logo-nav.svg',
-  '/logo-auth.svg',
-  '/logo-loader.svg',
+  '/logo-nav.png',
+  '/logo-auth.png',
+  '/logo-loader.png',
+  '/icons/icon.png',
 ];
 
 // ─── Install: pre-cache app shell ───────────────────────

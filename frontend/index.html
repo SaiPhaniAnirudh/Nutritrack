@@ -5,14 +5,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#3ecf8e">
-  <meta name="description" content="AI-powered nutrition tracking with food photo scanning, macro tracking, and personalised diet planning.">
+  <meta name="description"
+    content="AI-powered nutrition tracking with food photo scanning, macro tracking, and personalised diet planning.">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="NutriTrack">
   <title>NutriTrack — AI Food Intelligence</title>
   <link rel="manifest" href="manifest.json">
-  <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
-  <link rel="apple-touch-icon" href="icons/icon.svg">
+  <link rel="icon" type="image/png" href="icons/icon.png">
+  <link rel="apple-touch-icon" href="icons/icon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="Style.css">
@@ -39,10 +40,11 @@
   <!-- ══ GLOBAL LOADING OVERLAY ══ -->
   <div id="pageLoader" class="page-loader">
     <div class="loader-inner">
-      <div class="loader-logo-wrap">
-        <img src="logo-loader.svg" alt="Loader Logo" width="80" height="80" />
+      <div class="loader-logo-wrap" style="animation: none; display: flex; justify-content: center; align-items: center; margin-bottom: 0.5rem;">
+        <img src="logo-loader.png" alt="Loader Logo" style="width: 260px; height: auto;" />
       </div>
-      <div class="loader-brand">NutriTrack</div>
+      <!-- loader-brand commented out because the brand name is built into the logo image -->
+      <!-- <div class="loader-brand">NutriTrack</div> -->
       <div class="loader-dots"><span></span><span></span><span></span></div>
       <div class="loader-msg" id="loaderMsg">Loading…</div>
     </div>
@@ -127,12 +129,13 @@
       <div class="auth-card">
 
         <!-- App Logo — single h1 for the page -->
-        <div class="auth-logo">
-          <div class="logo-mark">
-            <img src="logo-auth.svg" alt="Auth Logo" width="58" height="58" />
+        <div class="auth-logo" style="margin-bottom: 1.5rem;">
+          <div class="logo-mark" style="width: auto; height: auto; background: transparent; border: none; box-shadow: none; margin-bottom: 0; display: inline-flex;">
+            <img src="logo-auth.png" alt="Auth Logo" style="width: 220px; height: auto;" />
           </div>
-          <h1>NutriTrack</h1>
-          <p>AI-powered food intelligence</p>
+          <!-- Brand headers commented out because they are built into the logo image -->
+          <!-- <h1>NutriTrack</h1> -->
+          <!-- <p>AI-powered food intelligence</p> -->
         </div>
 
         <div class="auth-tab-row">
@@ -318,11 +321,11 @@
     <!-- TOP NAV -->
     <nav class="topnav">
       <div class="nav-brand">
-        <div class="mark">
-          <img src="logo-nav.svg" alt="Nav Logo" width="30" height="30" />
+        <div class="mark" style="width: auto; height: auto; display: flex; align-items: center;">
+          <img src="logo-nav.png" alt="Nav Logo" style="height: 28px; width: auto;" />
         </div>
-        <!-- FIX: changed to span — h1 already used in auth section above -->
-        <span class="nav-brand-name">NutriTrack</span>
+        <!-- Brand name commented out because it is built into the logo image -->
+        <!-- <span class="nav-brand-name">NutriTrack</span> -->
       </div>
       <div class="nav-center">
         <!-- FIX: added type="button" to all nav buttons -->
@@ -621,13 +624,18 @@
             <div class="profile-name" id="profileName">User</div>
             <div class="profile-email" id="profileEmail"></div>
             <div id="profileBodyStats" class="body-stats-chips"></div>
-            
+
             <!-- Install PWA Card in Profile -->
-            <div id="pwaProfileInstallCard" style="display:none; margin: 1rem 0; padding: 1.2rem; background: var(--kiwi-light); border: 1.5px dashed rgba(45,158,107,0.3); border-radius: var(--radius-md); text-align: center;">
+            <div id="pwaProfileInstallCard"
+              style="display:none; margin: 1rem 0; padding: 1.2rem; background: var(--kiwi-light); border: 1.5px dashed rgba(45,158,107,0.3); border-radius: var(--radius-md); text-align: center;">
               <div style="font-size: 1.5rem; margin-bottom: 0.4rem;">📲</div>
-              <div style="font-weight: 700; font-size: 0.9rem; color: var(--kiwi-deep); margin-bottom: 0.2rem;">Run NutriTrack as an App</div>
-              <div style="font-size: 0.72rem; color: var(--ink-50); margin-bottom: 0.8rem; line-height: 1.45;">Install on your home screen for quick, offline-capable diet tracking.</div>
-              <button type="button" id="pwaProfileInstallBtn" class="save-goals-btn" style="padding: 8px 16px; font-size: 0.82rem; width: auto; background: linear-gradient(135deg,var(--kiwi),var(--kiwi-deep)); margin: 0 auto; display: block;">Install Now</button>
+              <div style="font-weight: 700; font-size: 0.9rem; color: var(--kiwi-deep); margin-bottom: 0.2rem;">Run
+                NutriTrack as an App</div>
+              <div style="font-size: 0.72rem; color: var(--ink-50); margin-bottom: 0.8rem; line-height: 1.45;">Install
+                on your home screen for quick, offline-capable diet tracking.</div>
+              <button type="button" id="pwaProfileInstallBtn" class="save-goals-btn"
+                style="padding: 8px 16px; font-size: 0.82rem; width: auto; background: linear-gradient(135deg,var(--kiwi),var(--kiwi-deep)); margin: 0 auto; display: block;">Install
+                Now</button>
             </div>
 
             <div class="profile-stats">
@@ -726,10 +734,10 @@
             </div>
             <!-- FIX: added type="button" -->
             <button type="button" class="save-goals-btn" onclick="saveGoals()">Save Goals</button>
+          </div>
         </div>
       </div>
     </div>
-  </div>
 
     <!-- GLOBAL FOOTER -->
     <footer class="app-footer">
@@ -738,28 +746,23 @@
 
     <!-- ══ MOBILE BOTTOM NAV ══ -->
     <nav class="mobile-nav" id="mobileNav">
-      <button type="button" class="mob-nav-btn active" id="mobBtn-dashboard"
-        onclick="showPage('dashboard', this)">
+      <button type="button" class="mob-nav-btn active" id="mobBtn-dashboard" onclick="showPage('dashboard', this)">
         <span class="mob-nav-icon">📊</span>
         <span class="mob-nav-label">Dashboard</span>
       </button>
-      <button type="button" class="mob-nav-btn" id="mobBtn-track"
-        onclick="showPage('track', this)">
+      <button type="button" class="mob-nav-btn" id="mobBtn-track" onclick="showPage('track', this)">
         <span class="mob-nav-icon">🍽️</span>
         <span class="mob-nav-label">Track</span>
       </button>
-      <button type="button" class="mob-nav-btn" id="mobBtn-diet"
-        onclick="openDietModal()">
+      <button type="button" class="mob-nav-btn" id="mobBtn-diet" onclick="openDietModal()">
         <span class="mob-nav-icon">🥗</span>
         <span class="mob-nav-label">Plan Diet</span>
       </button>
-      <button type="button" class="mob-nav-btn" id="mobBtn-history"
-        onclick="showPage('history', this)">
+      <button type="button" class="mob-nav-btn" id="mobBtn-history" onclick="showPage('history', this)">
         <span class="mob-nav-icon">📈</span>
         <span class="mob-nav-label">History</span>
       </button>
-      <button type="button" class="mob-nav-btn" id="mobBtn-profile"
-        onclick="showPage('profile', this)">
+      <button type="button" class="mob-nav-btn" id="mobBtn-profile" onclick="showPage('profile', this)">
         <span class="mob-nav-icon">👤</span>
         <span class="mob-nav-label">Profile</span>
       </button>
@@ -772,7 +775,7 @@
   <script>
     // AI scan points to the Hugging Face Space LLM server
     window.LLM_SERVER_URL = "https://energyvenom-nutritrack-llm.hf.space/api/ai/analyze";
-    window._BACKEND_URL   = "";   // empty = use relative /api/ai/analyze (served by App.py on same port)
+    window._BACKEND_URL = "";   // empty = use relative /api/ai/analyze (served by App.py on same port)
 
     // Mobile nav active highlight helper
     function setMobActive(btn) {
@@ -796,7 +799,8 @@
       <img src="icons/icon.svg" alt="NutriTrack" width="40" height="40" style="border-radius:10px;">
       <div style="flex:1">
         <div style="font-weight:600;font-size:0.88rem;color:#e8f5e9;">Install NutriTrack</div>
-        <div style="font-size:0.72rem;color:rgba(184,201,186,0.7);margin-top:2px;">Add to home screen for quick access</div>
+        <div style="font-size:0.72rem;color:rgba(184,201,186,0.7);margin-top:2px;">Add to home screen for quick access
+        </div>
       </div>
       <!-- FIX: added type="button" to PWA buttons -->
       <button type="button" id="pwaInstallBtn" style="
@@ -813,8 +817,15 @@
 
   <style>
     @keyframes slideUp {
-      from { opacity:0; transform:translateX(-50%) translateY(20px); }
-      to   { opacity:1; transform:translateX(-50%) translateY(0); }
+      from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+      }
     }
   </style>
 
@@ -834,7 +845,7 @@
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       _deferredPrompt = e;
-      
+
       // Show install banner (only if not dismissed within the last 24 hours)
       const dismissedTime = localStorage.getItem('pwa-install-dismissed');
       let shouldShowBanner = true;
