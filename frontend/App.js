@@ -1824,6 +1824,108 @@ function openDietModal() {
       </div>
     </div>`;
 
+  // WORKOUT PLANS
+  const WORKOUTS = {
+    lose: {
+      name: "Fat Loss Strength & Burn",
+      icon: "🔥",
+      focus: "Preserve lean muscle tissue & maximize consistent calorie burn.",
+      cardio: "Daily step goal: 8,000 - 10,000 steps. 150-200 mins of low-stress cardio (e.g. brisk walking/cycling) weekly.",
+      schedule: [
+        { day: "Day 1", type: "Full Body Resistance Training", details: ["Squats / Leg Press (3 sets × 10 reps)", "Dumbbell Chest Press (3 sets × 10 reps)", "Dumbbell Rows (3 sets × 12 reps)", "Plank (3 sets × 45-60 seconds)"] },
+        { day: "Day 2", type: "LISS Cardio & Core Focus", details: ["35-45 mins Moderate Cardio (walk/cycle/elliptical)", "Hanging Knee Raises (3 sets × 12 reps)", "Russian Twists (3 sets × 20 total reps)"] },
+        { day: "Day 3", type: "Full Body Resistance Training", details: ["Romanian Deadlifts (3 sets × 10 reps)", "Overhead Press (3 sets × 10 reps)", "Lat Pulldowns (3 sets × 12 reps)", "Lunges (3 sets × 10 reps per leg)"] },
+        { day: "Day 4", type: "Active Recovery / Mobility", details: ["40 mins light walking", "15 mins full body stretching and joint mobility exercises"] },
+        { day: "Day 5", type: "Full Body Strength Focus", details: ["Goblet Squats (3 sets × 12 reps)", "Push-Ups (3 sets × max clean reps)", "Cable Rows (3 sets × 12 reps)", "Farmer's Walks (3 sets × 40 meters)"] },
+        { day: "Day 6", type: "Steady State Cardio (Aerobic)", details: ["45-60 mins Outdoor walk, light jog, or swimming at a conversational pace"] },
+        { day: "Day 7", type: "Rest & Muscle Repair", details: ["Complete rest day", "Focus on hitting daily protein target & hydration"] }
+      ]
+    },
+    maintain: {
+      name: "Balanced Health & Hybrid Split",
+      icon: "⚖️",
+      focus: "Maintain muscle mass, joint mobility, and cardiorespiratory health.",
+      cardio: "Daily step goal: 7,000 - 8,000 steps. 120-150 mins of moderate physical activity weekly.",
+      schedule: [
+        { day: "Day 1", type: "Upper Body Strength", details: ["Flat Bench Press (3 sets × 8 reps)", "Chest Supported Rows (3 sets × 10 reps)", "Overhead Dumbbell Press (3 sets × 10 reps)", "Face Pulls (3 sets × 15 reps)"] },
+        { day: "Day 2", type: "Lower Body & Core", details: ["Back Squats (3 sets × 8 reps)", "Leg Curls (3 sets × 12 reps)", "Calf Raises (4 sets × 15 reps)", "Decline Ab Crunches (3 sets × 15 reps)"] },
+        { day: "Day 3", type: "Cardio & Active Stretching", details: ["30-40 mins Swim or Jog", "15-20 mins Full Body Yoga / Mobility routine"] },
+        { day: "Day 4", type: "Complete Recovery", details: ["No intense lifting", "Keep moving with a light walk or active commuting"] },
+        { day: "Day 5", type: "Full Body Conditioning", details: ["Dumbbell Deadlifts (3 sets × 10 reps)", "Incline Push-Ups / Dips (3 sets × 10-12 reps)", "Pull-Ups or Lat Pulldowns (3 sets × 8-10 reps)", "Goblet Lunges (3 sets × 10 reps per leg)"] },
+        { day: "Day 6", type: "Recreational Sport / Cardio", details: ["Recreational sport, outdoor hike, or 45 mins cycling with friends"] },
+        { day: "Day 7", type: "Rest & Reset", details: ["Complete rest day", "Relax and prepare for the upcoming week"] }
+      ]
+    },
+    gain: {
+      name: "Controlled Hypertrophy Split",
+      icon: "💪",
+      focus: "Stimulate clean muscle hypertrophy. Keep cardio light to conserve calories.",
+      cardio: "Daily step goal: ~6,000 steps. Keep cardio low (light post-workout walk) to prioritize muscle recovery.",
+      schedule: [
+        { day: "Day 1", type: "Upper Body Hypertrophy", details: ["Incline Dumbbell Press (4 sets × 8 reps)", "Barbell Rows (4 sets × 8 reps)", "Dumbbell Shoulder Press (3 sets × 10 reps)", "Cable Lat Pulldowns (3 sets × 10 reps)", "Lateral Raises (3 sets × 15 reps)"] },
+        { day: "Day 2", type: "Lower Body Hypertrophy", details: ["Barbell Back Squats (4 sets × 6-8 reps)", "Romanian Deadlifts (3 sets × 8-10 reps)", "Leg Extensions (3 sets × 12 reps)", "Seated Calf Raises (4 sets × 15 reps)"] },
+        { day: "Day 3", type: "Active Recovery & Mobility", details: ["20-30 mins very light walk for blood flow", "10-15 mins of lower body stretching / foam rolling"] },
+        { day: "Day 4", type: "Upper Body Hypertrophy", details: ["Flat Barbell Bench Press (3 sets × 8 reps)", "Pull-Ups or Chin-Ups (3 sets × max reps)", "Overhead Press (3 sets × 8 reps)", "Seated Cable Rows (3 sets × 10-12 reps)", "Bicep & Tricep superset (3 sets × 12 reps)"] },
+        { day: "Day 5", type: "Lower Body & Core Hypertrophy", details: ["Bulgarian Split Squats (3 sets × 10 reps per leg)", "Lying Leg Curls (3 sets × 12 reps)", "Barbell Hip Thrusts (3 sets × 10 reps)", "Hanging Leg Raises (3 sets × 12-15 reps)"] },
+        { day: "Day 6", type: "Active Recovery Walk", details: ["30-40 mins light walk to promote systemic recovery and clear muscle soreness"] },
+        { day: "Day 7", type: "Rest & Growth", details: ["Complete rest", "Maximize protein synthesis with good nutrition and 8+ hours sleep"] }
+      ]
+    },
+    bulk: {
+      name: "Hypertrophy Volume (Push/Pull/Legs)",
+      icon: "🏋️",
+      focus: "Maximize mechanical tension and training volume to direct calorie surplus into muscle mass.",
+      cardio: "Daily step goal: 5,000 - 6,000 steps. Restrict intense cardio to preserve energy and surplus.",
+      schedule: [
+        { day: "Day 1", type: "Push Day (Chest, Shoulders, Triceps)", details: ["Barbell Bench Press (4 sets × 6-8 reps)", "Overhead Press (3 sets × 8 reps)", "Incline Dumbbell Flyes (3 sets × 10-12 reps)", "Lateral Raises (4 sets × 12-15 reps)", "Tricep Pushdowns (3 sets × 12 reps)"] },
+        { day: "Day 2", type: "Pull Day (Back, Rear Delts, Biceps)", details: ["Conventional Deadlifts (3 sets × 5 reps)", "Weighted Pull-Ups (3 sets × 6-8 reps)", "Chest-Supported Dumbbell Rows (3 sets × 10 reps)", "Incline Dumbbell Bicep Curls (3 sets × 10-12 reps)", "Face Pulls (4 sets × 15 reps)"] },
+        { day: "Day 3", type: "Legs Day (Quads, Hamstrings, Calves)", details: ["Barbell Back Squats (4 sets × 6-8 reps)", "Romanian Deadlifts (3 sets × 8-10 reps)", "Leg Press (3 sets × 10-12 reps)", "Standing Calf Raises (4 sets × 15 reps)"] },
+        { day: "Day 4", type: "Rest & Active Stretching", details: ["Complete rest from resistance training", "15 mins full body stretching / foam rolling"] },
+        { day: "Day 5", type: "Push Day (Hypertrophy Focus)", details: ["Incline Dumbbell Press (4 sets × 8-10 reps)", "Seated Dumbbell Shoulder Press (3 sets × 10-12 reps)", "Cable Chest Crossovers (3 sets × 12-15 reps)", "Tricep Overhead Extensions (4 sets × 10-12 reps)"] },
+        { day: "Day 6", type: "Pull Day (Hypertrophy Focus)", details: ["Lat Pulldowns (4 sets × 8-10 reps)", "Seated Cable Rows (3 sets × 10-12 reps)", "Standing Hammer Curls (3 sets × 12 reps)", "Rear Delt Dumbbell Flyes (3 sets × 12-15 reps)"] },
+        { day: "Day 7", type: "Rest, Growth & Feed", details: ["Complete rest", "Focus on recovery, sleep, and fueling muscles for next week's heavy lifts"] }
+      ]
+    }
+  };
+
+  // WORKOUTS TAB
+  const workoutPlan = WORKOUTS[u.dietGoal] || WORKOUTS.maintain;
+  document.getElementById('dpTab-workouts').innerHTML = `
+    <div class="dp-card" style="border-left: 3px solid ${plan.accentColor || '#7fbb6e'}">
+      <div class="dp-card-title" style="color:${plan.accentColor || 'var(--kiwi-deep)'}">
+        ${workoutPlan.icon} Workout Focus — ${workoutPlan.name}
+      </div>
+      <p style="font-size:0.86rem; color:var(--ink-50); line-height:1.65; margin-bottom:1rem">
+        ${workoutPlan.focus}
+      </p>
+      <div class="dp-tip-banner" style="margin-top:0.5rem; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05)">
+        <div class="dp-tip-icon">🏃</div>
+        <div class="dp-tip-text" style="font-size:0.78rem; color:var(--ink-50)">
+          <strong>Cardio Goal:</strong> ${workoutPlan.cardio}
+        </div>
+      </div>
+    </div>
+
+    <div class="dp-card">
+      <div class="dp-card-title">📅 Weekly Training Schedule</div>
+      <div class="dp-workout-list" style="margin-top: 1rem">
+        ${workoutPlan.schedule.map(w => `
+          <div class="dp-workout-day-row">
+            <div class="dp-workout-day-badge" style="background:${plan.accentColor || '#7fbb6e'}1e; color:${plan.accentColor || '#7fbb6e'}">
+              ${w.day}
+            </div>
+            <div class="dp-workout-day-info">
+              <div class="dp-workout-day-type">${w.type}</div>
+              <ul class="dp-workout-ex-list">
+                ${w.details.map(ex => `<li>${ex}</li>`).join('')}
+              </ul>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+
   const modal = document.getElementById('dietPlanModal');
   modal.classList.add('open');
   dpSwitchTab('overview', document.querySelector('.dp-tab'));

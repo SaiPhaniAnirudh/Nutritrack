@@ -3372,3 +3372,59 @@ body {
     color: var(--kiwi);
   }
 }
+
+/* ══════════════════════════════════════════════════
+   PLAN MY DIET — WORKOUTS TAB STYLING & SCROLL FIX
+   ══════════════════════════════════════════════════ */
+.dp-tabs {
+  overflow-x: auto;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+.dp-tabs::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+
+.dp-workout-day-row {
+  display: flex;
+  gap: 1.2rem;
+  padding: 0.9rem 0;
+  border-bottom: 1px solid var(--border-soft);
+  align-items: flex-start;
+}
+.dp-workout-day-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+.dp-workout-day-badge {
+  flex-shrink: 0;
+  width: 58px;
+  height: 26px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.dp-workout-day-info {
+  flex: 1;
+}
+.dp-workout-day-type {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 0.35rem;
+}
+.dp-workout-ex-list {
+  margin: 0;
+  padding-left: 1.2rem;
+}
+.dp-workout-ex-list li {
+  font-size: 0.8rem;
+  color: var(--ink-50);
+  margin-bottom: 0.25rem;
+  line-height: 1.5;
+}
