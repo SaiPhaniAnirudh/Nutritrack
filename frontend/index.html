@@ -842,23 +842,21 @@
       });
     }
 
+    // Clear legacy snooze timestamps so the banner shows immediately on reload
+    const dismissedTimeVal = localStorage.getItem('pwa-install-dismissed');
+    if (dismissedTimeVal && dismissedTimeVal !== 'installed') {
+      localStorage.removeItem('pwa-install-dismissed');
+    }
+
     // PWA Install Prompt
     let _deferredPrompt = null;
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       _deferredPrompt = e;
 
-      // Show install banner (only if not dismissed within the last 24 hours)
+      // Show install banner (only if not already installed)
       const dismissedTime = localStorage.getItem('pwa-install-dismissed');
-      let shouldShowBanner = true;
-      if (dismissedTime === 'installed') {
-        shouldShowBanner = false;
-      } else if (dismissedTime) {
-        const elapsed = Date.now() - parseInt(dismissedTime, 10);
-        if (elapsed < 24 * 60 * 60 * 1000) { // 24 hours snooze
-          shouldShowBanner = false;
-        }
-      }
+      let shouldShowBanner = dismissedTime !== 'installed';
 
       if (shouldShowBanner) {
         const banner = document.getElementById('pwaInstallBanner');
@@ -890,8 +888,7 @@
           if (banner) banner.style.display = 'none';
           if (profileInstallCard) profileInstallCard.style.display = 'none';
         } else {
-          // If dismissed/cancelled, save dismissal timestamp for banner so it doesn't show for 24h
-          localStorage.setItem('pwa-install-dismissed', Date.now().toString());
+          // If cancelled, just hide the banner for this session/load (shows again on reload)
           if (banner) banner.style.display = 'none';
         }
         _deferredPrompt = null;
@@ -907,9 +904,8 @@
 
       if (dismissBtn) {
         dismissBtn.addEventListener('click', () => {
+          // Just hide for this session/load (shows again on reload)
           if (banner) banner.style.display = 'none';
-          // Save dismissal timestamp (24-hour snooze)
-          localStorage.setItem('pwa-install-dismissed', Date.now().toString());
         });
       }
     });
