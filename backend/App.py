@@ -281,7 +281,12 @@ class FoodLog(db.Model):
 
 
 with app.app_context():
-    db.create_all()
+    try:
+        db.create_all()
+        print("✅ Database tables initialized.")
+    except Exception as e:
+        print(f"⚠️ Warning: Could not initialize database tables: {e}")
+
 
 
 # ══════════════════════════════════════════════════
