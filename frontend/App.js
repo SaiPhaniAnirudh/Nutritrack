@@ -90,7 +90,7 @@ function switchTab(tab) {
   document.getElementById('loginForm').style.display    = tab === 'login'    ? 'block' : 'none';
   document.getElementById('registerForm').style.display = tab === 'register' ? 'block' : 'none';
   hideAuthError();
-  if (tab === 'register') goToStep(1);
+  if (tab === 'register') { goToStep(1); _prewarmBackend(); }
 }
 
 function showAuthError(msg) {
@@ -2009,13 +2009,36 @@ async function goToStepOtp() {
     setTimeout(() => document.getElementById('otp0').focus(), 100);
   } catch (e) {
     hideLoader();
-    if (e.name === 'AbortError') {
-      showAuthError('⚠️ Server is waking up (free tier). Please wait 10 seconds and click Continue again.');
-    } else {
-      showAuthError('⚠️ Could not reach the server. Please check your connection and try again.');
-    }
-    // Do NOT skip OTP — user must retry
+    _autoRetryOtp();
   }
+}
+
+// Auto-retry with live countdown -- no manual click needed after Render cold start
+let _retryTimer = null;
+function _autoRetryOtp() {
+  clearTimeout(_retryTimer);
+  let secs = 18;
+  const btn = document.querySelector('#regStep1 .submit-btn');
+  if (btn) btn.disabled = true;
+  function tick() {
+    if (secs <= 0) {
+      clearTimeout(_retryTimer);
+      if (btn) btn.disabled = false;
+      hideAuthError();
+      goToStepOtp();
+      return;
+    }
+    showAuthError('Server waking up... retrying in ' + secs + 's (Render free tier cold start)');
+    secs--;
+    _retryTimer = setTimeout(tick, 1000);
+  }
+  tick();
+}
+
+// Pre-warm backend when user opens Register tab
+function _prewarmBackend() {
+  var url = (window._BACKEND_URL || '') + '/api/health';
+  fetch(url, { method: 'GET' }).catch(function() {});
 }
 
 function showRegStep(id) {
