@@ -876,6 +876,26 @@ def streak():
 #  HEALTH CHECK
 # ══════════════════════════════════════════════════
 
+@app.route('/api/debug/db')
+def debug_db():
+    try:
+        from sqlalchemy import text
+        result = db.session.execute(text("SELECT 1")).fetchone()
+        return jsonify({
+            'status': 'connected',
+            'result': str(result),
+            'database_uri_masked': app.config['SQLALCHEMY_DATABASE_URI'].split('@')[-1] if 'SQLALCHEMY_DATABASE_URI' in app.config else 'not_set'
+        })
+    except Exception as e:
+        import traceback
+        return jsonify({
+            'status': 'error',
+            'error': str(e),
+            'traceback': traceback.format_exc(),
+            'database_uri_masked': app.config['SQLALCHEMY_DATABASE_URI'].split('@')[-1] if 'SQLALCHEMY_DATABASE_URI' in app.config else 'not_set'
+        }), 500
+
+
 @app.route('/api/health', methods=['GET'])
 def health():
     return jsonify({
