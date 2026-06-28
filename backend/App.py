@@ -112,7 +112,12 @@ app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv(
     'DATABASE_URL',
     'sqlite:///nutritrack.db'
 ).replace('postgres://', 'postgresql://')   # Railway fix
+# Ensure instance directory exists for SQLite database
+if app.config['SQLALCHEMY_DATABASE_URI'].startswith('sqlite'):
+    os.makedirs(app.instance_path, exist_ok=True)
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
 
 # JWT
 jwt_secret = os.getenv('JWT_SECRET_KEY', 'change-me-in-production')
