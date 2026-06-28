@@ -1,4 +1,4 @@
-/* ═══════════════════════════════════════════════════
+﻿/* ═══════════════════════════════════════════════════
    NutriTrack — app.js  v2.0
    Changes vs v1:
    #1  Age/weight/height stored & displayed
@@ -1858,18 +1858,6 @@ function openDietModal() {
     },
     gain: {
       name: "Controlled Hypertrophy Split",
-      icon: "💪",
-      focus: "Stimulate clean muscle hypertrophy. Keep cardio light to conserve calories.",
-      cardio: "Daily step goal: ~6,000 steps. Keep cardio low (light post-workout walk) to prioritize muscle recovery.",
-      schedule: [
-        { day: "Day 1", type: "Upper Body Hypertrophy", details: ["Incline Dumbbell Press (4 sets × 8 reps)", "Barbell Rows (4 sets × 8 reps)", "Dumbbell Shoulder Press (3 sets × 10 reps)", "Cable Lat Pulldowns (3 sets × 10 reps)", "Lateral Raises (3 sets × 15 reps)"] },
-        { day: "Day 2", type: "Lower Body Hypertrophy", details: ["Barbell Back Squats (4 sets × 6-8 reps)", "Romanian Deadlifts (3 sets × 8-10 reps)", "Leg Extensions (3 sets × 12 reps)", "Seated Calf Raises (4 sets × 15 reps)"] },
-        { day: "Day 3", type: "Active Recovery & Mobility", details: ["20-30 mins very light walk for blood flow", "10-15 mins of lower body stretching / foam rolling"] },
-        { day: "Day 4", type: "Upper Body Hypertrophy", details: ["Flat Barbell Bench Press (3 sets × 8 reps)", "Pull-Ups or Chin-Ups (3 sets × max reps)", "Overhead Press (3 sets × 8 reps)", "Seated Cable Rows (3 sets × 10-12 reps)", "Bicep & Tricep superset (3 sets × 12 reps)"] },
-        { day: "Day 5", type: "Lower Body & Core Hypertrophy", details: ["Bulgarian Split Squats (3 sets × 10 reps per leg)", "Lying Leg Curls (3 sets × 12 reps)", "Barbell Hip Thrusts (3 sets × 10 reps)", "Hanging Leg Raises (3 sets × 12-15 reps)"] },
-        { day: "Day 6", type: "Active Recovery Walk", details: ["30-40 mins light walk to promote systemic recovery and clear muscle soreness"] },
-        { day: "Day 7", type: "Rest & Growth", details: ["Complete rest", "Maximize protein synthesis with good nutrition and 8+ hours sleep"] }
-      ]
     },
     bulk: {
       name: "Hypertrophy Volume (Push/Pull/Legs)",
@@ -1950,9 +1938,9 @@ function openDietModal() {
 // ─────────────────────────────────────────────────
 document.getElementById('loginPassword').addEventListener('keypress', e => { if(e.key==='Enter') handleLogin(); });
 document.getElementById('loginEmail').addEventListener('keypress',    e => { if(e.key==='Enter') handleLogin(); });
-// Registration Enter key navigates to the next step, not directly to submit
-document.getElementById('regEmail').addEventListener('keypress',      e => { if(e.key==='Enter') goToStep2(); });
-document.getElementById('regPassword').addEventListener('keypress',   e => { if(e.key==='Enter') goToStep2(); });
+// Registration Enter key -- routes through OTP verification flow
+document.getElementById('regEmail').addEventListener('keypress',    e => { if(e.key==='Enter') goToStepOtp(); });
+document.getElementById('regPassword').addEventListener('keypress', e => { if(e.key==='Enter') goToStepOtp(); });
 // ═══════════════════════════════════════════════════════════════
 //  OTP EMAIL VERIFICATION
 // ═══════════════════════════════════════════════════════════════
@@ -1991,19 +1979,27 @@ async function goToStepOtp() {
     return showAuthError('⚠️ An account with this email already exists. Sign in instead.');
   }
 
-  // Send OTP via backend
-  showLoader('Sending verification code…');
+  // Send OTP via backend (60s timeout to handle Render free-tier cold start)
+  showLoader('Sending verification code… (may take up to 30s on first use)');
   try {
     const backendUrl = window._BACKEND_URL || '';
-    const res = await fetch(`${backendUrl}/api/auth/send-otp`, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ email, name }),
-    });
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 60000); // 60s for cold start
+    let res;
+    try {
+      res = await fetch(`${backendUrl}/api/auth/send-otp`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ email, name }),
+        signal:  ctrl.signal,
+      });
+    } finally {
+      clearTimeout(timer);
+    }
     const data = await res.json();
     hideLoader();
     if (!res.ok) {
-      return showAuthError('⚠️ ' + (data.error || 'Failed to send verification code.'));
+      return showAuthError('⚠️ ' + (data.error || 'Failed to send verification code. Please try again.'));
     }
     // Show OTP step
     document.getElementById('otpSentEmail').textContent = email;
@@ -2013,10 +2009,12 @@ async function goToStepOtp() {
     setTimeout(() => document.getElementById('otp0').focus(), 100);
   } catch (e) {
     hideLoader();
-    // Backend offline — allow proceeding without OTP (local/dev mode)
-    console.warn('[OTP] Backend unreachable, skipping OTP:', e.message);
-    _otpVerifiedToken = null;
-    showRegStep('regStep2');
+    if (e.name === 'AbortError') {
+      showAuthError('⚠️ Server is waking up (free tier). Please wait 10 seconds and click Continue again.');
+    } else {
+      showAuthError('⚠️ Could not reach the server. Please check your connection and try again.');
+    }
+    // Do NOT skip OTP — user must retry
   }
 }
 
@@ -2375,40 +2373,145 @@ function _buildLocalChatContext() {
 }
 
 function _localNutribotFallback(message, context) {
-  const msg   = message.toLowerCase();
-  const goals = (context && context.goals) || {};
-  const logs  = (context && context.recent_logs) || [];
-  const name  = (context && context.user_name) || 'there';
+  const msg      = message.toLowerCase();
+  const goals    = (context && context.goals) || {};
+  const logs     = (context && context.recent_logs) || [];
+  const name     = (context && context.user_name) || 'there';
   const calGoal  = goals.calories || 2000;
   const protGoal = goals.protein  || 150;
+  const carbGoal = goals.carbs    || 250;
+  const fatGoal  = goals.fat      || 65;
+  const fiberGoal= goals.fiber    || 28;
   const today    = todayStr();
   const todayLog = logs.filter(l => l.date === today);
   const todayCal = todayLog.reduce((s, l) => s + (l.cal || 0), 0);
-  const todayProt = todayLog.reduce((s, l) => s + (l.protein_g || 0), 0);
+  const todayProt= todayLog.reduce((s, l) => s + (l.protein_g || 0), 0);
+  const todayCarb= todayLog.reduce((s, l) => s + (l.carbs_g || 0), 0);
+  const todayFat = todayLog.reduce((s, l) => s + (l.fat_g || 0), 0);
+  const remCal   = calGoal - todayCal;
 
-  if (/on track|doing|how am i|progress|today/.test(msg)) {
-    const rem = calGoal - todayCal;
-    if (todayCal === 0) return `Hey ${name}! 👋 You haven't logged any food today yet. Log your first meal to start tracking!`;
-    if (rem > 200) return `You've had **${Math.round(todayCal)} kcal** so far — **${Math.round(rem)} kcal** remaining to hit your goal. Keep going! 💪`;
-    if (rem > 0)   return `Almost there, ${name}! Just **${Math.round(rem)} kcal** left for today. Great discipline! 🎯`;
-    return `You've hit your calorie goal for today (${Math.round(todayCal)} / ${calGoal} kcal)! Time to rest and hydrate. 🌟`;
+  if (/on track|how am i doing|progress|summary|overview|status/.test(msg)) {
+    if (todayCal === 0) return `Hey ${name}! You haven't logged any food today yet. Start tracking to see your progress!`;
+    const pct = Math.round(todayCal / calGoal * 100);
+    return `Today so far: **${Math.round(todayCal)} / ${calGoal} kcal** (${pct}%) - Protein: **${Math.round(todayProt)}g** - Carbs: **${Math.round(todayCarb)}g** - Fat: **${Math.round(todayFat)}g**\n${remCal > 0 ? `You have **${Math.round(remCal)} kcal** remaining.` : "You've hit your calorie goal! Great job!"}`;
   }
-  if (/protein|muscle|gym/.test(msg)) {
+  if (/calorie|kcal|how many cal|remaining|left/.test(msg)) {
+    if (remCal > 400) return `You've used **${Math.round(todayCal)} kcal** out of **${calGoal} kcal**. **${Math.round(remCal)} kcal remaining** - enough for a proper meal!`;
+    if (remCal > 100) return `Almost at your limit! **${Math.round(remCal)} kcal** remaining. A light snack like fruit or yogurt would be perfect.`;
+    return `You've hit your calorie target (${Math.round(todayCal)} kcal). Keep it to water and very light snacks now!`;
+  }
+  if (/protein|muscle|gym|lifting|strength/.test(msg)) {
     const rem = protGoal - todayProt;
-    if (rem > 0) return `You've had **${Math.round(todayProt)}g protein** — need **${Math.round(rem)}g more** to reach your ${protGoal}g goal. Try eggs, paneer, dal or grilled chicken! 🥚`;
-    return `Protein goal smashed! **${Math.round(todayProt)}g** consumed today. Amazing work, ${name}! 💪`;
+    if (rem > 50) return `You need **${Math.round(rem)}g more protein** today (${Math.round(todayProt)}g / ${protGoal}g). Top sources: chicken breast (31g/100g), eggs (6g each), paneer (18g/100g), dal (9g/cup), tofu (8g/100g).`;
+    if (rem > 0)  return `Almost at protein goal! Just **${Math.round(rem)}g more** to go. A boiled egg or a small protein shake will do it!`;
+    return `Protein goal crushed! **${Math.round(todayProt)}g** consumed today. Your muscles will thank you!`;
   }
-  if (/eat|dinner|lunch|breakfast|snack|what should/.test(msg)) {
-    const rem = calGoal - todayCal;
-    if (rem > 500) return `With **${Math.round(rem)} kcal** remaining, try a balanced meal: dal + roti + sabzi, or grilled chicken with rice and salad. 🍛`;
-    if (rem > 200) return `About **${Math.round(rem)} kcal** left — perfect for a fruit bowl, Greek yogurt, or a small handful of nuts. 🍎`;
-    return `You're close to your limit! Consider herbal tea, a small fruit, or just water. Great job staying on track! 🌿`;
+  if (/carb|carbohydrate|rice|roti|bread|sugar|glucose|energy/.test(msg)) {
+    const rem = carbGoal - todayCarb;
+    if (rem > 0) return `Carbs: **${Math.round(todayCarb)}g / ${carbGoal}g** (${Math.round(rem)}g remaining). Prefer complex carbs: oats, brown rice, whole wheat roti over refined options.`;
+    return `You've hit your carb goal (**${Math.round(todayCarb)}g**). Focus on protein and vegetables for the rest of the day.`;
   }
-  if (/sodium|salt/.test(msg)) return `Your daily sodium goal is **${goals.sodium || 2300}mg**. Common culprits: pickles, papad, processed snacks. Home-cooked meals with less salt is the best strategy! 🧂`;
-  if (/fiber|digestion|gut/.test(msg)) return `Aim for **${goals.fiber || 28}g fiber** daily. Dal, vegetables, fruits and whole grains are excellent sources. Dal + roti is one of the best combinations! 🌾`;
-  return `I'm here to help you reach your nutrition goals, **${name}**! Try asking: "Am I on track today?", "What should I eat for dinner?", or "How's my protein intake?" 🥗`;
+  if (/fat|oil|ghee|butter|avocado|nuts|omega/.test(msg)) {
+    const rem = fatGoal - todayFat;
+    return `Fat today: **${Math.round(todayFat)}g / ${fatGoal}g** (${Math.round(Math.max(0,rem))}g remaining). Healthy fats: ghee (in moderation), nuts, avocado, olive oil. Avoid trans fats in fried fast food.`;
+  }
+  if (/fiber|fibre|digestion|gut|constipation|bloat/.test(msg)) {
+    return `Aim for **${fiberGoal}g fiber** daily. Best Indian sources: rajma (15g/cup), chana dal (8g/cup), peas, broccoli, oats, whole wheat roti. Fiber keeps you full and improves gut health!`;
+  }
+  if (/sodium|salt|bp|blood pressure|hypertension/.test(msg)) {
+    return `Daily sodium limit: **2300mg** (1 tsp salt). High sodium raises blood pressure. Reduce pickles, papad, packaged snacks, restaurant food. Use lemon and herbs for flavor instead.`;
+  }
+  if (/water|hydrat|drink|thirst|fluid/.test(msg)) {
+    return `Aim for **2.5-3 litres of water** daily (more if you exercise). Dehydration mimics hunger pangs. Drink a glass before each meal - it helps control portion size!`;
+  }
+  if (/weight loss|lose weight|slim|fat loss|deficit|cutting/.test(msg)) {
+    return `For healthy fat loss, aim for a **300-500 kcal daily deficit**. Your goal is **${calGoal} kcal**. Prioritize protein (prevents muscle loss), strength training, and 7-8 hours of sleep. Avoid crash dieting!`;
+  }
+  if (/weight gain|bulk|gain weight|mass|underweight/.test(msg)) {
+    return `To gain muscle, you need a **calorie surplus of 250-400 kcal**. Eat every 3-4 hours, prioritize protein (1.6-2.2g per kg body weight). Dal, eggs, milk, and bananas are great budget bulking foods.`;
+  }
+  if (/bmi|ideal weight|healthy weight|body mass/.test(msg)) {
+    return `BMI = weight(kg) / height(m)^2. Healthy range: **18.5-24.9**. But BMI doesn't account for muscle mass. Focus on waist circumference and body fat % for a fuller picture.`;
+  }
+  if (/meal time|when to eat|timing|skip meal|intermittent|16:8|fasting/.test(msg)) {
+    return `Ideal timing: **Breakfast** within 1hr of waking, **Lunch** 12-2 PM, **Dinner** before 8 PM. For intermittent fasting (16:8), eat between 12-8 PM. Avoid eating within 2 hours of sleep.`;
+  }
+  if (/breakfast|morning meal|wake up|poha|upma|idli|paratha/.test(msg)) {
+    return `Great Indian breakfasts: **Poha** (250 kcal), **Oats+milk** (300 kcal), **2 Eggs+2 roti** (350 kcal), **Idli+sambar** (220 kcal), **Greek yogurt+fruit** (200 kcal). High-protein breakfast controls hunger till lunch!`;
+  }
+  if (/lunch|afternoon|midday|dal rice|thali/.test(msg)) {
+    return `Balanced Indian lunch: **Dal + 2 roti + sabzi + curd** (~600 kcal, 25g protein), **Rajma rice** (~550 kcal), **Chicken curry + rice** (~650 kcal). Fill half your plate with vegetables!`;
+  }
+  if (/dinner|evening meal|night|supper/.test(msg)) {
+    if (remCal > 500) return `You have **${Math.round(remCal)} kcal** for dinner - enjoy a proper meal: grilled chicken/paneer + vegetables + small portion rice or 2 rotis.`;
+    if (remCal > 150) return `Keep dinner light - **${Math.round(remCal)} kcal** remaining. Try khichdi, vegetable soup + 1 roti, or salad with paneer.`;
+    return `You're near your limit. Have a very light dinner - vegetable soup, cucumber salad, or warm milk. Your body will thank you!`;
+  }
+  if (/snack|munchies|hunger|evening bite|mid.?meal|craving/.test(msg)) {
+    return `Healthy snacks under 200 kcal: **Almonds** (164 kcal/28g), **Apple** (95 kcal), **Roasted chana** (120 kcal), **Greek yogurt** (100 kcal), **Cucumber+hummus** (80 kcal). Avoid chips and biscuits!`;
+  }
+  if (/pre.?workout|before gym|before exercise|pre.?train/.test(msg)) {
+    return `**Pre-workout (1-2hr before):** Banana + peanut butter, oats with milk, or rice + chicken. You need fast carbs for energy + some protein. Avoid heavy/fatty meals right before training.`;
+  }
+  if (/post.?workout|after gym|after exercise|recovery meal|muscle recovery/.test(msg)) {
+    return `**Post-workout (within 45 min):** 30-40g protein + carbs. Try: protein shake + banana, eggs + toast, paneer + roti, or curd rice. Don't skip this meal - it's when muscles repair!`;
+  }
+  if (/biryani|butter chicken|dal makhani|samosa|pav bhaji|chole|rajma|dosa|idli|roti|chapati|paratha|paneer|tikka/.test(msg)) {
+    return `Indian food can be very nutritious! **Best choices:** Dal (high protein/fiber), Idli+sambar (light, fermented), Rajma (plant protein), Roti. **Limit:** Biryani (high cal), Butter chicken (high fat), Samosa (deep fried). Balance is key!`;
+  }
+  if (/vitamin|mineral|deficiency|iron|calcium|d3|b12|zinc|magnesium/.test(msg)) {
+    return `Common Indian deficiencies: **Vitamin D** (get 20min sun daily), **B12** (vegetarians: take supplements), **Iron** (eat spinach, lentils, jaggery), **Calcium** (milk, curd, ragi). Get a blood test annually!`;
+  }
+  if (/diabetes|blood sugar|insulin|glycemic|glucose/.test(msg)) {
+    return `For blood sugar control: prefer **low glycemic foods** - oats, barley, dal, vegetables over white rice/bread. Eat smaller frequent meals. A 10-min walk after meals helps lower blood sugar significantly!`;
+  }
+  if (/cholesterol|heart|hdl|ldl|triglyceride|cardiovascular/.test(msg)) {
+    return `For heart health: reduce saturated fat, increase soluble fiber (oats, beans), eat flaxseeds/walnuts for omega-3, exercise 150 min/week. Get your lipid panel checked annually.`;
+  }
+  if (/sleep|rest|recovery|fatigue|tired|insomnia/.test(msg)) {
+    return `Sleep is when your body repairs muscle! Aim for **7-9 hours**. Poor sleep raises ghrelin (hunger hormone), causes cravings, and slows metabolism. Avoid screens 1hr before bed.`;
+  }
+  if (/cheat|junk|pizza|burger|cheat meal|cheat day|treat yourself/.test(msg)) {
+    return `Cheat meals are okay! Rule: **1 cheat meal per week**, not a full cheat day. Enjoy what you love in moderation. One meal never ruined progress - just like one salad never created it. Get back on track the next meal!`;
+  }
+  if (/vegetarian|vegan|plant.?based|no meat/.test(msg)) {
+    return `Top veg protein sources: **Paneer** (18g/100g), **Tofu** (8g/100g), **Rajma** (9g/cup), **Chana dal** (9g/cup), **Moong dal** (7g/cup), **Greek yogurt** (10g/100g), **Quinoa** (8g/cup). Combine sources for complete amino acids!`;
+  }
+  if (/burn|exercise|workout|cardio|run|walk|cycling|swim|calorie burn/.test(msg)) {
+    return `Approx calorie burn (70kg, 30 min): **Running** ~300 kcal, **Cycling** ~240 kcal, **Swimming** ~250 kcal, **Brisk Walk** ~150 kcal, **HIIT** ~350 kcal, **Yoga** ~100 kcal.`;
+  }
+  if (/macro|breakdown|split|nutrient|today.?s nutrition/.test(msg)) {
+    if (todayCal === 0) return `No food logged yet today, ${name}! Log your first meal and I'll give you a full macro breakdown.`;
+    return `Today's macros:\n- Protein: **${Math.round(todayProt)}g / ${protGoal}g** (${Math.round(todayProt/protGoal*100)}%)\n- Carbs: **${Math.round(todayCarb)}g / ${carbGoal}g** (${Math.round(todayCarb/carbGoal*100)}%)\n- Fat: **${Math.round(todayFat)}g / ${fatGoal}g** (${Math.round(todayFat/fatGoal*100)}%)\n- Calories: **${Math.round(todayCal)} / ${calGoal} kcal**`;
+  }
+  if (/metabolism|tdee|maintenance|metabolic rate|bmr/.test(msg)) {
+    return `Your TDEE is how many calories you burn daily at your activity level. Eat less to lose weight, more to gain. Strength training boosts metabolic rate long-term - you burn more even at rest!`;
+  }
+  if (/supplement|creatine|whey|protein powder|bcaa|multivitamin/.test(msg)) {
+    return `Supplements worth considering: **Creatine monohydrate** (proven for strength/muscle), **Whey protein** (convenient protein), **Vitamin D3+K2** (most Indians are deficient), **Omega-3** (heart+brain). Food first, supplements second!`;
+  }
+  if (/alcohol|beer|wine|whisky|drinking/.test(msg)) {
+    return `Alcohol has **7 kcal/gram** - more than carbs! A beer adds ~200 kcal, wine ~120 kcal. It disrupts sleep and fat metabolism. If you drink, account for it in your daily calories.`;
+  }
+  if (/motivat|inspire|stuck|plateau|not losing|demotivat|give up/.test(msg)) {
+    return `Plateaus are normal - your body adapts! Try: changing your workout, adjusting calories by 100-150 kcal, prioritizing sleep, taking body measurements instead of just scale weight. Consistency beats perfection, ${name}!`;
+  }
+  if (/what did i eat|my food today|today.?s log|show log|food log/.test(msg)) {
+    if (todayLog.length === 0) return `No food logged today yet, ${name}! Start logging your meals to track your nutrition.`;
+    const foods = todayLog.map(l => l.food).slice(0, 6).join(', ');
+    return `Today you logged: **${foods}** - totaling **${Math.round(todayCal)} kcal** and **${Math.round(todayProt)}g protein**. Check your Dashboard for the full breakdown!`;
+  }
+  if (/my goal|daily goal|target|calorie goal|how much should/.test(msg)) {
+    return `Your daily targets: **${calGoal} kcal** - **${protGoal}g protein** - **${carbGoal}g carbs** - **${fatGoal}g fat** - **${fiberGoal}g fiber**. These are calculated from your body stats. Update your profile to recalculate!`;
+  }
+  if (/^(hi|hello|hey|hii|helo|namaste|sup|yo)\b/.test(msg)) {
+    return `Hey ${name}! I'm NutriBot, your AI nutritionist. Ask me about nutrition, your food logs, meal ideas, weight loss, protein, or anything health-related!`;
+  }
+  if (/thank|thanks|great|awesome|nice|helpful/.test(msg)) {
+    return `You're welcome, ${name}! Keep up the great work on your nutrition journey. Small consistent steps lead to big results! Anything else I can help with?`;
+  }
+  return `I'm your AI nutritionist, **${name}**! Ask me about:\n- "Am I on track today?"\n- "What should I eat for dinner?"\n- "Show my macro breakdown"\n- "How to lose weight?"\n- "Best vegetarian protein sources"\n- "Pre-workout nutrition"\n- "Does sleep affect weight?"\n\nJust type your question!`;
 }
-
 // Show NutriBot button when user is logged in
 const _origLoginSuccess = loginSuccess;
 loginSuccess = function(user) {
