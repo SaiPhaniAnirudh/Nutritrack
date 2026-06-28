@@ -1,4 +1,4 @@
-"""
+﻿"""
 NutriTrack — backend/App.py
 Flask REST API backend
 
@@ -139,6 +139,20 @@ if app.config['SQLALCHEMY_DATABASE_URI'].startswith('sqlite'):
     os.makedirs(app.instance_path, exist_ok=True)
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# -- Connection pool settings -- critical for Render free tier ----------------
+# pool_pre_ping: validate connection before use -- fixes the SSL
+#   'decryption failed or bad record mac' error after Render idle periods.
+# pool_recycle:  recycle connections every 5 min (Render idles after ~15 min).
+_is_postgres = app.config.get('SQLALCHEMY_DATABASE_URI', '').startswith('postgresql')
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_pre_ping': True,
+    'pool_recycle':  300,
+    'pool_size':     5,
+    'max_overflow':  2,
+    'pool_timeout':  30,
+    'connect_args':  {'connect_timeout': 10} if _is_postgres else {},
+}
 
 
 
