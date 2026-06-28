@@ -294,6 +294,63 @@ def _date_range(days):
     return [(today - timedelta(days=i)).isoformat() for i in range(days-1, -1, -1)]
 
 
+def _send_otp_email(email, otp_code, to_name='there'):
+    """
+    Send OTP code to user's email.
+    If SMTP details are not configured, prints code to console (local dev mode).
+    """
+    smtp_email = os.getenv('SMTP_EMAIL')
+    smtp_password = os.getenv('SMTP_APP_PASSWORD')
+    
+    if not smtp_email or not smtp_password:
+        print("\n" + "═"*60)
+        print(f"📧  [DEV MODE] OTP verification code for {to_name} ({email}):")
+        print(f"    👉  {otp_code}  👈")
+        print("═"*60 + "\n")
+        return True
+
+    smtp_host = os.getenv('SMTP_HOST', 'smtp.gmail.com')
+    try:
+        smtp_port = int(os.getenv('SMTP_PORT', 587))
+    except ValueError:
+        smtp_port = 587
+
+    from_name = os.getenv('SMTP_FROM_NAME', 'NutriTrack')
+
+    msg = MIMEMultipart()
+    msg['From'] = f"{from_name} <{smtp_email}>"
+    msg['To'] = email
+    msg['Subject'] = f"{otp_code} is your NutriTrack verification code"
+
+    body = f"""Hi {to_name},
+
+Thank you for registering on NutriTrack!
+
+Your verification code is: {otp_code}
+
+This code will expire in 10 minutes.
+
+If you did not request this, please ignore this email.
+
+Best regards,
+The NutriTrack Team
+"""
+    msg.attach(MIMEText(body, 'plain'))
+
+    try:
+        server = smtplib.SMTP(smtp_host, smtp_port)
+        server.starttls()
+        server.login(smtp_email, smtp_password)
+        server.sendmail(smtp_email, email, msg.as_string())
+        server.close()
+        print(f"✅ OTP email sent successfully to {email}")
+        return True
+    except Exception as e:
+        print(f"❌ Failed to send OTP email to {email}: {e}")
+        return False
+
+
+
 # ══════════════════════════════════════════════════
 #  AUTH ROUTES
 # ══════════════════════════════════════════════════
@@ -320,7 +377,11 @@ def send_otp():
         return jsonify({'error': 'Email already registered. Please sign in instead.'}), 409
 
     # Generate 6-digit OTP and store in DB
-    otp_code   = str(random.randint(100000, 999999))
+    # Generate 6-digit OTP and store in DB (fixed 123456 in dev mode for easy testing)
+    if not os.getenv('SMTP_EMAIL') or not os.getenv('SMTP_APP_PASSWORD'):
+        otp_code = '123456'
+    else:
+        otp_code = str(random.randint(100000, 999999))
     expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
 
     # Invalidate any previous unused OTPs for this email

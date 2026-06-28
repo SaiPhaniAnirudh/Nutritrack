@@ -2152,20 +2152,21 @@ function otpDigitKey(e, idx) {
 
 // Override the old goToStep so it works with the new OTP step too
 const _origGoToStep = goToStep;
-function goToStep(n) {
+goToStep = function(n) {
   if (n === 1) { showRegStep('regStep1'); return; }
   if (n === 2) { showRegStep('regStep2'); return; }
   if (n === 3) { showRegStep('regStep3'); return; }
-}
+};
 
 // Patch handleRegister to include the verified token
 const _origHandleRegister = handleRegister;
-async function handleRegister() {
+handleRegister = async function() {
   // Pass verified_token to the backend if we have one
   // We intercept the network call by temporarily storing it
   window._pendingVerifiedToken = _otpVerifiedToken;
   await _origHandleRegister();
-}
+};
+
 
 
 // ═══════════════════════════════════════════════════════════════
@@ -2406,7 +2407,7 @@ function _localNutribotFallback(message, context) {
 
 // Show NutriBot button when user is logged in
 const _origLoginSuccess = loginSuccess;
-function loginSuccess(user) {
+loginSuccess = function(user) {
   _origLoginSuccess(user);
   const btn = document.getElementById('nutribotBtn');
   if (btn) btn.style.display = 'flex';
@@ -2415,15 +2416,16 @@ function loginSuccess(user) {
   _chatOpen = false;
   const panel = document.getElementById('nutribotPanel');
   if (panel) panel.style.display = 'none';
-}
+};
 
 // Hide NutriBot button when user logs out
 const _origHandleLogout = handleLogout;
-function handleLogout() {
+handleLogout = function() {
   const btn = document.getElementById('nutribotBtn');
   if (btn) btn.style.display = 'none';
   const panel = document.getElementById('nutribotPanel');
   if (panel) { panel.style.display = 'none'; _chatOpen = false; }
   _chatHistory = [];
   _origHandleLogout();
-}
+};
+
