@@ -108,15 +108,32 @@ def serve_manifest():
     return app.send_static_file('manifest.json')
 
 # Database — SQLite locally, Postgres in production
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv(
-    'DATABASE_URL',
-    'sqlite:///nutritrack.db'
-).replace('postgres://', 'postgresql://')   # Railway fix
+db_url = os.getenv('DATABASE_URL', 'sqlite:///nutritrack.db')
+
+# Ensure PostgreSQL password is URL-encoded if it contains special characters
+if db_url.startswith('postgres://') or db_url.startswith('postgresql://'):
+    try:
+        scheme, rest = db_url.split('://', 1)
+        if '@' in rest:
+            creds, host_db = rest.rsplit('@', 1)
+            if ':' in creds:
+                user, password = creds.split(':', 1)
+                from urllib.parse import quote_plus, unquote
+                # Unquote first to avoid double encoding, then quote
+                password = quote_plus(unquote(password))
+                db_url = f"{scheme}://{user}:{password}@{host_db}"
+    except Exception as e:
+        print(f"⚠️ Warning parsing DATABASE_URL: {e}")
+
+db_url = db_url.replace('postgres://', 'postgresql://')   # Railway fix
+app.config['SQLALCHEMY_DATABASE_URI'] = db_url
+
 # Ensure instance directory exists for SQLite database
 if app.config['SQLALCHEMY_DATABASE_URI'].startswith('sqlite'):
     os.makedirs(app.instance_path, exist_ok=True)
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
 
 
 # JWT
