@@ -1994,7 +1994,8 @@ async function goToStepOtp() {
   // Send OTP via backend
   showLoader('Sending verification code…');
   try {
-    const res = await fetch('/api/auth/send-otp', {
+    const backendUrl = window._BACKEND_URL || '';
+    const res = await fetch(`${backendUrl}/api/auth/send-otp`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ email, name }),
@@ -2032,7 +2033,8 @@ async function resendOtp() {
   const name  = document.getElementById('regName').value.trim();
   showLoader('Resending code…');
   try {
-    const res  = await fetch('/api/auth/send-otp', {
+    const backendUrl = window._BACKEND_URL || '';
+    const res  = await fetch(`${backendUrl}/api/auth/send-otp`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ email, name }),
@@ -2066,7 +2068,8 @@ async function verifyOtpAndProceed() {
 
   showLoader('Verifying code…');
   try {
-    const res  = await fetch('/api/auth/verify-otp', {
+    const backendUrl = window._BACKEND_URL || '';
+    const res  = await fetch(`${backendUrl}/api/auth/verify-otp`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ email, otp_code: code }),
@@ -2290,7 +2293,8 @@ async function _callNutriBot(message) {
   if (jwt) {
     // Use the backend proxy (which fetches logs from DB)
     try {
-      const res = await fetch('/api/ai/chat', {
+      const backendUrl = window._BACKEND_URL || '';
+      const res = await fetch(`${backendUrl}/api/ai/chat`, {
         method:  'POST',
         headers: {
           'Content-Type':  'application/json',
