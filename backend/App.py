@@ -108,7 +108,8 @@ def serve_manifest():
     return app.send_static_file('manifest.json')
 
 # Database — SQLite locally, Postgres in production
-db_url = os.getenv('DATABASE_URL', 'sqlite:///nutritrack.db')
+db_url = os.getenv('DATABASE_URL', 'sqlite:///nutritrack.db').strip()
+
 
 # Ensure PostgreSQL password is URL-encoded if it contains special characters
 if db_url.startswith('postgres://') or db_url.startswith('postgresql://'):
