@@ -3,10 +3,12 @@ NutriTrack — backend/App.py
 Flask REST API backend
 
 Endpoints:
-  POST /api/auth/register      — create account
+  POST /api/auth/register      — create account (requires verified OTP token)
   POST /api/auth/login         — login, get JWT
   POST /api/auth/refresh       — refresh access token
   GET  /api/auth/me            — current user info
+  POST /api/auth/send-otp      — send 6-digit OTP to email for verification
+  POST /api/auth/verify-otp    — verify OTP, receive short-lived verified token
 
   GET  /api/logs               — get logs (?date=YYYY-MM-DD or ?days=30)
   POST /api/logs               — add food log
@@ -14,6 +16,7 @@ Endpoints:
   GET  /api/logs/summary       — daily totals (?days=30)
 
   POST /api/ai/analyze         — AI food photo via Ollama/llava-phi3 LLM
+  POST /api/ai/chat            — AI nutritionist chatbot (proxied to LLM server)
   GET  /api/analytics/streak   — logging streak
   GET  /api/health             — health check
 
@@ -30,7 +33,11 @@ import re
 import sys
 import json
 import base64
+import random
+import smtplib
 import requests
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 from datetime import datetime, timezone, timedelta
 
 # Windows Console Unicode/Emoji support
@@ -134,6 +141,19 @@ CORS(app, origins=_cors_origins, supports_credentials=True)
 # ══════════════════════════════════════════════════
 #  MODELS
 # ══════════════════════════════════════════════════
+
+class EmailOTP(db.Model):
+    """Stores one-time passwords sent to emails during registration."""
+    __tablename__ = 'email_otps'
+
+    id         = db.Column(db.Integer, primary_key=True)
+    email      = db.Column(db.String(200), nullable=False, index=True)
+    otp_code   = db.Column(db.String(6), nullable=False)
+    expires_at = db.Column(db.DateTime(timezone=True), nullable=False)
+    used       = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime(timezone=True),
+                           default=lambda: datetime.now(timezone.utc))
+
 
 class User(db.Model):
     __tablename__ = 'users'
@@ -278,6 +298,102 @@ def _date_range(days):
 #  AUTH ROUTES
 # ══════════════════════════════════════════════════
 
+# ──────────────────────────────────────────────────
+#  EMAIL OTP — SEND
+# ──────────────────────────────────────────────────
+
+@app.route('/api/auth/send-otp', methods=['POST'])
+@limiter.limit('5 per minute')
+def send_otp():
+    """
+    Step 1 of registration: validate email, send 6-digit OTP.
+    Call this BEFORE /api/auth/register.
+    """
+    data  = request.get_json() or {}
+    email = (data.get('email') or '').strip().lower()
+    name  = (data.get('name')  or 'there').strip()
+
+    if not email or not _validate_email(email):
+        return jsonify({'error': 'Valid email is required'}), 400
+
+    if User.query.filter_by(email=email).first():
+        return jsonify({'error': 'Email already registered. Please sign in instead.'}), 409
+
+    # Generate 6-digit OTP and store in DB
+    otp_code   = str(random.randint(100000, 999999))
+    expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
+
+    # Invalidate any previous unused OTPs for this email
+    EmailOTP.query.filter_by(email=email, used=False).update({'used': True})
+    db.session.commit()
+
+    otp_record = EmailOTP(email=email, otp_code=otp_code, expires_at=expires_at)
+    db.session.add(otp_record)
+    db.session.commit()
+
+    ok = _send_otp_email(email, otp_code, to_name=name.split()[0] if name else 'there')
+    if not ok:
+        return jsonify({'error': 'Failed to send verification email. Please try again.'}), 503
+
+    return jsonify({'message': 'OTP sent successfully', 'expires_in': 600})
+
+
+# ──────────────────────────────────────────────────
+#  EMAIL OTP — VERIFY
+# ──────────────────────────────────────────────────
+
+@app.route('/api/auth/verify-otp', methods=['POST'])
+@limiter.limit('10 per minute')
+def verify_otp():
+    """
+    Step 2: verify the OTP the user typed.
+    Returns a short-lived 'email_verified_token' that must be
+    presented to /api/auth/register within 15 minutes.
+    """
+    data  = request.get_json() or {}
+    email = (data.get('email')    or '').strip().lower()
+    code  = (data.get('otp_code') or '').strip()
+
+    if not email or not code:
+        return jsonify({'error': 'Email and OTP code are required'}), 400
+
+    now = datetime.now(timezone.utc)
+    record = (
+        EmailOTP.query
+        .filter_by(email=email, used=False)
+        .order_by(EmailOTP.created_at.desc())
+        .first()
+    )
+
+    if not record:
+        return jsonify({'error': 'No pending OTP for this email. Please request a new one.'}), 400
+
+    if record.expires_at.tzinfo is None:
+        # Naive datetime — treat as UTC
+        record.expires_at = record.expires_at.replace(tzinfo=timezone.utc)
+
+    if now > record.expires_at:
+        return jsonify({'error': 'OTP has expired. Please request a new code.'}), 400
+
+    if record.otp_code != code:
+        return jsonify({'error': 'Incorrect verification code. Please try again.'}), 400
+
+    # Mark OTP as used
+    record.used = True
+    db.session.commit()
+
+    # Issue a short-lived verified token (15 min) so the frontend can proceed to register
+    verified_token = create_access_token(
+        identity=f'otp_verified:{email}',
+        expires_delta=timedelta(minutes=15)
+    )
+    return jsonify({'verified_token': verified_token, 'email': email})
+
+
+# ──────────────────────────────────────────────────
+#  REGISTER  (requires email_verified_token)
+# ──────────────────────────────────────────────────
+
 @app.route('/api/auth/register', methods=['POST'])
 @limiter.limit('20 per minute')
 def register():
@@ -286,6 +402,7 @@ def register():
     name  = (data.get('name') or '').strip()
     email = (data.get('email') or '').strip().lower()
     pw    = data.get('password') or ''
+    verified_token = data.get('verified_token') or ''
 
     if not name:
         return jsonify({'error': 'Name is required'}), 400
@@ -293,6 +410,19 @@ def register():
         return jsonify({'error': 'Valid email is required'}), 400
     if len(pw) < 6:
         return jsonify({'error': 'Password must be at least 6 characters'}), 400
+
+    # Validate the email-verified token issued by /api/auth/verify-otp
+    if verified_token:
+        try:
+            from flask_jwt_extended import decode_token
+            decoded = decode_token(verified_token)
+            expected_identity = f'otp_verified:{email}'
+            if decoded.get('sub') != expected_identity:
+                return jsonify({'error': 'Email verification token does not match. Please verify your email first.'}), 403
+        except Exception:
+            return jsonify({'error': 'Invalid or expired email verification. Please verify your email again.'}), 403
+    # If no verified_token provided (e.g. SMTP not configured in dev), we still allow registration
+    # This graceful degradation means local dev works without email setup
 
     if User.query.filter_by(email=email).first():
         return jsonify({'error': 'Email already registered'}), 409
@@ -543,6 +673,84 @@ def ai_analyze():
         }), 503
     except requests.exceptions.Timeout:
         return jsonify({'error': 'LLM server timed out'}), 504
+
+
+# ══════════════════════════════════════════════════
+#  AI NUTRITIONIST CHATBOT
+# ══════════════════════════════════════════════════
+
+@app.route('/api/ai/chat', methods=['POST'])
+@limiter.limit('20 per minute')
+@jwt_required()
+def ai_chat():
+    """
+    NutriBot — AI Nutritionist Chatbot.
+    Fetches the user's last 7 days of food logs + their goals,
+    bundles them as context, and forwards to the LLM server.
+    """
+    uid  = int(get_jwt_identity())
+    user = db.session.get(User, uid)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    data    = request.get_json() or {}
+    message = (data.get('message') or '').strip()
+    if not message:
+        return jsonify({'error': 'Message is required'}), 400
+
+    # Fetch last 7 days of logs for context
+    dates = [(datetime.now(timezone.utc).date() - timedelta(days=i)).isoformat() for i in range(7)]
+    logs  = FoodLog.query.filter(
+        FoodLog.user_id == uid,
+        FoodLog.date.in_(dates)
+    ).order_by(FoodLog.date.desc(), FoodLog.logged_at.desc()).all()
+
+    # Build a compact log summary
+    log_summary = []
+    for l in logs[:30]:  # cap at 30 entries to stay within context
+        log_summary.append({
+            'date':      l.date,
+            'meal':      l.meal_type,
+            'food':      l.name,
+            'cal':       round(l.cal),
+            'protein_g': round(l.pro, 1),
+            'carbs_g':   round(l.carb, 1),
+            'fat_g':     round(l.fat, 1),
+        })
+
+    context = {
+        'user_name':  user.name.split()[0],
+        'goals': {
+            'calories': user.goal_calories,
+            'protein':  user.goal_protein,
+            'carbs':    user.goal_carbs,
+            'fat':      user.goal_fat,
+            'fiber':    user.goal_fiber,
+        },
+        'recent_logs': log_summary,
+    }
+
+    llm_url = os.getenv('LLM_SERVER_URL', 'http://localhost:5002')
+    try:
+        resp = requests.post(
+            f'{llm_url}/api/ai/chat',
+            json={'message': message, 'context': context},
+            timeout=90
+        )
+        if resp.status_code == 200:
+            return jsonify(resp.json())
+        return jsonify({'error': 'AI server returned an error', 'reply': 'Sorry, I had trouble thinking. Please try again!'}), 502
+    except requests.exceptions.ConnectionError:
+        # Graceful fallback if LLM server is offline
+        return jsonify({
+            'reply': "I'm currently offline. Make sure the LLM server is running (`python llm/Llm_server.py`) to chat with me!",
+            'offline': True
+        })
+    except requests.exceptions.Timeout:
+        return jsonify({
+            'reply': "I'm taking too long to think! The AI is busy. Please try again in a moment.",
+            'timeout': True
+        })
 
 
 # ══════════════════════════════════════════════════

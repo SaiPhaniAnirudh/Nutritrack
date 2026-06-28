@@ -1198,6 +1198,173 @@ def analyze_stream():
 
 
 # ──────────────────────────────────────────────────────────────────────────────
+#  AI NUTRITIONIST CHATBOT — /api/ai/chat
+# ──────────────────────────────────────────────────────────────────────────────
+
+CHAT_SYSTEM_PROMPT = """You are NutriBot, a friendly and knowledgeable AI nutritionist for NutriTrack.
+Your role is to help users understand their nutrition, reach their health goals, and make better food choices.
+
+Guidelines:
+- Be warm, encouraging, and concise (2-4 sentences per response)
+- Always reference the user's actual food data when relevant
+- Give specific, actionable advice
+- Use emojis sparingly but effectively 🥗
+- If asked something unrelated to nutrition/health/food, politely redirect
+- Don't be preachy — be supportive and practical
+- For Indian foods, show special knowledge (you know Indian cuisine well)
+"""
+
+def _build_chat_context_str(context: dict) -> str:
+    """Build a human-readable context string from user data."""
+    name  = context.get('user_name', 'there')
+    goals = context.get('goals', {})
+    logs  = context.get('recent_logs', [])
+
+    lines = [f"User: {name}"]
+    if goals:
+        lines.append(
+            f"Daily Goals: {goals.get('calories', 2000)} kcal, "
+            f"{goals.get('protein', 150)}g protein, "
+            f"{goals.get('carbs', 250)}g carbs, "
+            f"{goals.get('fat', 65)}g fat, "
+            f"{goals.get('fiber', 28)}g fiber"
+        )
+
+    if logs:
+        # Group logs by date for a compact summary
+        from collections import defaultdict
+        by_date = defaultdict(list)
+        for entry in logs:
+            by_date[entry['date']].append(entry)
+
+        lines.append("Recent meals (last 7 days):")
+        for date in sorted(by_date.keys(), reverse=True)[:3]:
+            day_logs  = by_date[date]
+            day_cal   = sum(e['cal'] for e in day_logs)
+            day_prot  = sum(e['protein_g'] for e in day_logs)
+            meal_list = ', '.join(e['food'] for e in day_logs[:4])
+            lines.append(f"  {date}: {meal_list} — {round(day_cal)} kcal, {round(day_prot)}g protein")
+    else:
+        lines.append("No food logged yet today.")
+
+    return '\n'.join(lines)
+
+
+def _nutribot_ollama(message: str, context: dict) -> str:
+    """Call Ollama text model for chat response."""
+    ollama_url   = os.getenv('OLLAMA_URL',   'http://localhost:11434')
+    # Use a lightweight text model — phi3 or llama3.2 or fall back to the vision model
+    chat_model   = os.getenv('OLLAMA_CHAT_MODEL', os.getenv('OLLAMA_MODEL', 'llava-phi3'))
+
+    ctx_str = _build_chat_context_str(context)
+    full_prompt = f"{CHAT_SYSTEM_PROMPT}\n\n--- User Data ---\n{ctx_str}\n\n--- User Message ---\n{message}"
+
+    try:
+        resp = http_requests.post(
+            f'{ollama_url}/api/generate',
+            json={
+                'model':  chat_model,
+                'prompt': full_prompt,
+                'stream': False,
+                'options': {
+                    'temperature': 0.7,
+                    'num_predict': 200,
+                    'num_thread':  os.cpu_count() or 4,
+                }
+            },
+            timeout=90
+        )
+        if resp.status_code == 200:
+            return resp.json().get('response', '').strip()
+    except Exception as e:
+        print(f'  [NutriBot/Ollama] error: {e}')
+    return None
+
+
+def _nutribot_rule_based(message: str, context: dict) -> str:
+    """Rule-based fallback when LLM is unavailable."""
+    msg   = message.lower()
+    goals = context.get('goals', {})
+    logs  = context.get('recent_logs', [])
+    name  = context.get('user_name', 'there')
+
+    cal_goal  = goals.get('calories', 2000)
+    prot_goal = goals.get('protein',  150)
+
+    # Calculate today's totals from logs
+    from datetime import date as _date
+    today_str = _date.today().isoformat()
+    today_logs = [l for l in logs if l.get('date') == today_str]
+    today_cal  = sum(l.get('cal', 0) for l in today_logs)
+    today_prot = sum(l.get('protein_g', 0) for l in today_logs)
+
+    if any(w in msg for w in ['on track', 'doing', 'how am i', 'progress', 'today']):
+        rem_cal = cal_goal - today_cal
+        if today_cal == 0:
+            return f"Hey {name}! 👋 You haven't logged any food today yet. Log your first meal to start tracking your progress!"
+        elif rem_cal > 200:
+            return f"You've had {round(today_cal)} kcal so far today — {round(rem_cal)} kcal remaining to hit your {cal_goal} kcal goal. Keep it up! 💪"
+        elif rem_cal > 0:
+            return f"Almost there, {name}! You've consumed {round(today_cal)} kcal — just {round(rem_cal)} kcal left for today. Great discipline! 🎯"
+        else:
+            return f"You've hit your calorie goal for today ({round(today_cal)} / {cal_goal} kcal)! Focus on hydration and rest now. 🌟"
+
+    if any(w in msg for w in ['protein', 'muscle', 'gym']):
+        rem_prot = prot_goal - today_prot
+        if rem_prot > 0:
+            return f"You've had {round(today_prot)}g protein so far — you need {round(rem_prot)}g more to hit your {prot_goal}g goal. Try eggs, paneer, dal, or grilled chicken! 🥚"
+        else:
+            return f"Protein goal hit! You've already consumed {round(today_prot)}g today. Excellent work, {name}! 💪"
+
+    if any(w in msg for w in ['eat', 'dinner', 'lunch', 'breakfast', 'snack', 'what should']):
+        remaining = cal_goal - today_cal
+        if remaining > 500:
+            return f"With {round(remaining)} kcal remaining, try a balanced meal: dal + roti + vegetables, or grilled chicken with rice and salad. Aim for protein + complex carbs! 🍛"
+        elif remaining > 200:
+            return f"You have about {round(remaining)} kcal left — perfect for a light snack like a fruit bowl, Greek yogurt, or a small handful of nuts. 🍎"
+        else:
+            return f"You're close to your calorie limit for today! Consider herbal tea, a small fruit, or just water. Great job staying on track! 🌿"
+
+    if any(w in msg for w in ['sodium', 'salt']):
+        return f"Your daily sodium goal is {goals.get('sodium', 2300)}mg. Indian home cooking and processed foods are common sources of excess salt. Rinse canned foods and reduce pickles/papad! 🧂"
+
+    if any(w in msg for w in ['fiber', 'digestion', 'gut']):
+        return f"Aim for {goals.get('fiber', 28)}g of fiber daily. Dal, vegetables, fruits, and whole grains are excellent sources. Dal + roti is one of the best fiber combinations! 🌾"
+
+    # Default helpful response
+    return f"I'm here to help you reach your nutrition goals, {name}! Ask me things like 'Am I on track today?', 'What should I eat for dinner?', or 'How's my protein intake?' 🥗"
+
+
+@app.route('/api/ai/chat', methods=['POST'])
+@limiter.limit('20 per minute')
+def nutribot_chat():
+    """NutriBot — AI Nutritionist Chatbot endpoint."""
+    data    = request.get_json() or {}
+    message = (data.get('message') or '').strip()
+    context = data.get('context', {})
+
+    if not message:
+        return jsonify({'error': 'Message is required'}), 400
+
+    # Try Ollama first, fall back to rule-based
+    reply = None
+    if engine and getattr(engine, 'loaded', False):
+        try:
+            reply = _nutribot_ollama(message, context)
+        except Exception as e:
+            print(f'  [NutriBot] Ollama error: {e}')
+
+    if not reply:
+        # Graceful rule-based fallback
+        reply = _nutribot_rule_based(message, context)
+
+    return jsonify({
+        'reply':  reply,
+        'engine': type(engine).__name__ if engine and reply != _nutribot_rule_based(message, context) else 'rule_based',
+    })
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 #  MAIN
 # ──────────────────────────────────────────────────────────────────────────────
 

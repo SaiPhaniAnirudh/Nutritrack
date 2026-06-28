@@ -3428,3 +3428,217 @@ body {
   margin-bottom: 0.25rem;
   line-height: 1.5;
 }
+/* ══════════════════════════════════════════════════════
+   OTP VERIFICATION STYLES
+═══════════════════════════════════════════════════════ */
+
+.otp-sent-notice {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  background: var(--kiwi-light);
+  border: 1.5px solid rgba(45, 158, 107, 0.25);
+  border-radius: var(--radius-md);
+  padding: 1rem 1.2rem;
+  margin-bottom: 0.5rem;
+}
+.otp-sent-icon { font-size: 1.5rem; flex-shrink: 0; }
+.otp-sent-text { font-size: 0.82rem; color: var(--ink-80); line-height: 1.5; }
+.otp-sent-text strong { color: var(--kiwi-deep); }
+
+.otp-input-row {
+  display: flex;
+  justify-content: center;
+  gap: 0.45rem;
+}
+.otp-digit {
+  width: 2.6rem; height: 3.2rem;
+  text-align: center; font-size: 1.4rem; font-weight: 700;
+  border: 2px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--white); color: var(--ink);
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+  caret-color: var(--kiwi); outline: none;
+}
+.otp-digit:focus {
+  border-color: var(--kiwi);
+  box-shadow: 0 0 0 3px rgba(45, 158, 107, 0.15);
+  transform: scale(1.05);
+}
+.otp-digit.otp-filled { border-color: var(--kiwi); background: var(--kiwi-light); color: var(--kiwi-deep); }
+.otp-digit.otp-error { border-color: var(--coral); background: var(--coral-light); animation: otp-shake 0.35s ease; }
+@keyframes otp-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+.otp-timer {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: 1rem; font-size: 0.78rem; color: var(--ink-50);
+}
+.otp-resend-btn {
+  background: none; border: none; color: var(--kiwi); font-weight: 600;
+  font-size: 0.78rem; cursor: pointer; padding: 0.2rem 0.5rem;
+  border-radius: 6px; transition: background 0.15s;
+}
+.otp-resend-btn:hover { background: var(--kiwi-light); }
+
+/* ══════════════════════════════════════════════════════
+   NUTRIBOT FLOATING CHAT PANEL
+═══════════════════════════════════════════════════════ */
+
+.nutribot-fab {
+  position: fixed; bottom: 90px; right: 20px; z-index: 1200;
+  background: linear-gradient(135deg, var(--kiwi), var(--kiwi-deep));
+  color: #fff; border: none; border-radius: 50px;
+  padding: 0.7rem 1.1rem; display: flex; align-items: center; gap: 0.5rem;
+  cursor: pointer; box-shadow: 0 6px 24px rgba(45,158,107,0.4);
+  font-family: inherit; font-weight: 700; font-size: 0.82rem;
+  transition: transform 0.2s, box-shadow 0.2s;
+  animation: fab-bounce 2.5s ease-in-out infinite;
+}
+@keyframes fab-bounce {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-5px); }
+}
+.nutribot-fab:hover { transform: translateY(-3px) scale(1.04); box-shadow: 0 10px 32px rgba(45,158,107,0.5); animation: none; }
+.nutribot-fab-icon { font-size: 1.15rem; }
+.nutribot-fab-label { letter-spacing: 0.02em; }
+
+.nutribot-panel {
+  position: fixed; bottom: 90px; right: 20px; z-index: 1300;
+  width: min(380px, calc(100vw - 32px));
+  max-height: min(580px, calc(100vh - 120px));
+  display: flex; flex-direction: column;
+  background: var(--white); border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl), 0 0 0 1px rgba(45,158,107,0.1);
+  overflow: hidden;
+  animation: chat-slide-up 0.3s cubic-bezier(0.34,1.56,0.64,1);
+}
+@keyframes chat-slide-up {
+  from { opacity: 0; transform: translateY(24px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.nutribot-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1rem 1.2rem;
+  background: linear-gradient(135deg, var(--kiwi), var(--kiwi-deep));
+  color: #fff;
+}
+.nutribot-header-left { display: flex; align-items: center; gap: 0.7rem; }
+.nutribot-avatar {
+  width: 40px; height: 40px; border-radius: 50%;
+  background: rgba(255,255,255,0.2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.3rem; flex-shrink: 0;
+}
+.nutribot-title { font-weight: 700; font-size: 0.95rem; }
+.nutribot-subtitle { font-size: 0.72rem; opacity: 0.85; margin-top: 1px; }
+.nutribot-close {
+  background: rgba(255,255,255,0.2); border: none; color: #fff; cursor: pointer;
+  width: 28px; height: 28px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.85rem; transition: background 0.15s; flex-shrink: 0;
+}
+.nutribot-close:hover { background: rgba(255,255,255,0.35); }
+
+.nutribot-messages {
+  flex: 1; overflow-y: auto; padding: 1rem;
+  display: flex; flex-direction: column; gap: 0.75rem;
+  scroll-behavior: smooth; background: var(--smoke);
+}
+.nutribot-messages::-webkit-scrollbar { width: 4px; }
+.nutribot-messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+.nb-msg {
+  display: flex; gap: 0.5rem; max-width: 90%;
+  animation: msg-appear 0.25s ease;
+}
+@keyframes msg-appear {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.nb-msg.user { align-self: flex-end; flex-direction: row-reverse; }
+.nb-msg.bot  { align-self: flex-start; }
+
+.nb-msg-avatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.85rem; flex-shrink: 0; margin-top: auto;
+}
+.nb-msg.bot  .nb-msg-avatar { background: var(--kiwi-light); }
+.nb-msg.user .nb-msg-avatar { background: var(--citrus-light); }
+
+.nb-msg-bubble {
+  padding: 0.65rem 0.9rem; border-radius: 18px;
+  font-size: 0.84rem; line-height: 1.55;
+  max-width: 280px; word-break: break-word;
+}
+.nb-msg.bot .nb-msg-bubble {
+  background: var(--white); color: var(--ink);
+  border-bottom-left-radius: 6px; box-shadow: var(--shadow-sm);
+}
+.nb-msg.user .nb-msg-bubble {
+  background: linear-gradient(135deg, var(--kiwi), var(--kiwi-deep));
+  color: #fff; border-bottom-right-radius: 6px;
+}
+
+.nb-typing .nb-msg-bubble { padding: 0.7rem 1rem; }
+.nb-typing-dots { display: flex; gap: 4px; align-items: center; }
+.nb-typing-dots span {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--ink-30);
+  animation: typing-dot 1.2s ease-in-out infinite;
+}
+.nb-typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+.nb-typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes typing-dot {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  30%            { transform: translateY(-5px); opacity: 1; }
+}
+
+.nutribot-chips {
+  padding: 0.6rem 0.8rem; display: flex; flex-wrap: wrap; gap: 0.4rem;
+  background: var(--white); border-top: 1px solid var(--border-soft);
+}
+.nutribot-chip {
+  font-family: inherit; font-size: 0.73rem; font-weight: 600;
+  padding: 0.35rem 0.7rem; border-radius: 50px;
+  background: var(--kiwi-light); color: var(--kiwi-deep);
+  border: 1.5px solid rgba(45,158,107,0.2);
+  cursor: pointer; transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+  white-space: nowrap;
+}
+.nutribot-chip:hover {
+  background: var(--kiwi); color: #fff;
+  transform: translateY(-1px); box-shadow: 0 3px 10px rgba(45,158,107,0.3);
+}
+
+.nutribot-input-row {
+  display: flex; gap: 0.5rem; padding: 0.75rem 0.85rem;
+  background: var(--white); border-top: 1px solid var(--border-soft);
+}
+.nutribot-input {
+  flex: 1; border: 1.5px solid var(--border); border-radius: 50px;
+  padding: 0.55rem 1rem; font-family: inherit; font-size: 0.84rem;
+  color: var(--ink); background: var(--smoke); outline: none;
+  transition: border-color 0.2s, background 0.2s;
+}
+.nutribot-input:focus { border-color: var(--kiwi); background: var(--white); }
+.nutribot-send {
+  width: 38px; height: 38px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--kiwi), var(--kiwi-deep));
+  color: #fff; border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1rem; flex-shrink: 0;
+  transition: transform 0.15s, box-shadow 0.15s;
+  box-shadow: 0 3px 10px rgba(45,158,107,0.3);
+}
+.nutribot-send:hover { transform: scale(1.1); box-shadow: 0 5px 15px rgba(45,158,107,0.4); }
+.nutribot-send:disabled { opacity: 0.5; transform: none; cursor: not-allowed; }
+
+@media (max-width: 480px) {
+  .nutribot-fab   { bottom: 76px; right: 12px; }
+  .nutribot-panel { bottom: 76px; right: 12px; left: 12px; width: auto; }
+  .otp-digit { width: 2.3rem; height: 2.8rem; font-size: 1.2rem; }
+}

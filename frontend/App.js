@@ -1953,3 +1953,477 @@ document.getElementById('loginEmail').addEventListener('keypress',    e => { if(
 // Registration Enter key navigates to the next step, not directly to submit
 document.getElementById('regEmail').addEventListener('keypress',      e => { if(e.key==='Enter') goToStep2(); });
 document.getElementById('regPassword').addEventListener('keypress',   e => { if(e.key==='Enter') goToStep2(); });
+// ═══════════════════════════════════════════════════════════════
+//  OTP EMAIL VERIFICATION
+// ═══════════════════════════════════════════════════════════════
+
+// Holds the short-lived verified token received after OTP check
+let _otpVerifiedToken = null;
+// Countdown timer handle
+let _otpCountdownTimer = null;
+
+/**
+ * Called when user clicks "Continue" on Step 1.
+ * Validates form, sends OTP to backend, then shows the OTP step.
+ */
+async function goToStepOtp() {
+  const name   = document.getElementById('regName').value.trim();
+  const email  = document.getElementById('regEmail').value.trim();
+  const pw     = document.getElementById('regPassword').value;
+  const pwConf = document.getElementById('regPasswordConfirm').value;
+
+  if (!name)           return showAuthError('⚠️ Please enter your full name.');
+  if (name.length < 2) return showAuthError('⚠️ Name must be at least 2 characters.');
+
+  const emailRegex = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
+  if (!email)                       return showAuthError('⚠️ Please enter your email address.');
+  if (!emailRegex.test(email))      return showAuthError('⚠️ Enter a valid email (e.g. name@domain.com).');
+
+  if (!pw)             return showAuthError('⚠️ Please enter a password.');
+  if (pw.length < 8)   return showAuthError('⚠️ Password must be at least 8 characters.');
+  if (getPasswordStrength(pw) < 2)  return showAuthError('⚠️ Password is too weak. Mix letters, numbers, and symbols.');
+
+  if (!pwConf)         return showAuthError('⚠️ Please confirm your password.');
+  if (pw !== pwConf)   return showAuthError('⚠️ Passwords do not match. Please re-enter.');
+
+  const users = DB.getUsers();
+  if (users.find(u => u.email.toLowerCase() === email.toLowerCase())) {
+    return showAuthError('⚠️ An account with this email already exists. Sign in instead.');
+  }
+
+  // Send OTP via backend
+  showLoader('Sending verification code…');
+  try {
+    const res = await fetch('/api/auth/send-otp', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ email, name }),
+    });
+    const data = await res.json();
+    hideLoader();
+    if (!res.ok) {
+      return showAuthError('⚠️ ' + (data.error || 'Failed to send verification code.'));
+    }
+    // Show OTP step
+    document.getElementById('otpSentEmail').textContent = email;
+    _clearOtpInputs();
+    _startOtpCountdown(600); // 10 min
+    showRegStep('regStepOtp');
+    setTimeout(() => document.getElementById('otp0').focus(), 100);
+  } catch (e) {
+    hideLoader();
+    // Backend offline — allow proceeding without OTP (local/dev mode)
+    console.warn('[OTP] Backend unreachable, skipping OTP:', e.message);
+    _otpVerifiedToken = null;
+    showRegStep('regStep2');
+  }
+}
+
+function showRegStep(id) {
+  ['regStep1','regStepOtp','regStep2','regStep3'].forEach(s => {
+    const el = document.getElementById(s);
+    if (el) el.style.display = s === id ? 'block' : 'none';
+  });
+  hideAuthError();
+}
+
+async function resendOtp() {
+  const email = document.getElementById('otpSentEmail').textContent;
+  const name  = document.getElementById('regName').value.trim();
+  showLoader('Resending code…');
+  try {
+    const res  = await fetch('/api/auth/send-otp', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ email, name }),
+    });
+    hideLoader();
+    if (res.ok) {
+      _clearOtpInputs();
+      _startOtpCountdown(600);
+      document.getElementById('otpResendBtn').style.display = 'none';
+      document.getElementById('otpTimerText').style.display = 'inline';
+      showToast('New code sent! Check your inbox.', 'success');
+      document.getElementById('otp0').focus();
+    } else {
+      const d = await res.json();
+      showAuthError('⚠️ ' + (d.error || 'Failed to resend code.'));
+    }
+  } catch (e) {
+    hideLoader();
+    showToast('Could not reach server. Check your connection.', 'error');
+  }
+}
+
+async function verifyOtpAndProceed() {
+  const email = document.getElementById('otpSentEmail').textContent;
+  const code  = [0,1,2,3,4,5].map(i => (document.getElementById('otp'+i).value||'').trim()).join('');
+
+  if (code.length < 6) {
+    _shakeOtpInputs();
+    return showAuthError('⚠️ Please enter all 6 digits of the verification code.');
+  }
+
+  showLoader('Verifying code…');
+  try {
+    const res  = await fetch('/api/auth/verify-otp', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ email, otp_code: code }),
+    });
+    const data = await res.json();
+    hideLoader();
+    if (!res.ok) {
+      _shakeOtpInputs();
+      return showAuthError('⚠️ ' + (data.error || 'Invalid code. Please try again.'));
+    }
+    _otpVerifiedToken = data.verified_token || null;
+    clearInterval(_otpCountdownTimer);
+    showToast('✅ Email verified!', 'success');
+    showRegStep('regStep2'); // proceed to body stats
+  } catch (e) {
+    hideLoader();
+    // Backend offline — skip OTP
+    _otpVerifiedToken = null;
+    showRegStep('regStep2');
+  }
+}
+
+function _clearOtpInputs() {
+  for (let i = 0; i < 6; i++) {
+    const el = document.getElementById('otp' + i);
+    if (el) { el.value = ''; el.classList.remove('otp-filled','otp-error'); }
+  }
+}
+
+function _shakeOtpInputs() {
+  for (let i = 0; i < 6; i++) {
+    const el = document.getElementById('otp' + i);
+    if (el) { el.classList.add('otp-error'); setTimeout(() => el.classList.remove('otp-error'), 400); }
+  }
+}
+
+function _startOtpCountdown(seconds) {
+  clearInterval(_otpCountdownTimer);
+  let remaining = seconds;
+  const display = document.getElementById('otpCountdown');
+  const timerText = document.getElementById('otpTimerText');
+  const resendBtn = document.getElementById('otpResendBtn');
+  if (display) display.textContent = _fmt(remaining);
+  if (timerText) timerText.style.display = 'inline';
+  if (resendBtn) resendBtn.style.display = 'none';
+
+  _otpCountdownTimer = setInterval(() => {
+    remaining--;
+    if (remaining <= 0) {
+      clearInterval(_otpCountdownTimer);
+      if (timerText) timerText.style.display = 'none';
+      if (resendBtn) resendBtn.style.display = 'inline';
+    } else {
+      if (display) display.textContent = _fmt(remaining);
+    }
+  }, 1000);
+}
+
+function _fmt(s) {
+  return `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
+}
+
+function otpDigitInput(el, idx) {
+  // Allow only digits
+  el.value = el.value.replace(/[^0-9]/g, '').slice(-1);
+  if (el.value) {
+    el.classList.add('otp-filled');
+    if (idx < 5) document.getElementById('otp' + (idx+1)).focus();
+    // Auto-submit when last digit filled
+    if (idx === 5) { const allFilled = [0,1,2,3,4,5].every(i => document.getElementById('otp'+i).value); if (allFilled) verifyOtpAndProceed(); }
+  } else {
+    el.classList.remove('otp-filled');
+  }
+}
+
+function otpDigitKey(e, idx) {
+  if (e.key === 'Backspace' && !e.target.value && idx > 0) {
+    document.getElementById('otp' + (idx-1)).focus();
+  }
+  if (e.key === 'ArrowLeft'  && idx > 0) document.getElementById('otp' + (idx-1)).focus();
+  if (e.key === 'ArrowRight' && idx < 5) document.getElementById('otp' + (idx+1)).focus();
+}
+
+// Override the old goToStep so it works with the new OTP step too
+const _origGoToStep = goToStep;
+function goToStep(n) {
+  if (n === 1) { showRegStep('regStep1'); return; }
+  if (n === 2) { showRegStep('regStep2'); return; }
+  if (n === 3) { showRegStep('regStep3'); return; }
+}
+
+// Patch handleRegister to include the verified token
+const _origHandleRegister = handleRegister;
+async function handleRegister() {
+  // Pass verified_token to the backend if we have one
+  // We intercept the network call by temporarily storing it
+  window._pendingVerifiedToken = _otpVerifiedToken;
+  await _origHandleRegister();
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+//  NUTRIBOT — AI NUTRITIONIST CHATBOT
+// ═══════════════════════════════════════════════════════════════
+
+let _chatOpen = false;
+let _chatHistory = [];    // { role: 'user'|'bot', text }
+let _chatTyping = false;
+
+function toggleChat() {
+  _chatOpen = !_chatOpen;
+  const panel  = document.getElementById('nutribotPanel');
+  const fabBtn = document.getElementById('nutribotBtn');
+
+  if (_chatOpen) {
+    panel.style.display = 'flex';
+    fabBtn.style.display = 'none';
+    if (_chatHistory.length === 0) _initChat();
+    // scroll to bottom
+    setTimeout(() => _scrollChatBottom(), 50);
+  } else {
+    panel.style.display = 'none';
+    fabBtn.style.display = 'flex';
+  }
+}
+
+function _initChat() {
+  const name = currentUser ? currentUser.name.split(' ')[0] : 'there';
+  _addBotMessage(`Hey ${name}! 👋 I'm **NutriBot**, your personal AI nutritionist.\n\nI can see your food logs and goals — ask me anything about your nutrition! Try the suggestions below or type your own question.`);
+}
+
+function _addBotMessage(text) {
+  _chatHistory.push({ role: 'bot', text });
+  _renderMessages();
+}
+
+function _addUserMessage(text) {
+  _chatHistory.push({ role: 'user', text });
+  _renderMessages();
+}
+
+function _renderMessages() {
+  const container = document.getElementById('nutribotMessages');
+  if (!container) return;
+
+  container.innerHTML = _chatHistory.map((msg, i) => {
+    const isUser = msg.role === 'user';
+    // Convert **bold** markdown to <strong>
+    const formatted = msg.text
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\n/g, '<br>');
+    return `
+      <div class="nb-msg ${isUser ? 'user' : 'bot'}">
+        <div class="nb-msg-avatar">${isUser ? '🧑' : '🤖'}</div>
+        <div class="nb-msg-bubble">${formatted}</div>
+      </div>`;
+  }).join('');
+
+  // Add typing indicator if waiting
+  if (_chatTyping) {
+    container.innerHTML += `
+      <div class="nb-msg bot nb-typing">
+        <div class="nb-msg-avatar">🤖</div>
+        <div class="nb-msg-bubble">
+          <div class="nb-typing-dots"><span></span><span></span><span></span></div>
+        </div>
+      </div>`;
+  }
+
+  _scrollChatBottom();
+}
+
+function _scrollChatBottom() {
+  const c = document.getElementById('nutribotMessages');
+  if (c) c.scrollTop = c.scrollHeight;
+}
+
+async function sendChatMessage() {
+  const input = document.getElementById('nutribotInput');
+  const msg   = (input.value || '').trim();
+  if (!msg || _chatTyping) return;
+
+  input.value = '';
+  _addUserMessage(msg);
+
+  // Hide chips after first message
+  const chips = document.getElementById('nutribotChips');
+  if (chips) chips.style.display = 'none';
+
+  _chatTyping = true;
+  _renderMessages();
+
+  const sendBtn = document.getElementById('nutribotSendBtn');
+  if (sendBtn) sendBtn.disabled = true;
+
+  try {
+    const reply = await _callNutriBot(msg);
+    _chatTyping = false;
+    _addBotMessage(reply);
+  } catch (e) {
+    _chatTyping = false;
+    _addBotMessage("Sorry, I'm having trouble connecting right now. Please try again in a moment! 🙏");
+  } finally {
+    if (sendBtn) sendBtn.disabled = false;
+    setTimeout(() => input.focus(), 100);
+    _renderMessages();
+  }
+}
+
+function sendChip(text) {
+  const input = document.getElementById('nutribotInput');
+  if (input) input.value = text;
+  sendChatMessage();
+}
+
+async function _callNutriBot(message) {
+  // Get JWT token if available (backend mode)
+  const jwt = _getJwt();
+
+  if (jwt) {
+    // Use the backend proxy (which fetches logs from DB)
+    try {
+      const res = await fetch('/api/ai/chat', {
+        method:  'POST',
+        headers: {
+          'Content-Type':  'application/json',
+          'Authorization': `Bearer ${jwt}`,
+        },
+        body: JSON.stringify({ message }),
+        signal: AbortSignal.timeout(95000),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return data.reply || "I didn't quite understand that. Could you rephrase?";
+      }
+    } catch (e) {
+      // Fall through to client-side fallback
+    }
+  }
+
+  // Client-side fallback: call LLM server directly with local log context
+  const context = _buildLocalChatContext();
+  const llmUrl  = window.LLM_SERVER_URL || 'https://energyvenom-nutritrack-llm.hf.space';
+  try {
+    const res = await fetch(`${llmUrl}/api/ai/chat`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ message, context }),
+      signal:  AbortSignal.timeout(95000),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return data.reply || "I didn't quite get that. Try asking something else!";
+    }
+  } catch (e) {
+    // Both failed — return a rule-based fallback inline
+  }
+  return _localNutribotFallback(message, context);
+}
+
+function _getJwt() {
+  // Try to get JWT from sessionStorage (set during cloud login)
+  try {
+    const s = sessionStorage.getItem('nt_jwt');
+    if (s) return s;
+  } catch (e) {}
+  return null;
+}
+
+function _buildLocalChatContext() {
+  if (!currentUser) return {};
+  const goals = currentUser.goals || {};
+  const logs  = DB.getLogs().filter(l => l.userId === currentUser.id);
+  const today = todayStr();
+
+  // Last 7 days of logs
+  const recent = logs
+    .filter(l => l.date >= (new Date(Date.now() - 7*86400000)).toISOString().split('T')[0])
+    .slice(0, 30)
+    .map(l => ({
+      date:      l.date,
+      meal:      l.mealType || 'meal',
+      food:      l.name,
+      cal:       Math.round(l.cal || 0),
+      protein_g: Math.round((l.pro || 0) * 10) / 10,
+      carbs_g:   Math.round((l.carb || 0) * 10) / 10,
+      fat_g:     Math.round((l.fat || 0) * 10) / 10,
+    }));
+
+  return {
+    user_name:   currentUser.name.split(' ')[0],
+    goals: {
+      calories: goals.calories || 2000,
+      protein:  goals.protein  || 150,
+      carbs:    goals.carbs    || 250,
+      fat:      goals.fat      || 65,
+      fiber:    goals.fiber    || 28,
+    },
+    recent_logs: recent,
+  };
+}
+
+function _localNutribotFallback(message, context) {
+  const msg   = message.toLowerCase();
+  const goals = (context && context.goals) || {};
+  const logs  = (context && context.recent_logs) || [];
+  const name  = (context && context.user_name) || 'there';
+  const calGoal  = goals.calories || 2000;
+  const protGoal = goals.protein  || 150;
+  const today    = todayStr();
+  const todayLog = logs.filter(l => l.date === today);
+  const todayCal = todayLog.reduce((s, l) => s + (l.cal || 0), 0);
+  const todayProt = todayLog.reduce((s, l) => s + (l.protein_g || 0), 0);
+
+  if (/on track|doing|how am i|progress|today/.test(msg)) {
+    const rem = calGoal - todayCal;
+    if (todayCal === 0) return `Hey ${name}! 👋 You haven't logged any food today yet. Log your first meal to start tracking!`;
+    if (rem > 200) return `You've had **${Math.round(todayCal)} kcal** so far — **${Math.round(rem)} kcal** remaining to hit your goal. Keep going! 💪`;
+    if (rem > 0)   return `Almost there, ${name}! Just **${Math.round(rem)} kcal** left for today. Great discipline! 🎯`;
+    return `You've hit your calorie goal for today (${Math.round(todayCal)} / ${calGoal} kcal)! Time to rest and hydrate. 🌟`;
+  }
+  if (/protein|muscle|gym/.test(msg)) {
+    const rem = protGoal - todayProt;
+    if (rem > 0) return `You've had **${Math.round(todayProt)}g protein** — need **${Math.round(rem)}g more** to reach your ${protGoal}g goal. Try eggs, paneer, dal or grilled chicken! 🥚`;
+    return `Protein goal smashed! **${Math.round(todayProt)}g** consumed today. Amazing work, ${name}! 💪`;
+  }
+  if (/eat|dinner|lunch|breakfast|snack|what should/.test(msg)) {
+    const rem = calGoal - todayCal;
+    if (rem > 500) return `With **${Math.round(rem)} kcal** remaining, try a balanced meal: dal + roti + sabzi, or grilled chicken with rice and salad. 🍛`;
+    if (rem > 200) return `About **${Math.round(rem)} kcal** left — perfect for a fruit bowl, Greek yogurt, or a small handful of nuts. 🍎`;
+    return `You're close to your limit! Consider herbal tea, a small fruit, or just water. Great job staying on track! 🌿`;
+  }
+  if (/sodium|salt/.test(msg)) return `Your daily sodium goal is **${goals.sodium || 2300}mg**. Common culprits: pickles, papad, processed snacks. Home-cooked meals with less salt is the best strategy! 🧂`;
+  if (/fiber|digestion|gut/.test(msg)) return `Aim for **${goals.fiber || 28}g fiber** daily. Dal, vegetables, fruits and whole grains are excellent sources. Dal + roti is one of the best combinations! 🌾`;
+  return `I'm here to help you reach your nutrition goals, **${name}**! Try asking: "Am I on track today?", "What should I eat for dinner?", or "How's my protein intake?" 🥗`;
+}
+
+// Show NutriBot button when user is logged in
+const _origLoginSuccess = loginSuccess;
+function loginSuccess(user) {
+  _origLoginSuccess(user);
+  const btn = document.getElementById('nutribotBtn');
+  if (btn) btn.style.display = 'flex';
+  // Reset chat on login
+  _chatHistory = [];
+  _chatOpen = false;
+  const panel = document.getElementById('nutribotPanel');
+  if (panel) panel.style.display = 'none';
+}
+
+// Hide NutriBot button when user logs out
+const _origHandleLogout = handleLogout;
+function handleLogout() {
+  const btn = document.getElementById('nutribotBtn');
+  if (btn) btn.style.display = 'none';
+  const panel = document.getElementById('nutribotPanel');
+  if (panel) { panel.style.display = 'none'; _chatOpen = false; }
+  _chatHistory = [];
+  _origHandleLogout();
+}
