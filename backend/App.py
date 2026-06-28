@@ -123,6 +123,11 @@ if db_url.startswith('postgres://') or db_url.startswith('postgresql://'):
                 # Unquote first to avoid double encoding, then quote
                 password = quote_plus(unquote(password))
                 db_url = f"{scheme}://{user}:{password}@{host_db}"
+        
+        # Ensure sslmode=require is present for Postgres if not already set
+        if 'sslmode=' not in db_url:
+            separator = '&' if '?' in db_url else '?'
+            db_url = f"{db_url}{separator}sslmode=require"
     except Exception as e:
         print(f"⚠️ Warning parsing DATABASE_URL: {e}")
 
