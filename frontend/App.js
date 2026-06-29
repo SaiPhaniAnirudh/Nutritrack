@@ -1,4 +1,4 @@
-﻿/* ═══════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════
    NutriTrack — app.js  v2.0
    Changes vs v1:
    #1  Age/weight/height stored & displayed
@@ -1996,20 +1996,47 @@ async function goToStepOtp() {
     } finally {
       clearTimeout(timer);
     }
-    const data = await res.json();
+    let data;
+    try {
+      const contentType = res.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        data = await res.json();
+      } else {
+        const txt = await res.text();
+        data = { error: txt || ("HTTP Error " + res.status) };
+      }
+    } catch (parseErr) {
+      data = { error: ("Invalid response format (HTTP " + res.status) };
+    }
     hideLoader();
     if (!res.ok) {
-      return showAuthError('⚠️ ' + (data.error || 'Failed to send verification code. Please try again.'));
+      let errMsg = data.error || 'Failed to send verification code. Please try again.';
+      if (res.status === 504 || res.status === 503 || res.status === 500) {
+        errMsg += ` If you already received a code in your email, <a href="#" onclick="showRegStep('regStepOtp');document.getElementById('otpSentEmail').textContent=document.getElementById('regEmail').value.trim();return false;" style="color:#2ecc71;text-decoration:underline;font-weight:bold;">click here to enter code</a>.`;
+      }
+      return showAuthError('⚠️ ' + errMsg);
     }
     // Show OTP step
-    document.getElementById('otpSentEmail').textContent = email;
+    document.getElementById("otpSentEmail").textContent = email;
     _clearOtpInputs();
+    if (data.is_fallback) {
+      const noticeText = document.querySelector('#otpSentNotice .otp-sent-text');
+      if (noticeText) {
+        noticeText.innerHTML = `Email service down.<br><strong>Use fallback code <span style="color:#e67e22;font-size:1.15rem;letter-spacing:1px;">123456</span> to verify</strong>`;
+      }
+      showToast('⚠️ Email service down. Using fallback code.', 'warning');
+    } else {
+      const noticeText = document.querySelector('#otpSentNotice .otp-sent-text');
+      if (noticeText) {
+        noticeText.innerHTML = `A 6-digit code was sent to<br><strong id="otpSentEmail">${email}</strong>`;
+      }
+    }
     _startOtpCountdown(600); // 10 min
     showRegStep('regStepOtp');
     setTimeout(() => document.getElementById('otp0').focus(), 100);
   } catch (e) {
     hideLoader();
-    _autoRetryOtp();
+    showAuthError(`⚠️ Server is waking up (Render free tier). If you already received a verification code in your email, <a href="#" onclick="showRegStep('regStepOtp');document.getElementById('otpSentEmail').textContent=document.getElementById('regEmail').value.trim();return false;" style="color:#2ecc71;text-decoration:underline;font-weight:bold;">click here to enter code</a>. Otherwise, click Continue again in 10 seconds.`);
   }
 }
 

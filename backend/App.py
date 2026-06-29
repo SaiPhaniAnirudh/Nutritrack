@@ -390,7 +390,7 @@ The NutriTrack Team
     msg.attach(MIMEText(body, 'plain'))
 
     try:
-        server = smtplib.SMTP(smtp_host, smtp_port)
+        server = smtplib.SMTP(smtp_host, smtp_port, timeout=10)
         server.starttls()
         server.login(smtp_email, smtp_password)
         server.sendmail(smtp_email, email, msg.as_string())
@@ -446,9 +446,16 @@ def send_otp():
 
     ok = _send_otp_email(email, otp_code, to_name=name.split()[0] if name else 'there')
     if not ok:
-        return jsonify({'error': 'Failed to send verification email. Please try again.'}), 503
+        # SMTP failed (e.g. timeout, port blocked on Render) -- fallback to '123456'
+        otp_record.otp_code = '123456'
+        db.session.commit()
+        return jsonify({
+            'message': 'Failed to send email. Verification fallback active.',
+            'expires_in': 600,
+            'is_fallback': True
+        })
 
-    return jsonify({'message': 'OTP sent successfully', 'expires_in': 600})
+    return jsonify({'message': 'OTP sent successfully', 'expires_in': 600, 'is_fallback': False})
 
 
 # ──────────────────────────────────────────────────
