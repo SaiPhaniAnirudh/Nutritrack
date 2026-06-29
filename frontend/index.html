@@ -20,25 +20,13 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;0,9..144,900;1,9..144,300&family=DM+Sans:wght@300;400;500&display=swap"
     rel="stylesheet" media="print" onload="this.media='all'">
-  <script>
-    // Safety net: hide loader as soon as possible
-    // App.js will also call hideLoader() when it starts
-    window.addEventListener('load', function () {
-      var el = document.getElementById('pageLoader');
-      if (el) { el.style.opacity = '0'; el.style.visibility = 'hidden'; }
-    });
-    // Also hide after 3 seconds max no matter what
-    setTimeout(function () {
-      var el = document.getElementById('pageLoader');
-      if (el) { el.style.opacity = '0'; el.style.visibility = 'hidden'; el.style.pointerEvents = 'none'; }
-    }, 3000);
-  </script>
+
 </head>
 
 <body>
 
-  <!-- ══ GLOBAL LOADING OVERLAY ══ -->
-  <div id="pageLoader" class="page-loader">
+  <!-- 🟢 GLOBAL LOADING OVERLAY 🟢 -->
+  <div id="pageLoader" class="page-loader hidden">
     <div class="loader-inner">
       <div class="loader-logo-wrap" style="animation: none; display: flex; justify-content: center; align-items: center; margin-bottom: 0.5rem;">
         <img src="logo-loader.png" alt="Loader Logo" style="width: 260px; height: auto;" />
