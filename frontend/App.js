@@ -414,6 +414,10 @@ function initApp() {
   refreshDashboard();
   searchFoods('');
   _updateDietWidget(); // change #11
+  
+  // Show chatbot button if it exists
+  const nbBtn = document.getElementById('nutribotBtn');
+  if (nbBtn) nbBtn.style.display = 'flex';
 }
 
 // ─────────────────────────────────────────────────
