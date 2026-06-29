@@ -465,7 +465,10 @@ function sumLogs(logs) {
     sugar:  acc.sugar  + (l.sugar  || 0),
     sodium: acc.sodium + (l.sodium || 0),
     chol:   acc.chol   + (l.chol   || 0),
-  }), {cal:0, pro:0, carb:0, fat:0, fiber:0, sugar:0, sodium:0, chol:0});
+    vit_d:  acc.vit_d  + (l.vit_d  || 0),
+    iron:   acc.iron   + (l.iron   || 0),
+    folate: acc.folate + (l.folate || 0),
+  }), {cal:0, pro:0, carb:0, fat:0, fiber:0, sugar:0, sodium:0, chol:0, vit_d:0, iron:0, folate:0});
 }
 
 // ─────────────────────────────────────────────────
