@@ -1939,269 +1939,24 @@ function openDietModal() {
 document.getElementById('loginPassword').addEventListener('keypress', e => { if(e.key==='Enter') handleLogin(); });
 document.getElementById('loginEmail').addEventListener('keypress',    e => { if(e.key==='Enter') handleLogin(); });
 // Registration Enter key -- routes through OTP verification flow
-document.getElementById('regEmail').addEventListener('keypress',    e => { if(e.key==='Enter') goToStepOtp(); });
-document.getElementById('regPassword').addEventListener('keypress', e => { if(e.key==='Enter') goToStepOtp(); });
+document.getElementById('regEmail').addEventListener('keypress',    e => { if(e.key==='Enter') goToStep2(); });
+document.getElementById('regPassword').addEventListener('keypress', e => { if(e.key==='Enter') goToStep2(); });
 // ═══════════════════════════════════════════════════════════════
-//  OTP EMAIL VERIFICATION
+//  REGISTRATION STEP NAVIGATION (OTP removed — instant flow)
 // ═══════════════════════════════════════════════════════════════
 
-// Holds the short-lived verified token received after OTP check
+// Stub: kept for backward compatibility in case any old code calls it
 let _otpVerifiedToken = null;
-// Countdown timer handle
-let _otpCountdownTimer = null;
-
-/**
- * Called when user clicks "Continue" on Step 1.
- * Validates form, sends OTP to backend, then shows the OTP step.
- */
-async function goToStepOtp() {
-  const name   = document.getElementById('regName').value.trim();
-  const email  = document.getElementById('regEmail').value.trim();
-  const pw     = document.getElementById('regPassword').value;
-  const pwConf = document.getElementById('regPasswordConfirm').value;
-
-  if (!name)           return showAuthError('⚠️ Please enter your full name.');
-  if (name.length < 2) return showAuthError('⚠️ Name must be at least 2 characters.');
-
-  const emailRegex = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
-  if (!email)                       return showAuthError('⚠️ Please enter your email address.');
-  if (!emailRegex.test(email))      return showAuthError('⚠️ Enter a valid email (e.g. name@domain.com).');
-
-  if (!pw)             return showAuthError('⚠️ Please enter a password.');
-  if (pw.length < 8)   return showAuthError('⚠️ Password must be at least 8 characters.');
-  if (getPasswordStrength(pw) < 2)  return showAuthError('⚠️ Password is too weak. Mix letters, numbers, and symbols.');
-
-  if (!pwConf)         return showAuthError('⚠️ Please confirm your password.');
-  if (pw !== pwConf)   return showAuthError('⚠️ Passwords do not match. Please re-enter.');
-
-  const users = DB.getUsers();
-  if (users.find(u => u.email.toLowerCase() === email.toLowerCase())) {
-    return showAuthError('⚠️ An account with this email already exists. Sign in instead.');
-  }
-
-  // Send OTP via backend (60s timeout to handle Render free-tier cold start)
-  showLoader('Sending verification code… (may take up to 30s on first use)');
-  try {
-    const backendUrl = window._BACKEND_URL || '';
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 60000); // 60s for cold start
-    let res;
-    try {
-      res = await fetch(`${backendUrl}/api/auth/send-otp`, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ email, name }),
-        signal:  ctrl.signal,
-      });
-    } finally {
-      clearTimeout(timer);
-    }
-    let data;
-    try {
-      const contentType = res.headers.get('content-type') || '';
-      if (contentType.includes('application/json')) {
-        data = await res.json();
-      } else {
-        const txt = await res.text();
-        data = { error: txt || ("HTTP Error " + res.status) };
-      }
-    } catch (parseErr) {
-      data = { error: ("Invalid response format (HTTP " + res.status) };
-    }
-    hideLoader();
-    if (!res.ok) {
-      let errMsg = data.error || 'Failed to send verification code. Please try again.';
-      if (res.status === 504 || res.status === 503 || res.status === 500) {
-        errMsg += ` If you already received a code in your email, <a href="#" onclick="showRegStep('regStepOtp');document.getElementById('otpSentEmail').textContent=document.getElementById('regEmail').value.trim();return false;" style="color:#2ecc71;text-decoration:underline;font-weight:bold;">click here to enter code</a>.`;
-      }
-      return showAuthError('⚠️ ' + errMsg);
-    }
-    // Show OTP step
-    document.getElementById("otpSentEmail").textContent = email;
-    _clearOtpInputs();
-    if (data.is_fallback) {
-      const noticeText = document.querySelector('#otpSentNotice .otp-sent-text');
-      if (noticeText) {
-        noticeText.innerHTML = `Email service down.<br><strong>Use fallback code <span style="color:#e67e22;font-size:1.15rem;letter-spacing:1px;">123456</span> to verify</strong>`;
-      }
-      showToast('⚠️ Email service down. Using fallback code.', 'warning');
-    } else {
-      const noticeText = document.querySelector('#otpSentNotice .otp-sent-text');
-      if (noticeText) {
-        noticeText.innerHTML = `A 6-digit code was sent to<br><strong id="otpSentEmail">${email}</strong>`;
-      }
-    }
-    _startOtpCountdown(600); // 10 min
-    showRegStep('regStepOtp');
-    setTimeout(() => document.getElementById('otp0').focus(), 100);
-  } catch (e) {
-    hideLoader();
-    showAuthError(`⚠️ Server is waking up (Render free tier). If you already received a verification code in your email, <a href="#" onclick="showRegStep('regStepOtp');document.getElementById('otpSentEmail').textContent=document.getElementById('regEmail').value.trim();return false;" style="color:#2ecc71;text-decoration:underline;font-weight:bold;">click here to enter code</a>. Otherwise, click Continue again in 10 seconds.`);
-  }
-}
-
-// Auto-retry with live countdown -- no manual click needed after Render cold start
-let _retryTimer = null;
-function _autoRetryOtp() {
-  clearTimeout(_retryTimer);
-  let secs = 18;
-  const btn = document.querySelector('#regStep1 .submit-btn');
-  if (btn) btn.disabled = true;
-  function tick() {
-    if (secs <= 0) {
-      clearTimeout(_retryTimer);
-      if (btn) btn.disabled = false;
-      hideAuthError();
-      goToStepOtp();
-      return;
-    }
-    showAuthError('Server waking up... retrying in ' + secs + 's (Render free tier cold start)');
-    secs--;
-    _retryTimer = setTimeout(tick, 1000);
-  }
-  tick();
-}
-
-// Pre-warm backend when user opens Register tab
-function _prewarmBackend() {
-  var url = (window._BACKEND_URL || '') + '/api/health';
-  fetch(url, { method: 'GET' }).catch(function() {});
-}
 
 function showRegStep(id) {
-  ['regStep1','regStepOtp','regStep2','regStep3'].forEach(s => {
+  ['regStep1','regStep2','regStep3'].forEach(s => {
     const el = document.getElementById(s);
     if (el) el.style.display = s === id ? 'block' : 'none';
   });
   hideAuthError();
 }
 
-async function resendOtp() {
-  const email = document.getElementById('otpSentEmail').textContent;
-  const name  = document.getElementById('regName').value.trim();
-  showLoader('Resending code…');
-  try {
-    const backendUrl = window._BACKEND_URL || '';
-    const res  = await fetch(`${backendUrl}/api/auth/send-otp`, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ email, name }),
-    });
-    hideLoader();
-    if (res.ok) {
-      _clearOtpInputs();
-      _startOtpCountdown(600);
-      document.getElementById('otpResendBtn').style.display = 'none';
-      document.getElementById('otpTimerText').style.display = 'inline';
-      showToast('New code sent! Check your inbox.', 'success');
-      document.getElementById('otp0').focus();
-    } else {
-      const d = await res.json();
-      showAuthError('⚠️ ' + (d.error || 'Failed to resend code.'));
-    }
-  } catch (e) {
-    hideLoader();
-    showToast('Could not reach server. Check your connection.', 'error');
-  }
-}
-
-async function verifyOtpAndProceed() {
-  const email = document.getElementById('otpSentEmail').textContent;
-  const code  = [0,1,2,3,4,5].map(i => (document.getElementById('otp'+i).value||'').trim()).join('');
-
-  if (code.length < 6) {
-    _shakeOtpInputs();
-    return showAuthError('⚠️ Please enter all 6 digits of the verification code.');
-  }
-
-  showLoader('Verifying code…');
-  try {
-    const backendUrl = window._BACKEND_URL || '';
-    const res  = await fetch(`${backendUrl}/api/auth/verify-otp`, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ email, otp_code: code }),
-    });
-    const data = await res.json();
-    hideLoader();
-    if (!res.ok) {
-      _shakeOtpInputs();
-      return showAuthError('⚠️ ' + (data.error || 'Invalid code. Please try again.'));
-    }
-    _otpVerifiedToken = data.verified_token || null;
-    clearInterval(_otpCountdownTimer);
-    showToast('✅ Email verified!', 'success');
-    showRegStep('regStep2'); // proceed to body stats
-  } catch (e) {
-    hideLoader();
-    // Backend offline — skip OTP
-    _otpVerifiedToken = null;
-    showRegStep('regStep2');
-  }
-}
-
-function _clearOtpInputs() {
-  for (let i = 0; i < 6; i++) {
-    const el = document.getElementById('otp' + i);
-    if (el) { el.value = ''; el.classList.remove('otp-filled','otp-error'); }
-  }
-}
-
-function _shakeOtpInputs() {
-  for (let i = 0; i < 6; i++) {
-    const el = document.getElementById('otp' + i);
-    if (el) { el.classList.add('otp-error'); setTimeout(() => el.classList.remove('otp-error'), 400); }
-  }
-}
-
-function _startOtpCountdown(seconds) {
-  clearInterval(_otpCountdownTimer);
-  let remaining = seconds;
-  const display = document.getElementById('otpCountdown');
-  const timerText = document.getElementById('otpTimerText');
-  const resendBtn = document.getElementById('otpResendBtn');
-  if (display) display.textContent = _fmt(remaining);
-  if (timerText) timerText.style.display = 'inline';
-  if (resendBtn) resendBtn.style.display = 'none';
-
-  _otpCountdownTimer = setInterval(() => {
-    remaining--;
-    if (remaining <= 0) {
-      clearInterval(_otpCountdownTimer);
-      if (timerText) timerText.style.display = 'none';
-      if (resendBtn) resendBtn.style.display = 'inline';
-    } else {
-      if (display) display.textContent = _fmt(remaining);
-    }
-  }, 1000);
-}
-
-function _fmt(s) {
-  return `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
-}
-
-function otpDigitInput(el, idx) {
-  // Allow only digits
-  el.value = el.value.replace(/[^0-9]/g, '').slice(-1);
-  if (el.value) {
-    el.classList.add('otp-filled');
-    if (idx < 5) document.getElementById('otp' + (idx+1)).focus();
-    // Auto-submit when last digit filled
-    if (idx === 5) { const allFilled = [0,1,2,3,4,5].every(i => document.getElementById('otp'+i).value); if (allFilled) verifyOtpAndProceed(); }
-  } else {
-    el.classList.remove('otp-filled');
-  }
-}
-
-function otpDigitKey(e, idx) {
-  if (e.key === 'Backspace' && !e.target.value && idx > 0) {
-    document.getElementById('otp' + (idx-1)).focus();
-  }
-  if (e.key === 'ArrowLeft'  && idx > 0) document.getElementById('otp' + (idx-1)).focus();
-  if (e.key === 'ArrowRight' && idx < 5) document.getElementById('otp' + (idx+1)).focus();
-}
-
-// Override the old goToStep so it works with the new OTP step too
+// Override goToStep so it uses showRegStep
 const _origGoToStep = goToStep;
 goToStep = function(n) {
   if (n === 1) { showRegStep('regStep1'); return; }
@@ -2209,14 +1964,13 @@ goToStep = function(n) {
   if (n === 3) { showRegStep('regStep3'); return; }
 };
 
-// Patch handleRegister to include the verified token
+// Patch handleRegister — no token needed any more
 const _origHandleRegister = handleRegister;
 handleRegister = async function() {
-  // Pass verified_token to the backend if we have one
-  // We intercept the network call by temporarily storing it
-  window._pendingVerifiedToken = _otpVerifiedToken;
+  window._pendingVerifiedToken = null;
   await _origHandleRegister();
 };
+
 
 
 

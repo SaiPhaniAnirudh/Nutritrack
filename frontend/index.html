@@ -207,50 +207,10 @@
                 oninput="validateConfirmPassword(this)">
               <div id="confirmPasswordMsg" style="font-size:0.7rem;margin-top:0.35rem;display:none;"></div>
             </div>
-            <!-- Now calls goToStepOtp() to send OTP before proceeding -->
-            <button type="button" class="submit-btn" onclick="goToStepOtp()">Continue →</button>
+            <button type="button" class="submit-btn" onclick="goToStep2()">Continue →</button>
           </div>
 
-          <!-- STEP OTP: Email Verification -->
-          <div id="regStepOtp" style="display:none;">
-            <div class="step-indicator">
-              <div class="step-dot done">✓</div>
-              <div class="step-line filled"></div>
-              <div class="step-dot active">2</div>
-              <div class="step-line"></div>
-              <div class="step-dot">3</div>
-              <div class="step-line"></div>
-              <div class="step-dot">4</div>
-            </div>
-            <p class="step-label">Step 2 of 4 — Verify Your Email</p>
-
-            <div class="otp-sent-notice" id="otpSentNotice">
-              <div class="otp-sent-icon">📧</div>
-              <div class="otp-sent-text">A 6-digit code was sent to<br><strong id="otpSentEmail"></strong></div>
-            </div>
-
-            <div class="field-group" style="margin-top:1.2rem;">
-              <label style="text-align:center;display:block;margin-bottom:0.8rem;">Enter Verification Code</label>
-              <div class="otp-input-row" id="otpInputRow">
-                <input type="text" class="otp-digit" id="otp0" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="one-time-code" oninput="otpDigitInput(this,0)" onkeydown="otpDigitKey(event,0)">
-                <input type="text" class="otp-digit" id="otp1" maxlength="1" inputmode="numeric" pattern="[0-9]" oninput="otpDigitInput(this,1)" onkeydown="otpDigitKey(event,1)">
-                <input type="text" class="otp-digit" id="otp2" maxlength="1" inputmode="numeric" pattern="[0-9]" oninput="otpDigitInput(this,2)" onkeydown="otpDigitKey(event,2)">
-                <input type="text" class="otp-digit" id="otp3" maxlength="1" inputmode="numeric" pattern="[0-9]" oninput="otpDigitInput(this,3)" onkeydown="otpDigitKey(event,3)">
-                <input type="text" class="otp-digit" id="otp4" maxlength="1" inputmode="numeric" pattern="[0-9]" oninput="otpDigitInput(this,4)" onkeydown="otpDigitKey(event,4)">
-                <input type="text" class="otp-digit" id="otp5" maxlength="1" inputmode="numeric" pattern="[0-9]" oninput="otpDigitInput(this,5)" onkeydown="otpDigitKey(event,5)">
-              </div>
-            </div>
-
-            <div class="otp-timer" id="otpTimerRow">
-              <span id="otpTimerText">Code expires in <strong id="otpCountdown">10:00</strong></span>
-              <button type="button" class="otp-resend-btn" id="otpResendBtn" onclick="resendOtp()" style="display:none;">Resend Code</button>
-            </div>
-
-            <button type="button" class="submit-btn" onclick="verifyOtpAndProceed()">Verify & Continue →</button>
-            <button type="button" class="submit-btn back-btn" style="margin-top:0.5rem;" onclick="goToStep(1)">← Back</button>
-          </div>
-
-          <!-- STEP 2 (now 3): Body Stats -->
+          <!-- STEP 2: Body Stats -->
           <div id="regStep2" style="display:none;">
             <div class="step-indicator">
               <div class="step-dot done">✓</div>
