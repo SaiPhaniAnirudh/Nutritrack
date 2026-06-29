@@ -1238,6 +1238,9 @@ function addFoodToLog(food) {
     sugar:  food.sugar  || 0,
     sodium: food.sodium || 0,
     chol:   food.chol   || 0,
+    vit_d:  food.vit_d  || 0,
+    iron:   food.iron   || 0,
+    folate: food.folate || 0,
     loggedAt: new Date().toISOString()
   };
   const logs = DB.getLogs();
