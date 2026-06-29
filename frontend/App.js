@@ -317,7 +317,8 @@ async function handleRegister() { // async — needed for hashPw()
     dietType: dietTypeEl ? dietTypeEl.value  : 'nonveg',
     goals: {
       calories: goalCal, protein: goalProt, carbs: 275, fat: 78,
-      fiber: 28, sugar: 50, sodium: 2300, chol: 300
+      fiber: 28, sugar: 50, sodium: 2300, chol: 300,
+      vit_d: 15, iron: 18, folate: 400
     },
     createdAt: new Date().toISOString()
   };
@@ -403,6 +404,9 @@ function initApp() {
   document.getElementById('editSugarGoal').value  = g.sugar  || 50;
   document.getElementById('editSodiumGoal').value = g.sodium || 2300;
   document.getElementById('editCholGoal').value   = g.chol   || 300;
+  document.getElementById('editVitDGoal').value   = g.vit_d  || 15;
+  document.getElementById('editIronGoal').value   = g.iron   || 18;
+  document.getElementById('editFolateGoal').value = g.folate || 400;
 
   buildCatFilters();
   autoSelectMeal();
@@ -486,6 +490,9 @@ function refreshDashboard() {
    ['dashSugar','sugarBar',totals.sugar,goals.sugar||50,true,'sugar-card'],
    ['dashSodium','sodiumBar',totals.sodium,goals.sodium||2300,true,'sodium-card'],
    ['dashChol','cholBar',totals.chol,goals.chol||300,true,'chol-card'],
+   ['dashVitD','vitDBar',totals.vit_d,goals.vit_d||15,false,'vitD-card'],
+   ['dashIron','ironBar',totals.iron,goals.iron||18,false,'iron-card'],
+   ['dashFolate','folateBar',totals.folate,goals.folate||400,false,'folate-card'],
   ].forEach(([vId,bId,val,goal,warnOnOver,cardId]) => {
     const el = document.getElementById(vId); if (el) el.textContent = Math.round(val);
     const bar = document.getElementById(bId); if (bar) bar.style.width = Math.min(100,(val/(goal||1))*100)+'%';
@@ -509,6 +516,9 @@ function refreshDashboard() {
               ${l.sugar  ? `<span class="npill sugar">🍬 ${l.sugar}g sugar</span>` : ''}
               ${l.sodium ? `<span class="npill sodium">🧂 ${l.sodium}mg salt</span>` : ''}<!-- change #13 -->
               ${l.chol   ? `<span class="npill chol">❤️ ${l.chol}mg chol</span>` : ''}
+              ${l.vit_d  ? `<span class="npill vit_d" style="background:rgba(245,166,35,0.1);color:#F5A623;border-color:rgba(245,166,35,0.2)">☀️ ${l.vit_d}mcg VitD</span>` : ''}
+              ${l.iron   ? `<span class="npill iron" style="background:rgba(208,2,27,0.1);color:#D0021B;border-color:rgba(208,2,27,0.2)">🥩 ${l.iron}mg Iron</span>` : ''}
+              ${l.folate ? `<span class="npill folate" style="background:rgba(126,211,33,0.1);color:#7ED321;border-color:rgba(126,211,33,0.2)">🥬 ${l.folate}mcg Fol</span>` : ''}
             </div>
           </div>
         </div>
@@ -967,13 +977,17 @@ function _renderScanResult(r) {
     sugar: +(item.sugar_g||0).toFixed(1),
     sod:   Math.round(item.sodium_mg||0),
     chol:  Math.round(item.cholesterol_mg||0),
+    vit_d: +(item.vit_d||0).toFixed(1),
+    iron:  +(item.iron||0).toFixed(1),
+    folate:+(item.folate||0).toFixed(1),
   }));
 
   const total = parsed.reduce((acc,f) => ({
     cal:acc.cal+f.cal, pro:+(acc.pro+f.pro).toFixed(1), carb:+(acc.carb+f.carb).toFixed(1),
     fat:+(acc.fat+f.fat).toFixed(1), fiber:+(acc.fiber+f.fiber).toFixed(1),
     sugar:+(acc.sugar+f.sugar).toFixed(1), sod:acc.sod+f.sod, chol:acc.chol+f.chol,
-  }), {cal:0,pro:0,carb:0,fat:0,fiber:0,sugar:0,sod:0,chol:0});
+    vit_d:+(acc.vit_d+f.vit_d).toFixed(1), iron:+(acc.iron+f.iron).toFixed(1), folate:+(acc.folate+f.folate).toFixed(1),
+  }), {cal:0,pro:0,carb:0,fat:0,fiber:0,sugar:0,sod:0,chol:0,vit_d:0,iron:0,folate:0});
 
   const avgConf  = Math.round(parsed.reduce((a,f)=>a+f.conf,0)/parsed.length);
   const macroT   = (total.pro*4)+(total.carb*4)+(total.fat*9)||1;
@@ -990,7 +1004,7 @@ function _renderScanResult(r) {
     const mT  = (f.pro*4)+(f.carb*4)+(f.fat*9)||1;
     const ipW = Math.round((f.pro*4/mT)*100), icW=Math.round((f.carb*4/mT)*100), ifW=100-ipW-icW;
     const iCC = f.conf>=85?'rgba(100,180,110,0.8)':f.conf>=65?'rgba(212,168,83,0.8)':'rgba(196,132,90,0.8)';
-    const foodJson = JSON.stringify({name:f.name,emoji:'🍽️',cal:f.cal,pro:f.pro,carb:f.carb,fat:f.fat,fiber:f.fiber,sugar:f.sugar,sodium:f.sod,chol:f.chol}).replace(/'/g,"&#39;");
+    const foodJson = JSON.stringify({name:f.name,emoji:'🍽️',cal:f.cal,pro:f.pro,carb:f.carb,fat:f.fat,fiber:f.fiber,sugar:f.sugar,sodium:f.sod,chol:f.chol,vit_d:f.vit_d,iron:f.iron,folate:f.folate}).replace(/'/g,"&#39;");
     return `
     <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:0.9rem;margin-bottom:0.7rem;">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0.4rem;">
@@ -1018,8 +1032,8 @@ function _renderScanResult(r) {
     </div>`;
   }).join('');
 
-  const allFoodsJson   = JSON.stringify({name:parsed.map(f=>f.name).join(' + '),emoji:'🍽️',cal:total.cal,pro:total.pro,carb:total.carb,fat:total.fat,fiber:total.fiber,sugar:total.sugar,sodium:total.sod,chol:total.chol}).replace(/'/g,"&#39;");
-  const singleFoodJson = JSON.stringify({name:parsed[0].name,emoji:'🍽️',cal:parsed[0].cal,pro:parsed[0].pro,carb:parsed[0].carb,fat:parsed[0].fat,fiber:parsed[0].fiber,sugar:parsed[0].sugar,sodium:parsed[0].sod,chol:parsed[0].chol}).replace(/'/g,"&#39;");
+  const allFoodsJson   = JSON.stringify({name:parsed.map(f=>f.name).join(' + '),emoji:'🍽️',cal:total.cal,pro:total.pro,carb:total.carb,fat:total.fat,fiber:total.fiber,sugar:total.sugar,sodium:total.sod,chol:total.chol,vit_d:total.vit_d,iron:total.iron,folate:total.folate}).replace(/'/g,"&#39;");
+  const singleFoodJson = JSON.stringify({name:parsed[0].name,emoji:'🍽️',cal:parsed[0].cal,pro:parsed[0].pro,carb:parsed[0].carb,fat:parsed[0].fat,fiber:parsed[0].fiber,sugar:parsed[0].sugar,sodium:parsed[0].sod,chol:parsed[0].chol,vit_d:parsed[0].vit_d,iron:parsed[0].iron,folate:parsed[0].folate}).replace(/'/g,"&#39;");
 
   document.getElementById('scanResult').innerHTML = `
     <div class="scan-result-card">
@@ -1028,6 +1042,7 @@ function _renderScanResult(r) {
         <div>
           <div class="scan-food-name">${isMulti?'🍱 Full Meal Total':parsed[0].name}</div>
           <div class="scan-portion">${isMulti?parsed.length+' items detected':parsed[0].size}</div>
+          ${r.source ? `<div style="font-size:0.7rem;color:#7fb8d4;margin-top:0.3rem;font-weight:600">📊 Source: ${r.source}</div>` : ''}
         </div>
         <div class="scan-confidence" style="background:rgba(0,0,0,0.2);border-color:${confColor};color:${confColor}">${avgConf}% confident</div>
       </div>
@@ -1052,6 +1067,9 @@ function _renderScanResult(r) {
         ${_buildNutrientCell('🧂','Salt',total.sod,'mg',sodWarn)}<!-- change #13 -->
         ${_buildNutrientCell('❤️','Cholesterol',total.chol,'mg',cholWarn)}
         ${_buildNutrientCell('🔥','Calories',total.cal,'kcal',false)}
+        ${_buildNutrientCell('☀️','Vit D',total.vit_d,'mcg',false)}
+        ${_buildNutrientCell('🥩','Iron',total.iron,'mg',false)}
+        ${_buildNutrientCell('🥬','Folate',total.folate,'mcg',false)}
       </div>
       ${r.tips ? `<div style="font-size:0.72rem;color:rgba(100,180,110,0.7);background:rgba(100,180,110,0.06);border:1px solid rgba(100,180,110,0.15);border-radius:8px;padding:0.55rem 0.8rem;margin-bottom:0.9rem;line-height:1.4">💡 ${r.tips}</div>` : ''}
       ${isMulti ? `
@@ -1364,6 +1382,9 @@ function saveGoals() {
     sugar:    parseInt(document.getElementById('editSugarGoal').value)  || 50,
     sodium:   parseInt(document.getElementById('editSodiumGoal').value) || 2300,
     chol:     parseInt(document.getElementById('editCholGoal').value)   || 300,
+    vit_d:    parseInt(document.getElementById('editVitDGoal').value)   || 15,
+    iron:     parseInt(document.getElementById('editIronGoal').value)   || 18,
+    folate:   parseInt(document.getElementById('editFolateGoal').value) || 400,
   };
   currentUser.goals = newGoals;
   // Save diet type change
@@ -2161,6 +2182,9 @@ function _buildLocalChatContext() {
       protein_g: Math.round((l.pro || 0) * 10) / 10,
       carbs_g:   Math.round((l.carb || 0) * 10) / 10,
       fat_g:     Math.round((l.fat || 0) * 10) / 10,
+      vit_d:     Math.round((l.vit_d || 0) * 10) / 10,
+      iron:      Math.round((l.iron || 0) * 10) / 10,
+      folate:    Math.round((l.folate || 0) * 10) / 10,
     }));
 
   return {
@@ -2171,6 +2195,9 @@ function _buildLocalChatContext() {
       carbs:    goals.carbs    || 250,
       fat:      goals.fat      || 65,
       fiber:    goals.fiber    || 28,
+      vit_d:    goals.vit_d    || 15,
+      iron:     goals.iron     || 18,
+      folate:   goals.folate   || 400,
     },
     recent_logs: recent,
   };

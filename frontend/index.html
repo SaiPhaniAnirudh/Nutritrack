@@ -463,6 +463,36 @@
             </div>
           </div>
         </div>
+        <div class="stat-card" id="vitD-card" style="--accent: #F5A623">
+          <div class="icon">☀️</div>
+          <div><span class="val" id="dashVitD">0</span><span class="unit">mcg</span></div>
+          <div class="label">Vit D</div>
+          <div class="goal-bar-wrap">
+            <div class="goal-bar-bg">
+              <div class="goal-bar-fill" id="vitDBar" style="width:0%;background:#F5A623"></div>
+            </div>
+          </div>
+        </div>
+        <div class="stat-card" id="iron-card" style="--accent: #D0021B">
+          <div class="icon">🥩</div>
+          <div><span class="val" id="dashIron">0</span><span class="unit">mg</span></div>
+          <div class="label">Iron</div>
+          <div class="goal-bar-wrap">
+            <div class="goal-bar-bg">
+              <div class="goal-bar-fill" id="ironBar" style="width:0%;background:#D0021B"></div>
+            </div>
+          </div>
+        </div>
+        <div class="stat-card" id="folate-card" style="--accent: #7ED321">
+          <div class="icon">🥬</div>
+          <div><span class="val" id="dashFolate">0</span><span class="unit">mcg</span></div>
+          <div class="label">Folate</div>
+          <div class="goal-bar-wrap">
+            <div class="goal-bar-bg">
+              <div class="goal-bar-fill" id="folateBar" style="width:0%;background:#7ED321"></div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div class="main-grid">
@@ -727,6 +757,27 @@
                 <div class="goal-sub">mg per day · limit</div>
               </div>
               <input class="goal-input" type="number" id="editCholGoal" value="300">
+            </div>
+            <div class="goal-row">
+              <div>
+                <div class="goal-label">☀️ Vitamin D</div>
+                <div class="goal-sub">mcg per day</div>
+              </div>
+              <input class="goal-input" type="number" id="editVitDGoal" value="15">
+            </div>
+            <div class="goal-row">
+              <div>
+                <div class="goal-label">🥩 Iron</div>
+                <div class="goal-sub">mg per day</div>
+              </div>
+              <input class="goal-input" type="number" id="editIronGoal" value="18">
+            </div>
+            <div class="goal-row">
+              <div>
+                <div class="goal-label">🥬 Folate</div>
+                <div class="goal-sub">mcg per day</div>
+              </div>
+              <input class="goal-input" type="number" id="editFolateGoal" value="400">
             </div>
             <div class="goal-row">
               <div>

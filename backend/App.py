@@ -211,6 +211,9 @@ class User(db.Model):
     goal_sugar    = db.Column(db.Integer, default=50)
     goal_sodium   = db.Column(db.Integer, default=2300)
     goal_chol     = db.Column(db.Integer, default=300)
+    goal_vit_d    = db.Column(db.Integer, default=15)
+    goal_iron     = db.Column(db.Integer, default=18)
+    goal_folate   = db.Column(db.Integer, default=400)
 
     logs = db.relationship('FoodLog', backref='user', lazy=True,
                            cascade='all, delete-orphan')
@@ -239,6 +242,9 @@ class User(db.Model):
                 'sugar':    self.goal_sugar,
                 'sodium':   self.goal_sodium,
                 'chol':     self.goal_chol,
+                'vit_d':    self.goal_vit_d,
+                'iron':     self.goal_iron,
+                'folate':   self.goal_folate,
             }
         }
 
@@ -262,6 +268,9 @@ class FoodLog(db.Model):
     sugar  = db.Column(db.Float, default=0)
     sodium = db.Column(db.Float, default=0)
     chol   = db.Column(db.Float, default=0)
+    vit_d  = db.Column(db.Float, default=0)
+    iron   = db.Column(db.Float, default=0)
+    folate = db.Column(db.Float, default=0)
 
     logged_at = db.Column(db.DateTime(timezone=True),
                           default=lambda: datetime.now(timezone.utc))
@@ -282,6 +291,9 @@ class FoodLog(db.Model):
             'sugar':     self.sugar,
             'sodium':    self.sodium,
             'chol':      self.chol,
+            'vit_d':     self.vit_d,
+            'iron':      self.iron,
+            'folate':    self.folate,
             'logged_at': self.logged_at.isoformat(),
         }
 
@@ -297,8 +309,29 @@ with app.app_context():
 
 # ══════════════════════════════════════════════════
 
-#  HELPERS
 # ══════════════════════════════════════════════════
+#  HELPERS & RAG DB
+# ══════════════════════════════════════════════════
+
+FNDDS_RAG_DB = {
+    'samosa': {'cal': 260, 'pro': 3.5, 'carb': 24, 'fat': 17, 'fiber': 2.1, 'sugar': 1, 'sodium': 250, 'chol': 0, 'vit_d': 0, 'iron': 1.2, 'folate': 15},
+    'idli': {'cal': 39, 'pro': 1.2, 'carb': 8, 'fat': 0.1, 'fiber': 0.4, 'sugar': 0, 'sodium': 10, 'chol': 0, 'vit_d': 0, 'iron': 0.2, 'folate': 3},
+    'dosa': {'cal': 133, 'pro': 2.5, 'carb': 19, 'fat': 3.5, 'fiber': 0.8, 'sugar': 0, 'sodium': 94, 'chol': 0, 'vit_d': 0, 'iron': 0.5, 'folate': 6},
+    'paneer butter masala': {'cal': 350, 'pro': 12, 'carb': 14, 'fat': 28, 'fiber': 2, 'sugar': 4, 'sodium': 550, 'chol': 40, 'vit_d': 0.5, 'iron': 1.5, 'folate': 12},
+    'chicken biryani': {'cal': 450, 'pro': 18, 'carb': 55, 'fat': 16, 'fiber': 2, 'sugar': 2, 'sodium': 800, 'chol': 45, 'vit_d': 0.2, 'iron': 2.1, 'folate': 20},
+    'chapati': {'cal': 104, 'pro': 3.1, 'carb': 22, 'fat': 0.4, 'fiber': 2.5, 'sugar': 0, 'sodium': 1, 'chol': 0, 'vit_d': 0, 'iron': 1.5, 'folate': 14},
+    'apple': {'cal': 52, 'pro': 0.3, 'carb': 14, 'fat': 0.2, 'fiber': 2.4, 'sugar': 10, 'sodium': 1, 'chol': 0, 'vit_d': 0, 'iron': 0.1, 'folate': 3},
+    'banana': {'cal': 89, 'pro': 1.1, 'carb': 23, 'fat': 0.3, 'fiber': 2.6, 'sugar': 12, 'sodium': 1, 'chol': 0, 'vit_d': 0, 'iron': 0.3, 'folate': 20},
+}
+
+def _find_closest_food(name, db_dict):
+    if not name: return None
+    name_lower = name.lower()
+    for key in db_dict:
+        if key in name_lower or name_lower in key:
+            return key
+    return None
+
 
 def _hash_password(pw):
     try:
@@ -401,6 +434,9 @@ def register():
         goal_sugar    = goals.get('sugar',     50),
         goal_sodium   = goals.get('sodium',  2300),
         goal_chol     = goals.get('chol',     300),
+        goal_vit_d    = goals.get('vit_d',     15),
+        goal_iron     = goals.get('iron',      18),
+        goal_folate   = goals.get('folate',   400),
     )
     db.session.add(user)
     db.session.commit()
@@ -479,6 +515,16 @@ def update_profile():
     # Update nutrition goals
     if goals.get('calories'): user.goal_calories = int(goals['calories'])
     if goals.get('protein'):  user.goal_protein  = int(goals['protein'])
+    if goals.get('carbs'):    user.goal_carbs    = int(goals['carbs'])
+    if goals.get('fat'):      user.goal_fat      = int(goals['fat'])
+    if goals.get('fiber'):    user.goal_fiber    = int(goals['fiber'])
+    if goals.get('sugar'):    user.goal_sugar    = int(goals['sugar'])
+    if goals.get('sodium'):   user.goal_sodium   = int(goals['sodium'])
+    if goals.get('chol'):     user.goal_chol     = int(goals['chol'])
+    if goals.get('vit_d'):    user.goal_vit_d    = int(goals['vit_d'])
+    if goals.get('iron'):     user.goal_iron     = int(goals['iron'])
+    if goals.get('folate'):   user.goal_folate   = int(goals['folate'])
+    if goals.get('protein'):  user.goal_protein  = int(goals['protein'])
     if goals.get('carbs'):    user.goal_carbs     = int(goals['carbs'])
     if goals.get('fat'):      user.goal_fat       = int(goals['fat'])
     if goals.get('fiber'):    user.goal_fiber     = int(goals['fiber'])
@@ -537,6 +583,9 @@ def add_log():
         sugar     = float(data.get('sugar',  0)),
         sodium    = float(data.get('sodium', 0)),
         chol      = float(data.get('chol',   0)),
+        vit_d     = float(data.get('vit_d',  0)),
+        iron      = float(data.get('iron',   0)),
+        folate    = float(data.get('folate', 0)),
     )
     db.session.add(log)
     db.session.commit()
@@ -573,7 +622,7 @@ def logs_summary():
     for d in dates:
         summary[d] = {'date': d, 'cal': 0, 'pro': 0, 'carb': 0,
                        'fat': 0, 'fiber': 0, 'sugar': 0,
-                       'sodium': 0, 'chol': 0, 'meals': 0}
+                       'sodium': 0, 'chol': 0, 'vit_d': 0, 'iron': 0, 'folate': 0, 'meals': 0}
     for l in logs:
         if l.date in summary:
             summary[l.date]['cal']    += l.cal
@@ -584,6 +633,9 @@ def logs_summary():
             summary[l.date]['sugar']  += l.sugar  or 0
             summary[l.date]['sodium'] += l.sodium or 0
             summary[l.date]['chol']   += l.chol   or 0
+            summary[l.date]['vit_d']  += l.vit_d  or 0
+            summary[l.date]['iron']   += l.iron   or 0
+            summary[l.date]['folate'] += l.folate or 0
             summary[l.date]['meals']  += 1
 
     return jsonify(list(summary.values()))
@@ -615,7 +667,18 @@ def ai_analyze():
             timeout=120   # LLM inference can take up to 90s on CPU
         )
         if resp.status_code == 200:
-            return jsonify(resp.json())
+            result = resp.json()
+            food_name = result.get('name', '')
+            rag_match = _find_closest_food(food_name, FNDDS_RAG_DB)
+            if rag_match:
+                result.update(FNDDS_RAG_DB[rag_match])
+                result['source'] = 'FNDDS RAG Database'
+                result['name'] = rag_match.title()
+            else:
+                result['source'] = 'MLLM Estimation'
+                for key in ['vit_d', 'iron', 'folate']:
+                    if key not in result: result[key] = 0
+            return jsonify(result)
         return jsonify({'error': 'LLM server error'}), 502
     except requests.exceptions.ConnectionError:
         return jsonify({
