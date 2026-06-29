@@ -33,11 +33,7 @@ import re
 import sys
 import json
 import base64
-import random
-import smtplib
 import requests
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
 from datetime import datetime, timezone, timedelta
 
 # Windows Console Unicode/Emoji support
@@ -186,18 +182,6 @@ CORS(app, origins=_cors_origins, supports_credentials=True)
 #  MODELS
 # ══════════════════════════════════════════════════
 
-class EmailOTP(db.Model):
-    """Stores one-time passwords sent to emails during registration."""
-    __tablename__ = 'email_otps'
-
-    id         = db.Column(db.Integer, primary_key=True)
-    email      = db.Column(db.String(200), nullable=False, index=True)
-    otp_code   = db.Column(db.String(6), nullable=False)
-    expires_at = db.Column(db.DateTime(timezone=True), nullable=False)
-    used       = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime(timezone=True),
-                           default=lambda: datetime.now(timezone.utc))
-
 
 class User(db.Model):
     __tablename__ = 'users'
@@ -337,7 +321,11 @@ def _check_password(pw, hashed):
         return 'sha256:' + hashlib.sha256(pw.encode()).hexdigest() == hashed
 
 def _validate_email(email):
-    return bool(re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', email))
+    """Strict email validation — checks format, TLD length, and total length."""
+    if not email or len(email) > 254:
+        return False
+    pattern = r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,10}$'
+    return bool(re.match(pattern, email))
 
 def _today():
     return datetime.now(timezone.utc).strftime('%Y-%m-%d')
@@ -348,176 +336,16 @@ def _date_range(days):
     return [(today - timedelta(days=i)).isoformat() for i in range(days-1, -1, -1)]
 
 
-def _send_otp_email(email, otp_code, to_name='there'):
-    """
-    Send OTP code to user's email.
-    If SMTP details are not configured, prints code to console (local dev mode).
-    """
-    smtp_email = os.getenv('SMTP_EMAIL')
-    smtp_password = os.getenv('SMTP_APP_PASSWORD')
-    
-    if not smtp_email or not smtp_password:
-        print("\n" + "═"*60)
-        print(f"📧  [DEV MODE] OTP verification code for {to_name} ({email}):")
-        print(f"    👉  {otp_code}  👈")
-        print("═"*60 + "\n")
-        return True
-
-    smtp_host = os.getenv('SMTP_HOST', 'smtp.gmail.com')
-    try:
-        smtp_port = int(os.getenv('SMTP_PORT', 587))
-    except ValueError:
-        smtp_port = 587
-
-    from_name = os.getenv('SMTP_FROM_NAME', 'NutriTrack')
-
-    msg = MIMEMultipart()
-    msg['From'] = f"{from_name} <{smtp_email}>"
-    msg['To'] = email
-    msg['Subject'] = f"{otp_code} is your NutriTrack verification code"
-
-    body = f"""Hi {to_name},
-
-Thank you for registering on NutriTrack!
-
-Your verification code is: {otp_code}
-
-This code will expire in 10 minutes.
-
-If you did not request this, please ignore this email.
-
-Best regards,
-The NutriTrack Team
-"""
-    msg.attach(MIMEText(body, 'plain'))
-
-    try:
-        server = smtplib.SMTP(smtp_host, smtp_port, timeout=10)
-        server.starttls()
-        server.login(smtp_email, smtp_password)
-        server.sendmail(smtp_email, email, msg.as_string())
-        server.close()
-        print(f"✅ OTP email sent successfully to {email}")
-        return True
-    except Exception as e:
-        print(f"❌ Failed to send OTP email to {email}: {e}")
-        return False
-
 
 
 # ══════════════════════════════════════════════════
 #  AUTH ROUTES
 # ══════════════════════════════════════════════════
 
-# ──────────────────────────────────────────────────
-#  EMAIL OTP — SEND
-# ──────────────────────────────────────────────────
 
-@app.route('/api/auth/send-otp', methods=['POST'])
-@limiter.limit('5 per minute')
-def send_otp():
-    """
-    Step 1 of registration: validate email, send 6-digit OTP.
-    Call this BEFORE /api/auth/register.
-    """
-    data  = request.get_json() or {}
-    email = (data.get('email') or '').strip().lower()
-    name  = (data.get('name')  or 'there').strip()
-
-    if not email or not _validate_email(email):
-        return jsonify({'error': 'Valid email is required'}), 400
-
-    if User.query.filter_by(email=email).first():
-        return jsonify({'error': 'Email already registered. Please sign in instead.'}), 409
-
-    # Generate 6-digit OTP and store in DB
-    # Generate 6-digit OTP and store in DB (fixed 123456 in dev mode for easy testing)
-    if not os.getenv('SMTP_EMAIL') or not os.getenv('SMTP_APP_PASSWORD'):
-        otp_code = '123456'
-    else:
-        otp_code = str(random.randint(100000, 999999))
-    expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
-
-    # Invalidate any previous unused OTPs for this email
-    EmailOTP.query.filter_by(email=email, used=False).update({'used': True})
-    db.session.commit()
-
-    otp_record = EmailOTP(email=email, otp_code=otp_code, expires_at=expires_at)
-    db.session.add(otp_record)
-    db.session.commit()
-
-    ok = _send_otp_email(email, otp_code, to_name=name.split()[0] if name else 'there')
-    if not ok:
-        # SMTP failed (e.g. timeout, port blocked on Render) -- fallback to '123456'
-        otp_record.otp_code = '123456'
-        db.session.commit()
-        return jsonify({
-            'message': 'Failed to send email. Verification fallback active.',
-            'expires_in': 600,
-            'is_fallback': True
-        })
-
-    return jsonify({'message': 'OTP sent successfully', 'expires_in': 600, 'is_fallback': False})
-
-
-# ──────────────────────────────────────────────────
-#  EMAIL OTP — VERIFY
-# ──────────────────────────────────────────────────
-
-@app.route('/api/auth/verify-otp', methods=['POST'])
-@limiter.limit('10 per minute')
-def verify_otp():
-    """
-    Step 2: verify the OTP the user typed.
-    Returns a short-lived 'email_verified_token' that must be
-    presented to /api/auth/register within 15 minutes.
-    """
-    data  = request.get_json() or {}
-    email = (data.get('email')    or '').strip().lower()
-    code  = (data.get('otp_code') or '').strip()
-
-    if not email or not code:
-        return jsonify({'error': 'Email and OTP code are required'}), 400
-
-    now = datetime.now(timezone.utc)
-    record = (
-        EmailOTP.query
-        .filter_by(email=email, used=False)
-        .order_by(EmailOTP.created_at.desc())
-        .first()
-    )
-
-    if not record:
-        return jsonify({'error': 'No pending OTP for this email. Please request a new one.'}), 400
-
-    if record.expires_at.tzinfo is None:
-        # Naive datetime — treat as UTC
-        record.expires_at = record.expires_at.replace(tzinfo=timezone.utc)
-
-    if now > record.expires_at:
-        return jsonify({'error': 'OTP has expired. Please request a new code.'}), 400
-
-    if record.otp_code != code:
-        return jsonify({'error': 'Incorrect verification code. Please try again.'}), 400
-
-    # Mark OTP as used
-    record.used = True
-    db.session.commit()
-
-    # Issue a short-lived verified token (15 min) so the frontend can proceed to register
-    verified_token = create_access_token(
-        identity=f'otp_verified:{email}',
-        expires_delta=timedelta(minutes=15)
-    )
-    return jsonify({'verified_token': verified_token, 'email': email})
-
-
-# ──────────────────────────────────────────────────
-#  REGISTER  (requires email_verified_token)
-# ──────────────────────────────────────────────────
 
 @app.route('/api/auth/register', methods=['POST'])
-@limiter.limit('20 per minute')
+@limiter.limit('5 per minute')
 def register():
     data = request.get_json() or {}
 
@@ -530,8 +358,8 @@ def register():
         return jsonify({'error': 'Name is required'}), 400
     if not email or not _validate_email(email):
         return jsonify({'error': 'Valid email is required'}), 400
-    if len(pw) < 6:
-        return jsonify({'error': 'Password must be at least 6 characters'}), 400
+    if len(pw) < 8:
+        return jsonify({'error': 'Password must be at least 8 characters'}), 400
 
     # Validate the email-verified token issued by /api/auth/verify-otp
     if verified_token:

@@ -2135,9 +2135,9 @@ async function _callNutriBot(message) {
 }
 
 function _getJwt() {
-  // Try to get JWT from sessionStorage (set during cloud login)
+  // Get JWT from localStorage so it persists across tab closes
   try {
-    const s = sessionStorage.getItem('nt_jwt');
+    const s = localStorage.getItem('nt_jwt');
     if (s) return s;
   } catch (e) {}
   return null;
