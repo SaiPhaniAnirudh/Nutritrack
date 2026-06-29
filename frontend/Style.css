@@ -2007,6 +2007,28 @@ body {
   box-shadow: 0 8px 28px rgba(45, 158, 107, 0.45);
 }
 
+.profile-logout-btn {
+  margin-top: 1.5rem;
+  padding: 13px;
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+  border: none;
+  border-radius: var(--radius-md);
+  color: white;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  width: 100%;
+  transition: all 0.25s;
+  box-shadow: 0 4px 18px rgba(231, 76, 60, 0.35);
+  text-align: center;
+}
+
+.profile-logout-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(231, 76, 60, 0.45);
+}
+
 /* ── TOAST ── */
 .toast {
   position: fixed;
