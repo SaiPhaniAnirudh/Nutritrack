@@ -1,4 +1,4 @@
-﻿"""
+"""
 NutriTrack — backend/App.py
 Flask REST API backend
 
@@ -167,12 +167,14 @@ app.config['JWT_REFRESH_TOKEN_EXPIRES'] = timedelta(days=30)
 db  = SQLAlchemy(app)
 jwt = JWTManager(app)
 
-# CORS — allow frontend from local dev
+# CORS — allow frontend from local dev and production
 _cors_origins = [
     'http://localhost:3000',
     'http://localhost:5500',
     'http://127.0.0.1:5500',
     'null',            # file:// opened locally
+    'https://nutritrack-k96f.onrender.com',
+    'https://saiphanianirudh.github.io',
 ]
 _frontend_url = os.getenv('FRONTEND_URL')
 if _frontend_url:
