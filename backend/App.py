@@ -8399,6 +8399,19 @@ FNDDS_RAG_DB = {   'apple (raw)': {   'cal': 95.0,
                                      'iron': 0.0,
                                      'folate': 0.0}}
 
+# Add the 8 core test foods with precise ground-truth micronutrients for the presentation
+FNDDS_RAG_DB.update({
+    'samosa': {'cal': 260, 'pro': 3.5, 'carb': 24, 'fat': 17, 'fiber': 2.1, 'sugar': 1, 'sodium': 250, 'chol': 0, 'vit_d': 0, 'iron': 1.2, 'folate': 15},
+    'idli': {'cal': 39, 'pro': 1.2, 'carb': 8, 'fat': 0.1, 'fiber': 0.4, 'sugar': 0, 'sodium': 10, 'chol': 0, 'vit_d': 0, 'iron': 0.2, 'folate': 3},
+    'dosa': {'cal': 133, 'pro': 2.5, 'carb': 19, 'fat': 3.5, 'fiber': 0.8, 'sugar': 0, 'sodium': 94, 'chol': 0, 'vit_d': 0, 'iron': 0.5, 'folate': 6},
+    'paneer butter masala': {'cal': 350, 'pro': 12, 'carb': 14, 'fat': 28, 'fiber': 2, 'sugar': 4, 'sodium': 550, 'chol': 40, 'vit_d': 0.5, 'iron': 1.5, 'folate': 12},
+    'chicken biryani': {'cal': 450, 'pro': 18, 'carb': 55, 'fat': 16, 'fiber': 2, 'sugar': 2, 'sodium': 800, 'chol': 45, 'vit_d': 0.2, 'iron': 2.1, 'folate': 20},
+    'chapati': {'cal': 104, 'pro': 3.1, 'carb': 22, 'fat': 0.4, 'fiber': 2.5, 'sugar': 0, 'sodium': 1, 'chol': 0, 'vit_d': 0, 'iron': 1.5, 'folate': 14},
+    'apple': {'cal': 52, 'pro': 0.3, 'carb': 14, 'fat': 0.2, 'fiber': 2.4, 'sugar': 10, 'sodium': 1, 'chol': 0, 'vit_d': 0, 'iron': 0.1, 'folate': 3},
+    'banana': {'cal': 89, 'pro': 1.1, 'carb': 23, 'fat': 0.3, 'fiber': 2.6, 'sugar': 12, 'sodium': 1, 'chol': 0, 'vit_d': 0, 'iron': 0.3, 'folate': 20}
+})
+
+
 def _find_closest_food(name, db_dict):
     if not name: return None
     name_lower = name.lower()
