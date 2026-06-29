@@ -1221,6 +1221,9 @@ function searchFoods(query) {
       ${desc ? `<div class="desc">${desc}</div>` : ''}
       <div class="cals">${f.cal} kcal</div>
       <div class="macros">P:${f.pro}g · C:${f.carb}g · F:${f.fat}g · Fiber:${f.fiber}g</div>
+      <div class="macros" style="color:rgba(184,201,186,0.8); margin-top:2px;">
+        ☀️ Vit D: ${f.vit_d || 0}mcg · 🥩 Iron: ${f.iron || 0}mg · 🥬 Folate: ${f.folate || 0}mcg
+      </div>
       <div class="macros" style="color:rgba(184,201,186,0.5)">Sugar:${f.sugar}g · Salt:${f.sodium}mg</div><!-- change #13 -->
     </div>`;
   }).join('');
