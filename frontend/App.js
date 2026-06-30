@@ -1381,7 +1381,7 @@ async function addFoodToLog(food) {
       showToast('Failed to add food to cloud.', 'error');
     }
   } catch (e) {
-    showToast('Network error adding food.', 'error');
+    showToast('Network error: ' + e.message, 'error');
   }
 }
 
