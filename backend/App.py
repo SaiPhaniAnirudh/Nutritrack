@@ -237,7 +237,8 @@ class User(db.Model):
             'email':      self.email,
             'created_at': self.created_at.isoformat(),
             'body_stats': {
-                'age':         self.age,
+                'age':         self.current_age,
+                'dob':         self.dob,
                 'weight':      self.weight,
                 'weight_unit': self.weight_unit,
                 'height':      self.height,
@@ -8823,7 +8824,7 @@ def update_profile():
         user.name = data['name'].strip() or user.name
 
     # Update body stats
-    if stats.get('age'):         user.age         = int(stats['age'])
+    if stats.get('dob'):         user.dob         = stats['dob']
     if stats.get('weight'):      user.weight      = float(stats['weight'])
     if stats.get('weight_unit'): user.weight_unit = stats['weight_unit']
     if stats.get('height'):      user.height      = float(stats['height'])
