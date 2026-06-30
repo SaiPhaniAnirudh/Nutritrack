@@ -411,7 +411,7 @@ async function handleRegister() {
   const backendUrl = window._BACKEND_URL !== undefined ? window._BACKEND_URL : '';
   const payload = {
       name, email, password: pw,
-      verified_token: window._pendingVerifiedToken || '',
+      verified_token: window._otpVerifiedToken || '',
       dob, weight, height, weightUnit, heightUnit,
       gender: genderEl ? genderEl.value : null,
       dietGoal: goalEl ? goalEl.value : 'maintain',
@@ -435,7 +435,7 @@ async function handleRegister() {
           hideLoader();
           return showAuthError('⚠️ ' + (data.error || 'Registration failed'));
       }
-      window._pendingVerifiedToken = null;
+      window._otpVerifiedToken = null;
       await _doLogin(email, pw);
   } catch (err) {
       hideLoader();
