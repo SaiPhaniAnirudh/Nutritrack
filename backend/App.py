@@ -334,6 +334,23 @@ with app.app_context():
                 db.session.commit()
             except Exception:
                 db.session.rollback()
+        
+        food_log_columns = [
+            "fiber FLOAT DEFAULT 0",
+            "sugar FLOAT DEFAULT 0",
+            "sodium FLOAT DEFAULT 0",
+            "chol FLOAT DEFAULT 0",
+            "vit_d FLOAT DEFAULT 0",
+            "iron FLOAT DEFAULT 0",
+            "folate FLOAT DEFAULT 0"
+        ]
+        for col in food_log_columns:
+            try:
+                db.session.execute(text(f"ALTER TABLE food_logs ADD COLUMN {col};"))
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+                
         print("✅ Database tables initialized.")
     except Exception as e:
         print(f"⚠️ Warning: Could not initialize database tables: {e}")
