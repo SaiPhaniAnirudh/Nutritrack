@@ -318,6 +318,10 @@ async function sendOtpAndGoToStepOtp() {
     
     if (!res.ok) throw new Error(data.error || 'Failed to send OTP');
     
+    if (data.status === 'DEMO') {
+      showToast('⚠️ Backend is in DEMO mode! Check Render Logs for the code.', 'warning');
+    }
+    
     document.getElementById('regStep1').style.display = 'none';
     document.getElementById('regStepOtp').style.display = 'block';
     document.getElementById('authError').style.display = 'none';

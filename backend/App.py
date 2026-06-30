@@ -8616,7 +8616,7 @@ def send_otp():
         success, err_msg = send_email_otp(email, otp)
         if success:
             OTP_STORE[email] = {'otp': otp, 'expires': time.time() + 600}
-            return jsonify({'message': 'OTP sent successfully'})
+            return jsonify({'message': 'OTP sent successfully', 'status': err_msg})
         else:
             # Return 400 instead of 500 to prevent Render proxy from replacing JSON with HTML
             return jsonify({'error': f"Failed to send email. Server said: {err_msg}"}), 400
