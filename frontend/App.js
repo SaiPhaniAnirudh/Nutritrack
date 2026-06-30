@@ -1347,12 +1347,12 @@ async function addFoodToLog(food) {
   const backendUrl = window._BACKEND_URL !== undefined ? window._BACKEND_URL : '';
   const payload = {
     date: todayStr(),
-    meal_type: currentMealType,
+    mealType: currentMealType,
     name: food.name,
     emoji: food.emoji,
-    calories: food.cal,
-    protein: food.pro,
-    carbs: food.carb,
+    cal: food.cal,
+    pro: food.pro,
+    carb: food.carb,
     fat: food.fat,
     fiber: food.fiber || 0,
     sugar: food.sugar || 0,
