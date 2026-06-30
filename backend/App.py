@@ -8558,11 +8558,46 @@ import time
 OTP_STORE = {}
 
 def send_email_otp(recipient_email, otp_code):
+    webhook_url = os.environ.get('GOOGLE_WEBHOOK_URL')
+    subject = "Your NutriTrack Verification Code"
+    
+    body = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; background-color: #f4f7f6; padding: 20px;">
+        <div style="max-width: 500px; margin: auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); text-align: center;">
+            <h2 style="color: #2c3e50; margin-bottom: 20px;">Verify your email</h2>
+            <p style="color: #7f8c8d; font-size: 16px; margin-bottom: 30px;">Use the code below to complete your NutriTrack registration.</p>
+            <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #3ecf8e; margin-bottom: 30px;">
+                {otp_code}
+            </div>
+            <p style="color: #bdc3c7; font-size: 14px;">This code expires in 10 minutes.</p>
+        </div>
+    </body>
+    </html>
+    """
+    
+    if webhook_url:
+        try:
+            payload = {
+                "email": recipient_email,
+                "subject": subject,
+                "body": body
+            }
+            r = requests.post(webhook_url, json=payload, timeout=10)
+            if r.status_code == 200:
+                return True, "SUCCESS"
+            else:
+                return True, f"DEMO:{otp_code}"
+        except Exception as e:
+            print(f"Webhook error: {e}")
+            return True, f"DEMO:{otp_code}"
+
+    # Fallback to standard SMTP if webhook is not set
     sender_email = os.environ.get('SMTP_EMAIL') or os.environ.get('MAIL_USERNAME')
     sender_password = os.environ.get('SMTP_APP_PASSWORD') or os.environ.get('MAIL_PASSWORD')
     
     if not sender_email or not sender_password:
-        print("WARNING: SMTP_EMAIL or SMTP_APP_PASSWORD not set. Pretending email was sent.")
+        print("WARNING: Email credentials not set. Pretending email was sent.")
         print(f"--- DEMO OTP for {recipient_email}: {otp_code} ---")
         return True, "DEMO"
         
@@ -8570,22 +8605,7 @@ def send_email_otp(recipient_email, otp_code):
         msg = MIMEMultipart()
         msg['From'] = sender_email
         msg['To'] = recipient_email
-        msg['Subject'] = "Your NutriTrack Verification Code"
-        
-        body = f"""
-        <html>
-        <body style="font-family: Arial, sans-serif; background-color: #f4f7f6; padding: 20px;">
-            <div style="max-width: 500px; margin: auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); text-align: center;">
-                <h2 style="color: #2c3e50; margin-bottom: 20px;">Verify your email</h2>
-                <p style="color: #7f8c8d; font-size: 16px; margin-bottom: 30px;">Use the code below to complete your NutriTrack registration.</p>
-                <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #3ecf8e; margin-bottom: 30px;">
-                    {otp_code}
-                </div>
-                <p style="color: #bdc3c7; font-size: 14px;">This code expires in 10 minutes.</p>
-            </div>
-        </body>
-        </html>
-        """
+        msg['Subject'] = subject
         msg.attach(MIMEText(body, 'html'))
         
         # Add a 5-second timeout so Render's firewall doesn't cause it to hang forever
