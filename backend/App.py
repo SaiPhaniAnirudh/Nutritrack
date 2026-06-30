@@ -8823,25 +8823,52 @@ def ai_analyze():
             
             # Check for multiple items
             if 'items' in result and isinstance(result['items'], list) and len(result['items']) > 0:
+                all_rag = True
                 for item in result['items']:
-                    fname = item.get('name', '')
+                    fname = item.get('food_name', item.get('name', ''))
                     match = _find_closest_food(fname, FNDDS_RAG_DB)
                     if match:
-                        item.update(FNDDS_RAG_DB[match])
+                        db_vals = FNDDS_RAG_DB[match]
+                        item['calories'] = db_vals.get('cal', 0)
+                        item['protein_g'] = db_vals.get('pro', 0)
+                        item['carbs_g'] = db_vals.get('carb', 0)
+                        item['fat_g'] = db_vals.get('fat', 0)
+                        item['fiber_g'] = db_vals.get('fiber', 0)
+                        item['sugar_g'] = db_vals.get('sugar', 0)
+                        item['sodium_mg'] = db_vals.get('sodium', 0)
+                        item['cholesterol_mg'] = db_vals.get('chol', 0)
+                        item['vit_d'] = db_vals.get('vit_d', 0.0)
+                        item['iron'] = db_vals.get('iron', 0.0)
+                        item['folate'] = db_vals.get('folate', 0.0)
                         item['source'] = 'FNDDS RAG Database'
-                        item['name'] = match.title()
+                        item['food_name'] = match.title()
                     else:
+                        all_rag = False
                         item['source'] = 'MLLM Estimation'
                         for key in ['vit_d', 'iron', 'folate']:
                             if key not in item: item[key] = 0
-                result['source'] = 'Mixed / Multiple Items'
+                if len(result['items']) == 1:
+                    result['source'] = result['items'][0]['source']
+                else:
+                    result['source'] = 'Mixed / Multiple Items'
             else:
-                food_name = result.get('name', '')
+                food_name = result.get('food_name', result.get('name', ''))
                 rag_match = _find_closest_food(food_name, FNDDS_RAG_DB)
                 if rag_match:
-                    result.update(FNDDS_RAG_DB[rag_match])
+                    db_vals = FNDDS_RAG_DB[rag_match]
+                    result['calories'] = db_vals.get('cal', 0)
+                    result['protein_g'] = db_vals.get('pro', 0)
+                    result['carbs_g'] = db_vals.get('carb', 0)
+                    result['fat_g'] = db_vals.get('fat', 0)
+                    result['fiber_g'] = db_vals.get('fiber', 0)
+                    result['sugar_g'] = db_vals.get('sugar', 0)
+                    result['sodium_mg'] = db_vals.get('sodium', 0)
+                    result['cholesterol_mg'] = db_vals.get('chol', 0)
+                    result['vit_d'] = db_vals.get('vit_d', 0.0)
+                    result['iron'] = db_vals.get('iron', 0.0)
+                    result['folate'] = db_vals.get('folate', 0.0)
                     result['source'] = 'FNDDS RAG Database'
-                    result['name'] = rag_match.title()
+                    result['food_name'] = rag_match.title()
                 else:
                     result['source'] = 'MLLM Estimation'
                     for key in ['vit_d', 'iron', 'folate']:
