@@ -2087,37 +2087,8 @@ function openDietModal() {
 document.getElementById('loginPassword').addEventListener('keypress', e => { if(e.key==='Enter') handleLogin(); });
 document.getElementById('loginEmail').addEventListener('keypress',    e => { if(e.key==='Enter') handleLogin(); });
 // Registration Enter key -- routes through OTP verification flow
-document.getElementById('regEmail').addEventListener('keypress',    e => { if(e.key==='Enter') goToStep2(); });
-document.getElementById('regPassword').addEventListener('keypress', e => { if(e.key==='Enter') goToStep2(); });
-// ═══════════════════════════════════════════════════════════════
-//  REGISTRATION STEP NAVIGATION (OTP removed — instant flow)
-// ═══════════════════════════════════════════════════════════════
-
-// Stub: kept for backward compatibility in case any old code calls it
-let _otpVerifiedToken = null;
-
-function showRegStep(id) {
-  ['regStep1','regStep2','regStep3'].forEach(s => {
-    const el = document.getElementById(s);
-    if (el) el.style.display = s === id ? 'block' : 'none';
-  });
-  hideAuthError();
-}
-
-// Override goToStep so it uses showRegStep
-const _origGoToStep = goToStep;
-goToStep = function(n) {
-  if (n === 1) { showRegStep('regStep1'); return; }
-  if (n === 2) { showRegStep('regStep2'); return; }
-  if (n === 3) { showRegStep('regStep3'); return; }
-};
-
-// Patch handleRegister — no token needed any more
-const _origHandleRegister = handleRegister;
-handleRegister = async function() {
-  window._pendingVerifiedToken = null;
-  await _origHandleRegister();
-};
+document.getElementById('regEmail').addEventListener('keypress',    e => { if(e.key==='Enter') sendOtpAndGoToStepOtp(); });
+document.getElementById('regPassword').addEventListener('keypress', e => { if(e.key==='Enter') sendOtpAndGoToStepOtp(); });
 
 
 
