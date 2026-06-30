@@ -301,6 +301,18 @@ class FoodLog(db.Model):
 with app.app_context():
     try:
         db.create_all()
+        # Migration for missing columns in production
+        from sqlalchemy import text
+        try:
+            db.session.execute(text("ALTER TABLE users ADD COLUMN goal_sugar FLOAT DEFAULT 50;"))
+            db.session.execute(text("ALTER TABLE users ADD COLUMN goal_sodium FLOAT DEFAULT 2300;"))
+            db.session.execute(text("ALTER TABLE users ADD COLUMN goal_chol FLOAT DEFAULT 300;"))
+            db.session.execute(text("ALTER TABLE users ADD COLUMN goal_vit_d FLOAT DEFAULT 20;"))
+            db.session.execute(text("ALTER TABLE users ADD COLUMN goal_iron FLOAT DEFAULT 18;"))
+            db.session.execute(text("ALTER TABLE users ADD COLUMN goal_folate FLOAT DEFAULT 400;"))
+            db.session.commit()
+        except Exception:
+            db.session.rollback() # Columns likely already exist
         print("✅ Database tables initialized.")
     except Exception as e:
         print(f"⚠️ Warning: Could not initialize database tables: {e}")
