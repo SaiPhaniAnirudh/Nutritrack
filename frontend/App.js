@@ -218,7 +218,7 @@ async function verifyOtpAndGoToStep3() {
   
   if (!otp || otp.length < 5) return showAuthError('?? Please enter the 6-digit code.');
 
-  const btn = document.querySelector('#regStepOtp .submit-btn');
+  const btn = document.querySelector('#regStep2 .submit-btn');
   const origText = btn.innerHTML;
   btn.innerHTML = 'Verifying... <div class="spinner"></div>';
   btn.disabled = true;
