@@ -388,7 +388,7 @@ function goBackToStep1() {
 }
 // -----------------
 
-async function handleRegister() { // async — needed for hashPw()
+async function handleRegister() {
   const name    = document.getElementById('regName').value.trim();
   const email   = document.getElementById('regEmail').value.trim();
   const pw      = document.getElementById('regPassword').value;
@@ -396,11 +396,9 @@ async function handleRegister() { // async — needed for hashPw()
   const goalCal  = parseInt(document.getElementById('goalCalories').value) || 2000;
   const goalProt = parseInt(document.getElementById('goalProtein').value)  || 150;
 
-  // Final safety check (should already be validated by step navigation)
   if (!name || !email || !pw || pw !== pwConf) return showAuthError('⚠️ Please complete all steps correctly.');
   if (goalCal < 500 || goalCal > 10000) return showAuthError('⚠️ Calorie goal must be between 500 and 10,000.');
 
-  // Collect body stats (change #1)
   const dob        = document.getElementById('regDob').value || null;
   const weight     = parseFloat(document.getElementById('regWeight').value) || null;
   const height     = parseFloat(document.getElementById('regHeight').value) || null;
@@ -410,64 +408,74 @@ async function handleRegister() { // async — needed for hashPw()
   const goalEl     = document.querySelector('input[name="dietGoal"]:checked');
   const dietTypeEl = document.querySelector('input[name="dietType"]:checked');
 
-  const newUser = {
-    id: Date.now().toString(),
-    name, email,
-    password: await hashPw(pw),  // SHA-256 hashed, never plaintext
-    dob, weight, height, weightUnit, heightUnit,
-    gender:   genderEl   ? genderEl.value   : null,
-    dietGoal: goalEl     ? goalEl.value      : 'maintain',
-    dietType: dietTypeEl ? dietTypeEl.value  : 'nonveg',
-    goals: {
-      calories: goalCal, protein: goalProt, carbs: 275, fat: 78,
-      fiber: 28, sugar: 50, sodium: 2300, chol: 300,
-      vit_d: 15, iron: 18, folate: 400
-    },
-    createdAt: new Date().toISOString()
+  const backendUrl = window._BACKEND_URL !== undefined ? window._BACKEND_URL : '';
+  const payload = {
+      name, email, password: pw,
+      verified_token: window._pendingVerifiedToken || '',
+      dob, weight, height, weightUnit, heightUnit,
+      gender: genderEl ? genderEl.value : null,
+      dietGoal: goalEl ? goalEl.value : 'maintain',
+      dietType: dietTypeEl ? dietTypeEl.value : 'nonveg',
+      goals: {
+        calories: goalCal, protein: goalProt, carbs: 275, fat: 78,
+        fiber: 28, sugar: 50, sodium: 2300, chol: 300,
+        vit_d: 15, iron: 18, folate: 400
+      }
   };
 
-  const users = DB.getUsers();
-  users.push(newUser);
-  DB.saveUsers(users);
-
-  showLoader('Creating your account…');
-  setTimeout(() => { loginSuccess(newUser); }, 700);
+  showLoader('Creating your account...');
+  try {
+      const res = await fetch(`${backendUrl}/api/auth/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!res.ok) {
+          hideLoader();
+          return showAuthError('⚠️ ' + (data.error || 'Registration failed'));
+      }
+      window._pendingVerifiedToken = null;
+      await _doLogin(email, pw);
+  } catch (err) {
+      hideLoader();
+      return showAuthError('⚠️ Network error during registration.');
+  }
 }
 
-// ─────────────────────────────────────────────────
-//  LOGIN
-// ─────────────────────────────────────────────────
-async function handleLogin() {  // async — needed for hashPw()
+async function handleLogin() {
   const email = document.getElementById('loginEmail').value.trim();
   const pw    = document.getElementById('loginPassword').value;
-  if (!email || !pw) return showAuthError('⚠️ Please fill in all fields.');
-  const users = DB.getUsers();
-  const user  = users.find(u => u.email.toLowerCase() === email.toLowerCase());
-  if (!user) return showAuthError('⚠️ Invalid email or password.');
+  if (!email || !pw) return showAuthError('⚠️ Email and password required.');
+  showLoader('Signing you in...');
+  await _doLogin(email, pw);
+}
 
-  let passwordMatch = false;
-  if (_isLegacyBtoa(user.password)) {
-    // Legacy btoa password — check and auto-migrate to SHA-256
-    if (user.password === btoa(pw)) {
-      passwordMatch = true;
-      const newHash = await hashPw(pw);
-      user.password = newHash;
-      const allUsers = DB.getUsers();
-      const idx = allUsers.findIndex(u => u.id === user.id);
-      if (idx >= 0) { allUsers[idx].password = newHash; DB.saveUsers(allUsers); }
-    }
-  } else {
-    passwordMatch = (await hashPw(pw)) === user.password;
+async function _doLogin(email, pw) {
+  const backendUrl = window._BACKEND_URL !== undefined ? window._BACKEND_URL : '';
+  try {
+      const res = await fetch(`${backendUrl}/api/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password: pw })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+          hideLoader();
+          return showAuthError('⚠️ ' + (data.error || 'Invalid credentials'));
+      }
+      localStorage.setItem('nt_access_token', data.access_token);
+      if (data.refresh_token) localStorage.setItem('nt_refresh_token', data.refresh_token);
+      loginSuccess(data.user);
+  } catch (err) {
+      hideLoader();
+      return showAuthError('⚠️ Network error during login.');
   }
-
-  if (!passwordMatch) return showAuthError('⚠️ Invalid email or password.');
-  showLoader('Signing you in…');
-  setTimeout(() => { loginSuccess(user); }, 600);
 }
 
 function loginSuccess(user) {
-  currentUser = user;
-  DB.setCurrentUser(user);
+  currentUser = { ...user, ...(user.body_stats || {}) };
+  currentUser.token = localStorage.getItem('nt_access_token');
   document.getElementById('authSection').style.display = 'none';
   document.getElementById('mainApp').style.display = 'block';
   initApp();
