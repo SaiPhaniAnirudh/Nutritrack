@@ -8548,7 +8548,7 @@ def send_email_otp(recipient_email, otp_code):
     if not sender_email or not sender_password:
         print("WARNING: MAIL_USERNAME or MAIL_PASSWORD not set. Pretending email was sent.")
         print(f"--- DEMO OTP for {recipient_email}: {otp_code} ---")
-        return True
+        return True, "DEMO"
         
     try:
         msg = MIMEMultipart()
@@ -8577,30 +8577,36 @@ def send_email_otp(recipient_email, otp_code):
         server.login(sender_email, sender_password)
         server.send_message(msg)
         server.quit()
-        return True
+        return True, "SUCCESS"
     except Exception as e:
         print(f"Error sending email: {e}")
-        return False
+        return False, str(e)
 
 @app.route('/api/auth/send-otp', methods=['POST'])
 @limiter.limit('5 per minute')
 def send_otp():
-    data = request.get_json() or {}
-    email = (data.get('email') or '').strip().lower()
-    
-    if not email or not _validate_email(email):
-        return jsonify({'error': 'Valid email is required'}), 400
+    try:
+        data = request.get_json() or {}
+        email = (data.get('email') or '').strip().lower()
         
-    if User.query.filter_by(email=email).first():
-        return jsonify({'error': 'Email already registered'}), 409
+        if not email or not _validate_email(email):
+            return jsonify({'error': 'Valid email is required'}), 400
+            
+        if User.query.filter_by(email=email).first():
+            return jsonify({'error': 'Email already registered'}), 409
+            
+        otp = str(random.randint(100000, 999999))
         
-    otp = str(random.randint(100000, 999999))
-    
-    if send_email_otp(email, otp):
-        OTP_STORE[email] = {'otp': otp, 'expires': time.time() + 600}
-        return jsonify({'message': 'OTP sent successfully'})
-    else:
-        return jsonify({'error': 'Failed to send OTP email'}), 500
+        success, err_msg = send_email_otp(email, otp)
+        if success:
+            OTP_STORE[email] = {'otp': otp, 'expires': time.time() + 600}
+            return jsonify({'message': 'OTP sent successfully'})
+        else:
+            # Return 400 instead of 500 to prevent Render proxy from replacing JSON with HTML
+            return jsonify({'error': f"Failed to send email. Server said: {err_msg}"}), 400
+    except Exception as e:
+        # Catch unexpected errors to prevent 500 HTML
+        return jsonify({'error': f"Unexpected server error: {str(e)}"}), 400
 
 @app.route('/api/auth/verify-otp', methods=['POST'])
 @limiter.limit('10 per minute')
