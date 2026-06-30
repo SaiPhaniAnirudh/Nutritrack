@@ -479,6 +479,7 @@ function loginSuccess(user) {
   document.getElementById('authSection').style.display = 'none';
   document.getElementById('mainApp').style.display = 'block';
   initApp();
+  fetchLogsFromCloud();
   hideLoader();
 }
 
@@ -591,7 +592,7 @@ function sumLogs(logs) {
 // ─────────────────────────────────────────────────
 function refreshDashboard() {
   const today  = todayStr();
-  const logs   = DB.getLogs().filter(l => l.userId === currentUser.id && l.date === today);
+  const logs   = window._foodLogs.filter(l => l.date === today);
   const totals = sumLogs(logs);
   const goals  = currentUser.goals || {calories:2000, protein:150, carbs:275, fat:78, fiber:28, sugar:50, sodium:2300, chol:300};
 
@@ -1340,48 +1341,65 @@ function searchFoods(query) {
   }).join('');
 }
 
-function addFoodToLog(food) {
-  const log = {
-    id:       Date.now().toString(),
-    userId:   currentUser.id,
-    date:     todayStr(),
-    mealType: currentMealType,
-    name:     food.name,
-    emoji:    food.emoji,
-    cal:    food.cal,
-    pro:    food.pro,
-    carb:   food.carb,
-    fat:    food.fat,
-    fiber:  food.fiber  || 0,
-    sugar:  food.sugar  || 0,
+async function addFoodToLog(food) {
+  const backendUrl = window._BACKEND_URL !== undefined ? window._BACKEND_URL : '';
+  const payload = {
+    date: todayStr(),
+    meal_type: currentMealType,
+    name: food.name,
+    emoji: food.emoji,
+    calories: food.cal,
+    protein: food.pro,
+    carbs: food.carb,
+    fat: food.fat,
+    fiber: food.fiber || 0,
+    sugar: food.sugar || 0,
     sodium: food.sodium || 0,
-    chol:   food.chol   || 0,
-    vit_d:  food.vit_d  || 0,
-    iron:   food.iron   || 0,
-    folate: food.folate || 0,
-    loggedAt: new Date().toISOString()
+    chol: food.chol || 0,
+    vit_d: food.vit_d || 0,
+    iron: food.iron || 0,
+    folate: food.folate || 0
   };
-  const logs = DB.getLogs();
-  logs.push(log);
-  DB.saveLogs(logs);
-  refreshDashboard();
-  showToast(`✓ ${food.name} added to ${currentMealType}`, 'success');
+
+  try {
+    const res = await fetch(`${backendUrl}/api/logs`, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${currentUser.token}`
+      },
+      body: JSON.stringify(payload)
+    });
+    if (res.ok) {
+      const savedLog = await res.json();
+      window._foodLogs.push(savedLog);
+      refreshDashboard();
+      showToast(`✓ ${food.name} added to ${currentMealType}`, 'success');
+    } else {
+      showToast('Failed to add food to cloud.', 'error');
+    }
+  } catch (e) {
+    showToast('Network error adding food.', 'error');
+  }
 }
 
-function removeLog(id) {
-  DB.saveLogs(DB.getLogs().filter(l => l.id !== id));
-  refreshDashboard();
-  showToast('Item removed', 'success');
-  
-  // HYBRID SYNC: Silently delete from SQLite DB
-  if (currentUser && currentUser.token) {
-    const backendUrl = window._BACKEND_URL !== undefined ? window._BACKEND_URL : '';
-    fetch(`${backendUrl}/api/logs/${id}`, {
+async function removeLog(id) {
+  const backendUrl = window._BACKEND_URL !== undefined ? window._BACKEND_URL : '';
+  try {
+    const res = await fetch(`${backendUrl}/api/logs/${id}`, {
       method: 'DELETE',
-      headers: { 
-        'Authorization': `Bearer ${currentUser.token}`
-      }
-    }).catch(e => console.log('Hybrid Sync failed:', e));
+      headers: { 'Authorization': `Bearer ${currentUser.token}` }
+    });
+    if (res.ok) {
+      window._foodLogs = window._foodLogs.filter(l => l.id !== id);
+      refreshDashboard();
+      renderHistory();
+      showToast('Item removed', 'success');
+    } else {
+      showToast('Failed to remove item from cloud.', 'error');
+    }
+  } catch (e) {
+    showToast('Network error removing item.', 'error');
   }
 }
 
@@ -1389,7 +1407,7 @@ function removeLog(id) {
 //  HISTORY
 // ─────────────────────────────────────────────────
 function renderHistory() {
-  const logs    = DB.getLogs().filter(l => l.userId === currentUser.id);
+  const logs    = window._foodLogs;
   const last30  = getLast30Days();
   const monthData = last30.map(d => sumLogs(logs.filter(l => l.date===d)).cal);
 
@@ -1489,7 +1507,7 @@ function renderProfile() {
   const dtSel = document.getElementById('editDietType');
   if (dtSel) dtSel.value = currentUser.dietType || 'nonveg';
 
-  const logs   = DB.getLogs().filter(l => l.userId === currentUser.id);
+  const logs   = window._foodLogs;
   const days   = [...new Set(logs.map(l=>l.date))];
   const totals = sumLogs(logs);
   const avgCal = days.length ? Math.round(totals.cal/days.length) : 0;
@@ -2273,7 +2291,7 @@ function _getJwt() {
 function _buildLocalChatContext() {
   if (!currentUser) return {};
   const goals = currentUser.goals || {};
-  const logs  = DB.getLogs().filter(l => l.userId === currentUser.id);
+  const logs  = window._foodLogs;
   const today = todayStr();
 
   // Last 7 days of logs
