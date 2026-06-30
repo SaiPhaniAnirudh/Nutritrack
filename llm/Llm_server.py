@@ -615,12 +615,22 @@ class ViTFoodEngine:
 
         # ── SigLIP zero-shot food check ────────────────────────────────────────
         if self.pipe_clip:
-            food_check = self.pipe_clip(img, candidate_labels=["a photo of food", "a photo of something that is not food"])
+            # Use more explicit non-food categories to catch faces, hands, and objects.
+            food_check_labels = [
+                "a photo of food",
+                "a photo of a person's face",
+                "a photo of a person",
+                "a photo of hands or body parts",
+                "a photo of an empty plate or table",
+                "a photo of an object that is not food"
+            ]
+            food_check = self.pipe_clip(img, candidate_labels=food_check_labels)
             is_food_label = food_check[0]['label']
             is_food_score = food_check[0]['score']
             print(f"  [SigLIP] food check: {is_food_label} ({is_food_score*100:.1f}%)")
-            # Lowered threshold 0.60 → 0.45 so hands, body parts, objects are rejected more strictly
-            if is_food_label == "a photo of something that is not food" and is_food_score > 0.45:
+            
+            # Reject if the top match is anything other than food, or if the food confidence is very low.
+            if is_food_label != "a photo of food":
                 return _not_food('SigLIP/siglip-base-patch16-224', 'image_classifier', int((time.time() - t0) * 1000))
 
             # ── SigLIP zero-shot: score ALL candidate foods against image ──────────
