@@ -98,6 +98,7 @@ function showAuthError(msg) {
   const el = document.getElementById('authError');
   el.textContent = msg;
   el.style.display = 'block';
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 function hideAuthError() {
   const el = document.getElementById('authError');
