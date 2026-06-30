@@ -8558,11 +8558,11 @@ import time
 OTP_STORE = {}
 
 def send_email_otp(recipient_email, otp_code):
-    sender_email = os.environ.get('MAIL_USERNAME')
-    sender_password = os.environ.get('MAIL_PASSWORD')
+    sender_email = os.environ.get('SMTP_EMAIL') or os.environ.get('MAIL_USERNAME')
+    sender_password = os.environ.get('SMTP_APP_PASSWORD') or os.environ.get('MAIL_PASSWORD')
     
     if not sender_email or not sender_password:
-        print("WARNING: MAIL_USERNAME or MAIL_PASSWORD not set. Pretending email was sent.")
+        print("WARNING: SMTP_EMAIL or SMTP_APP_PASSWORD not set. Pretending email was sent.")
         print(f"--- DEMO OTP for {recipient_email}: {otp_code} ---")
         return True, "DEMO"
         
