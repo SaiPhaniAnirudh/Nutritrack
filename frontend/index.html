@@ -198,8 +198,8 @@
             <button type="button" class="submit-btn" onclick="sendOtpAndGoToStepOtp()">Send Verification Code</button>
           </div>
 
-          <!-- STEP 1.5: OTP Verification -->
-          <div id="regStepOtp" style="display:none;">
+          <!-- STEP 2: OTP Verification -->
+          <div id="regStep2" style="display:none;">
             <div class="step-indicator">
               <div class="step-dot done">✓</div>
               <div class="step-line filled"></div>
@@ -219,12 +219,12 @@
               <label for="regOtpCode">6-Digit Code</label>
               <input type="text" id="regOtpCode" placeholder="Enter code" style="text-align: center; letter-spacing: 5px; font-weight: bold; font-size: 1.2rem;">
             </div>
-            <button type="button" class="submit-btn" onclick="verifyOtpAndGoToStep2()">Verify & Continue →</button>
+            <button type="button" class="submit-btn" onclick="verifyOtpAndGoToStep3()">Verify & Continue →</button>
             <button type="button" class="back-btn" onclick="goBackToStep1()" style="width: 100%; margin-top: 0.5rem; background: transparent; border: 1px solid rgba(62,207,142,0.3); color: #3ecf8e; border-radius: 8px; padding: 0.8rem; cursor: pointer; font-weight: 600;">Go Back</button>
           </div>
 
-          <!-- STEP 2: Body Stats -->
-          <div id="regStep2" style="display:none;">
+          <!-- STEP 3: Body Stats -->
+          <div id="regStep3" style="display:none;">
             <div class="step-indicator">
               <div class="step-dot done">✓</div>
               <div class="step-line filled"></div>
@@ -237,8 +237,8 @@
             <p class="step-label">Step 3 of 4 — Body Stats</p>
 
             <div class="field-group">
-              <label for="regAge">Age <span class="req-star">*</span></label>
-              <input type="number" id="regAge" placeholder="e.g. 24" min="10" max="100">
+              <label for="regDob">Date of Birth <span class="req-star">*</span></label>
+              <input type="date" id="regDob">
             </div>
             <div class="goals-row">
               <div class="field-group" style="margin-bottom:0">
@@ -290,13 +290,13 @@
             </div>
             <div class="step-btns">
               <!-- FIX: added type="button" -->
-              <button type="button" class="submit-btn back-btn" onclick="goToStep(1)">← Back</button>
-              <button type="button" class="submit-btn" onclick="goToStep3()">Continue →</button>
+              <button type="button" class="submit-btn back-btn" onclick="goToStep(2)">← Back</button>
+              <button type="button" class="submit-btn" onclick="goToStep4()">Continue →</button>
             </div>
           </div>
 
-          <!-- STEP 3 (now 4): Goals preview -->
-          <div id="regStep3" style="display:none;">
+          <!-- STEP 4: Goals preview -->
+          <div id="regStep4" style="display:none;">
             <div class="step-indicator">
               <div class="step-dot done">✓</div>
               <div class="step-line filled"></div>
@@ -323,8 +323,8 @@
             </div>
             <div class="step-btns" style="margin-top:1.2rem">
               <!-- FIX: added type="button" -->
-              <button type="button" class="submit-btn back-btn" onclick="goToStep(2)">← Back</button>
-              <button type="button" class="submit-btn" onclick="handleRegister()">Create Account →</button>
+              <button type="button" class="submit-btn back-btn" onclick="goToStep(3)">← Back</button>
+              <button type="button" class="submit-btn" onclick="handleRegister()">Complete Registration</button>
             </div>
           </div>
 

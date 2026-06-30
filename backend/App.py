@@ -194,13 +194,25 @@ class User(db.Model):
                            default=lambda: datetime.now(timezone.utc))
 
     # Body stats
-    age         = db.Column(db.Integer)
+    dob         = db.Column(db.String(20))
     weight      = db.Column(db.Float)
     weight_unit = db.Column(db.String(10), default='kg')
     height      = db.Column(db.Float)
     height_unit = db.Column(db.String(10), default='cm')
     gender      = db.Column(db.String(20))
     diet_goal   = db.Column(db.String(40))
+
+    @property
+    def current_age(self):
+        if not self.dob: return None
+        try:
+            from datetime import date
+            parts = self.dob.split('-')
+            birth = date(int(parts[0]), int(parts[1]), int(parts[2]))
+            today = date.today()
+            return today.year - birth.year - ((today.month, today.day) < (birth.month, birth.day))
+        except:
+            return None
 
     # Nutrition goals
     goal_calories = db.Column(db.Integer, default=2000)
@@ -309,7 +321,8 @@ with app.app_context():
             "goal_chol FLOAT DEFAULT 300",
             "goal_vit_d FLOAT DEFAULT 20",
             "goal_iron FLOAT DEFAULT 18",
-            "goal_folate FLOAT DEFAULT 400"
+            "goal_folate FLOAT DEFAULT 400",
+            "dob VARCHAR(20)"
         ]
         for col in columns_to_add:
             try:
@@ -8724,7 +8737,7 @@ def register():
         name        = name,
         email       = email,
         password    = _hash_password(pw),
-        age         = stats.get('age'),
+        dob         = stats.get('dob'),
         weight      = stats.get('weight'),
         weight_unit = stats.get('weight_unit', 'kg'),
         height      = stats.get('height'),
