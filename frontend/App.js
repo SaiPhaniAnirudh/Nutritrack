@@ -50,6 +50,7 @@ const DB = {
 //  APP STATE
 // ─────────────────────────────────────────────────
 let currentUser     = null;
+window._foodLogs = [];
 let currentMealType = 'breakfast';
 let currentCat      = 'all';
 let macroChart      = null;
@@ -2501,3 +2502,19 @@ handleLogout = function() {
   _origHandleLogout();
 };
 
+
+async function fetchLogsFromCloud() {
+  const backendUrl = window._BACKEND_URL !== undefined ? window._BACKEND_URL : '';
+  try {
+    const res = await fetch(`${backendUrl}/api/logs`, {
+      headers: { 'Authorization': `Bearer ${currentUser.token}` }
+    });
+    if (res.ok) {
+      window._foodLogs = await res.json();
+      refreshDashboard();
+      renderHistory();
+    }
+  } catch (e) {
+    console.error("Failed to fetch logs from cloud:", e);
+  }
+}
