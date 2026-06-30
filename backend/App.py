@@ -8481,7 +8481,7 @@ def _find_closest_food(name, db_dict):
     name_lower = name.lower()
     for key in db_dict:
         if key in name_lower or name_lower in key:
-            return key
+            return db_dict[key]
     return None
 
 
