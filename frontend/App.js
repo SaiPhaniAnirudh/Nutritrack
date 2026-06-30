@@ -115,6 +115,138 @@ function goToStep(n) {
   hideAuthError();
 }
 
+function goToStep2() {
+  // Validate Step 1 fully before advancing (change #7)
+  const name   = document.getElementById('regName').value.trim();
+  const email  = document.getElementById('regEmail').value.trim();
+  const pw     = document.getElementById('regPassword').value;
+  const pwConf = document.getElementById('regPasswordConfirm').value;
+
+  if (!name)              return showAuthError('⚠️ Please enter your full name.');
+  if (name.length < 2)    return showAuthError('⚠️ Name must be at least 2 characters.');
+
+  const emailRegex = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
+  if (!email)             return showAuthError('⚠️ Please enter your email address.');
+  if (!emailRegex.test(email)) return showAuthError('⚠️ Enter a valid email (e.g. name@domain.com).');
+
+  if (!pw)                return showAuthError('⚠️ Please enter a password.');
+  if (pw.length < 8)      return showAuthError('⚠️ Password must be at least 8 characters.');
+  if (getPasswordStrength(pw) < 2) return showAuthError('⚠️ Password is too weak. Mix letters, numbers, and symbols.');
+
+  if (!pwConf)            return showAuthError('⚠️ Please confirm your password.');
+  if (pw !== pwConf)      return showAuthError('⚠️ Passwords do not match. Please re-enter.');
+
+  const users = DB.getUsers();
+  if (users.find(u => u.email.toLowerCase() === email.toLowerCase())) {
+    return showAuthError('⚠️ An account with this email already exists. Sign in instead.');
+  }
+
+  goToStep(2);
+}
+
+function goToStep4() {
+  // Validate Step 2 fully (change #7)
+  const dobStr  = document.getElementById('regDob').value;
+  if (!dobStr) return showAuthError('⚠️ Please enter your date of birth.');
+  const dobDate = new Date(dobStr);
+  let age = new Date().getFullYear() - dobDate.getFullYear();
+  if (new Date() < new Date(dobDate.setFullYear(new Date().getFullYear()))) age--;
+
+  const weight  = parseFloat(document.getElementById('regWeight').value);
+  const height  = parseFloat(document.getElementById('regHeight').value);
+  const gender  = document.querySelector('input[name="gender"]:checked');
+  const goal    = document.querySelector('input[name="dietGoal"]:checked');
+
+  if (!age || age < 10 || age > 100) return showAuthError('⚠️ Please enter a valid age (10–100).');
+  if (!weight || weight < 20)        return showAuthError('⚠️ Please enter a valid weight.');
+  if (!height || height < 50)        return showAuthError('⚠️ Please enter a valid height.');
+  if (!gender)                        return showAuthError('⚠️ Please select your gender.');
+  if (!goal)                          return showAuthError('⚠️ Please select your diet goal.');
+
+  // Auto-calculate goals from body stats
+  const wUnit = document.getElementById('regWeightUnit').value;
+  const hUnit = document.getElementById('regHeightUnit').value;
+  const weightKg = wUnit === 'lbs' ? weight * 0.4536 : weight;
+  const heightCm = hUnit === 'ft'  ? height * 30.48  : height;
+
+  const { calories, protein } = _calcGoals(weightKg, heightCm, age, gender.value, goal.value);
+
+  document.getElementById('goalCalories').value = calories;
+  document.getElementById('goalProtein').value  = protein;
+
+  // Show preview cards
+  const bmi = (weightKg / ((heightCm/100)**2)).toFixed(1);
+  const bmiLabel = bmi < 18.5 ? 'Underweight' : bmi < 25 ? 'Normal' : bmi < 30 ? 'Overweight' : 'Obese';
+
+  document.getElementById('autoGoalsPreview').innerHTML = `
+    <div class="agp-card"><div class="agp-val">${calories}</div><div class="agp-label">kcal / day</div></div>
+    <div class="agp-card"><div class="agp-val">${protein}g</div><div class="agp-label">Protein / day</div></div>
+    <div class="agp-card"><div class="agp-val">${bmi}</div><div class="agp-label">BMI · ${bmiLabel}</div></div>
+  `;
+
+  goToStep(4);
+}
+
+// Harris-Benedict BMR + goal multiplier
+function _calcGoals(weightKg, heightCm, age, gender, goal) {
+  let bmr;
+  if (gender === 'female') {
+    bmr = 447.6 + 9.25*weightKg + 3.10*heightCm - 4.33*age;
+  } else {
+    bmr = 88.36 + 13.40*weightKg + 4.80*heightCm - 5.68*age;
+  }
+  const activityFactor = 1.55; // moderate activity
+  let tdee = bmr * activityFactor;
+
+  let calAdj = 0;
+  if (goal === 'lose')     calAdj = -400;
+  if (goal === 'gain')     calAdj = +300;
+  if (goal === 'bulk')     calAdj = +500;
+
+  const calories = Math.round(tdee + calAdj);
+  // Protein: 1.8g/kg for bulk, 1.6g/kg for gain, 1.4g/kg for lose/maintain
+  const protMultiplier = goal === 'bulk' ? 1.8 : goal === 'gain' ? 1.6 : 1.4;
+  const protein = Math.round(weightKg * protMultiplier);
+
+  return { calories, protein };
+}
+
+// ─────────────────────────────────────────────────
+//  PASSWORD HASHING  (SHA-256 via WebCrypto — much safer than btoa)
+// ─────────────────────────────────────────────────
+async function hashPw(pw) {
+  // Prefix with a fixed pepper so bare SHA-256 of the password can't be looked up in rainbow tables
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('nt_pepper:' + pw));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// Detect old btoa-encoded passwords so we can auto-migrate them on login
+function _isLegacyBtoa(hash) {
+  return !(hash && hash.length === 64 && /^[0-9a-f]+$/.test(hash));
+}
+
+// ─────────────────────────────────────────────────
+//  EMAIL / PASSWORD VALIDATORS
+// ─────────────────────────────────────────────────
+function validateEmailField(input) {
+  const email = input.value.trim();
+  const msgEl = document.getElementById('emailValidationMsg');
+  if (!email) { msgEl.style.display = 'none'; return; }
+  const valid = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(email);
+  msgEl.style.display = 'block';
+  if (valid) {
+    msgEl.textContent = '✓ Email format looks correct';
+    msgEl.style.color = '#7fbb6e';
+    msgEl.style.background = 'rgba(127,187,110,0.08)';
+    input.style.borderColor = 'rgba(127,187,110,0.4)';
+  } else {
+    msgEl.textContent = '✗ Please enter a valid email (e.g. name@domain.com)';
+    msgEl.style.color = '#F4613A';
+    msgEl.style.background = 'rgba(196,132,90,0.08)';
+    input.style.borderColor = 'rgba(196,132,90,0.4)';
+  }
+}
+
 function getPasswordStrength(pw) {
   let score = 0;
   if (pw.length >= 8)  score++;
@@ -268,7 +400,7 @@ async function handleRegister() { // async — needed for hashPw()
   if (goalCal < 500 || goalCal > 10000) return showAuthError('⚠️ Calorie goal must be between 500 and 10,000.');
 
   // Collect body stats (change #1)
-  const dob = document.getElementById('regDob').value || null;
+  const dob        = document.getElementById('regDob').value || null;
   const weight     = parseFloat(document.getElementById('regWeight').value) || null;
   const height     = parseFloat(document.getElementById('regHeight').value) || null;
   const weightUnit = document.getElementById('regWeightUnit').value;
@@ -1954,9 +2086,37 @@ function openDietModal() {
 document.getElementById('loginPassword').addEventListener('keypress', e => { if(e.key==='Enter') handleLogin(); });
 document.getElementById('loginEmail').addEventListener('keypress',    e => { if(e.key==='Enter') handleLogin(); });
 // Registration Enter key -- routes through OTP verification flow
-document.getElementById('regEmail').addEventListener('keypress',    e => { if(e.key==='Enter') sendOtpAndGoToStepOtp(); });
-document.getElementById('regPassword').addEventListener('keypress', e => { if(e.key==='Enter') sendOtpAndGoToStepOtp(); });
+document.getElementById('regEmail').addEventListener('keypress',    e => { if(e.key==='Enter') goToStep2(); });
+document.getElementById('regPassword').addEventListener('keypress', e => { if(e.key==='Enter') goToStep2(); });
+// ═══════════════════════════════════════════════════════════════
+//  REGISTRATION STEP NAVIGATION (OTP removed — instant flow)
+// ═══════════════════════════════════════════════════════════════
 
+// Stub: kept for backward compatibility in case any old code calls it
+let _otpVerifiedToken = null;
+
+function showRegStep(id) {
+  ['regStep1','regStep2','regStep3'].forEach(s => {
+    const el = document.getElementById(s);
+    if (el) el.style.display = s === id ? 'block' : 'none';
+  });
+  hideAuthError();
+}
+
+// Override goToStep so it uses showRegStep
+const _origGoToStep = goToStep;
+goToStep = function(n) {
+  if (n === 1) { showRegStep('regStep1'); return; }
+  if (n === 2) { showRegStep('regStep2'); return; }
+  if (n === 3) { showRegStep('regStep3'); return; }
+};
+
+// Patch handleRegister — no token needed any more
+const _origHandleRegister = handleRegister;
+handleRegister = async function() {
+  window._pendingVerifiedToken = null;
+  await _origHandleRegister();
+};
 
 
 
