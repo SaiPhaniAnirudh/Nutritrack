@@ -1,3 +1,4 @@
+window._otpVerifiedToken = '';
 /* ═══════════════════════════════════════════════════
    NutriTrack — app.js  v2.0
    Changes vs v1:
@@ -285,6 +286,93 @@ function validateConfirmPassword(input) {
 // ─────────────────────────────────────────────────
 //  REGISTER
 // ─────────────────────────────────────────────────
+
+// --- OTP LOGIC ---
+async function sendOtpAndGoToStepOtp() {
+  const email = document.getElementById('regEmail').value.trim();
+  if (!email || !email.includes('@')) {
+    return showAuthError('?? Please enter a valid email address first.');
+  }
+  
+  // Basic pre-validation
+  const name = document.getElementById('regName').value.trim();
+  const pw = document.getElementById('regPassword').value;
+  const pwConf = document.getElementById('regPasswordConfirm').value;
+  if (!name || !pw || pw !== pwConf) {
+    return showAuthError('?? Please complete Name and matching Passwords.');
+  }
+
+  const btn = document.querySelector('#regStep1 .submit-btn');
+  const origText = btn.innerHTML;
+  btn.innerHTML = 'Sending... <div class="spinner"></div>';
+  btn.disabled = true;
+
+  try {
+    const backendUrl = window._BACKEND_URL !== undefined ? window._BACKEND_URL : '';
+    const res = await fetch(`${backendUrl}/api/auth/send-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    const data = await res.json();
+    
+    if (!res.ok) throw new Error(data.error || 'Failed to send OTP');
+    
+    document.getElementById('regStep1').style.display = 'none';
+    document.getElementById('regStepOtp').style.display = 'block';
+    document.getElementById('authError').style.display = 'none';
+    
+  } catch(e) {
+    showAuthError('?? ' + e.message);
+  } finally {
+    btn.innerHTML = origText;
+    btn.disabled = false;
+  }
+}
+
+async function verifyOtpAndGoToStep2() {
+  const email = document.getElementById('regEmail').value.trim();
+  const otp = document.getElementById('regOtpCode').value.trim();
+  
+  if (!otp || otp.length < 5) return showAuthError('?? Please enter the 6-digit code.');
+
+  const btn = document.querySelector('#regStepOtp .submit-btn');
+  const origText = btn.innerHTML;
+  btn.innerHTML = 'Verifying... <div class="spinner"></div>';
+  btn.disabled = true;
+
+  try {
+    const backendUrl = window._BACKEND_URL !== undefined ? window._BACKEND_URL : '';
+    const res = await fetch(`${backendUrl}/api/auth/verify-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, otp })
+    });
+    const data = await res.json();
+    
+    if (!res.ok) throw new Error(data.error || 'Invalid OTP');
+    
+    window._otpVerifiedToken = data.verified_token;
+    
+    document.getElementById('regStepOtp').style.display = 'none';
+    document.getElementById('regStep2').style.display = 'block';
+    document.getElementById('authError').style.display = 'none';
+    
+  } catch(e) {
+    showAuthError('?? ' + e.message);
+  } finally {
+    btn.innerHTML = origText;
+    btn.disabled = false;
+  }
+}
+
+function goBackToStep1() {
+  document.getElementById('regStepOtp').style.display = 'none';
+  document.getElementById('regStep1').style.display = 'block';
+  document.getElementById('authError').style.display = 'none';
+}
+// -----------------
+
 async function handleRegister() { // async — needed for hashPw()
   const name    = document.getElementById('regName').value.trim();
   const email   = document.getElementById('regEmail').value.trim();
@@ -1261,6 +1349,17 @@ function removeLog(id) {
   DB.saveLogs(DB.getLogs().filter(l => l.id !== id));
   refreshDashboard();
   showToast('Item removed', 'success');
+  
+  // HYBRID SYNC: Silently delete from SQLite DB
+  if (currentUser && currentUser.token) {
+    const backendUrl = window._BACKEND_URL !== undefined ? window._BACKEND_URL : '';
+    fetch(`${backendUrl}/api/logs/${id}`, {
+      method: 'DELETE',
+      headers: { 
+        'Authorization': `Bearer ${currentUser.token}`
+      }
+    }).catch(e => console.log('Hybrid Sync failed:', e));
+  }
 }
 
 // ─────────────────────────────────────────────────

@@ -8529,7 +8529,117 @@ def _date_range(days):
 
 
 
+
+# -------------------------------------------------------------------------
+#  OTP VERIFICATION
+# -------------------------------------------------------------------------
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+import random
+import time
+
+OTP_STORE = {}
+
+def send_email_otp(recipient_email, otp_code):
+    sender_email = os.environ.get('MAIL_USERNAME')
+    sender_password = os.environ.get('MAIL_PASSWORD')
+    
+    if not sender_email or not sender_password:
+        print("WARNING: MAIL_USERNAME or MAIL_PASSWORD not set. Pretending email was sent.")
+        print(f"--- DEMO OTP for {recipient_email}: {otp_code} ---")
+        return True
+        
+    try:
+        msg = MIMEMultipart()
+        msg['From'] = sender_email
+        msg['To'] = recipient_email
+        msg['Subject'] = "Your NutriTrack Verification Code"
+        
+        body = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; background-color: #f4f7f6; padding: 20px;">
+            <div style="max-width: 500px; margin: auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); text-align: center;">
+                <h2 style="color: #2c3e50; margin-bottom: 20px;">Verify your email</h2>
+                <p style="color: #7f8c8d; font-size: 16px; margin-bottom: 30px;">Use the code below to complete your NutriTrack registration.</p>
+                <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #3ecf8e; margin-bottom: 30px;">
+                    {otp_code}
+                </div>
+                <p style="color: #bdc3c7; font-size: 14px;">This code expires in 10 minutes.</p>
+            </div>
+        </body>
+        </html>
+        """
+        msg.attach(MIMEText(body, 'html'))
+        
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()
+        server.login(sender_email, sender_password)
+        server.send_message(msg)
+        server.quit()
+        return True
+    except Exception as e:
+        print(f"Error sending email: {e}")
+        return False
+
+@app.route('/api/auth/send-otp', methods=['POST'])
+@limiter.limit('5 per minute')
+def send_otp():
+    data = request.get_json() or {}
+    email = (data.get('email') or '').strip().lower()
+    
+    if not email or not _validate_email(email):
+        return jsonify({'error': 'Valid email is required'}), 400
+        
+    if User.query.filter_by(email=email).first():
+        return jsonify({'error': 'Email already registered'}), 409
+        
+    otp = str(random.randint(100000, 999999))
+    
+    if send_email_otp(email, otp):
+        OTP_STORE[email] = {'otp': otp, 'expires': time.time() + 600}
+        return jsonify({'message': 'OTP sent successfully'})
+    else:
+        return jsonify({'error': 'Failed to send OTP email'}), 500
+
+@app.route('/api/auth/verify-otp', methods=['POST'])
+@limiter.limit('10 per minute')
+def verify_otp():
+    data = request.get_json() or {}
+    email = (data.get('email') or '').strip().lower()
+    otp = (data.get('otp') or '').strip()
+    
+    if not email or not otp:
+        return jsonify({'error': 'Email and OTP are required'}), 400
+        
+    stored = OTP_STORE.get(email)
+    if not stored:
+        return jsonify({'error': 'No OTP requested for this email'}), 400
+        
+    if time.time() > stored['expires']:
+        del OTP_STORE[email]
+        return jsonify({'error': 'OTP has expired'}), 400
+        
+    if stored['otp'] != otp:
+        return jsonify({'error': 'Invalid OTP'}), 400
+        
+    del OTP_STORE[email]
+    
+    from flask_jwt_extended import create_access_token
+    import datetime
+    # Issue a short-lived token just for completing registration
+    verified_token = create_access_token(
+        identity=f'otp_verified:{email}', 
+        expires_delta=datetime.timedelta(minutes=15)
+    )
+    
+    return jsonify({
+        'message': 'Email verified successfully',
+        'verified_token': verified_token
+    })
+
 @app.route('/api/auth/register', methods=['POST'])
+
 @limiter.limit('5 per minute')
 def register():
     data = request.get_json() or {}
@@ -8556,8 +8666,8 @@ def register():
                 return jsonify({'error': 'Email verification token does not match. Please verify your email first.'}), 403
         except Exception:
             return jsonify({'error': 'Invalid or expired email verification. Please verify your email again.'}), 403
-    # If no verified_token provided (e.g. SMTP not configured in dev), we still allow registration
-    # This graceful degradation means local dev works without email setup
+    else:
+        return jsonify({'error': 'Email verification token is required. Please complete the OTP step.'}), 403
 
     if User.query.filter_by(email=email).first():
         return jsonify({'error': 'Email already registered'}), 409

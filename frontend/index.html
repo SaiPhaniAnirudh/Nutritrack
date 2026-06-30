@@ -195,7 +195,32 @@
                 oninput="validateConfirmPassword(this)">
               <div id="confirmPasswordMsg" style="font-size:0.7rem;margin-top:0.35rem;display:none;"></div>
             </div>
-            <button type="button" class="submit-btn" onclick="goToStep2()">Continue →</button>
+            <button type="button" class="submit-btn" onclick="sendOtpAndGoToStepOtp()">Send Verification Code</button>
+          </div>
+
+          <!-- STEP 1.5: OTP Verification -->
+          <div id="regStepOtp" style="display:none;">
+            <div class="step-indicator">
+              <div class="step-dot done">✓</div>
+              <div class="step-line filled"></div>
+              <div class="step-dot active">🔒</div>
+              <div class="step-line"></div>
+              <div class="step-dot">2</div>
+              <div class="step-line"></div>
+              <div class="step-dot">3</div>
+              <div class="step-line"></div>
+              <div class="step-dot">4</div>
+            </div>
+            <p class="step-label">Email Verification</p>
+            <p style="font-size: 0.85rem; color: rgba(184,201,186,0.8); margin-bottom: 1rem; text-align: center;">
+              We sent a 6-digit code to your email.
+            </p>
+            <div class="field-group">
+              <label for="regOtpCode">6-Digit Code</label>
+              <input type="text" id="regOtpCode" placeholder="Enter code" style="text-align: center; letter-spacing: 5px; font-weight: bold; font-size: 1.2rem;">
+            </div>
+            <button type="button" class="submit-btn" onclick="verifyOtpAndGoToStep2()">Verify & Continue →</button>
+            <button type="button" class="back-btn" onclick="goBackToStep1()" style="width: 100%; margin-top: 0.5rem; background: transparent; border: 1px solid rgba(62,207,142,0.3); color: #3ecf8e; border-radius: 8px; padding: 0.8rem; cursor: pointer; font-weight: 600;">Go Back</button>
           </div>
 
           <!-- STEP 2: Body Stats -->
