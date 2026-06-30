@@ -201,6 +201,7 @@ class User(db.Model):
     height_unit = db.Column(db.String(10), default='cm')
     gender      = db.Column(db.String(20))
     diet_goal   = db.Column(db.String(40))
+    diet_type   = db.Column(db.String(20))
 
     @property
     def current_age(self):
@@ -245,6 +246,7 @@ class User(db.Model):
                 'height_unit': self.height_unit,
                 'gender':      self.gender,
                 'diet_goal':   self.diet_goal,
+                'diet_type':   self.diet_type,
             },
             'goals': {
                 'calories': self.goal_calories,
@@ -8745,6 +8747,7 @@ def register():
         height_unit = stats.get('height_unit', 'cm'),
         gender      = stats.get('gender'),
         diet_goal   = stats.get('diet_goal'),
+        diet_type   = stats.get('diet_type'),
 
         goal_calories = goals.get('calories', 2000),
         goal_protein  = goals.get('protein',  150),
@@ -8831,6 +8834,7 @@ def update_profile():
     if stats.get('height_unit'): user.height_unit = stats['height_unit']
     if stats.get('gender'):      user.gender      = stats['gender']
     if stats.get('diet_goal'):   user.diet_goal   = stats['diet_goal']
+    if stats.get('diet_type'):   user.diet_type   = stats['diet_type']
 
     # Update nutrition goals
     if goals.get('calories'): user.goal_calories = int(goals['calories'])

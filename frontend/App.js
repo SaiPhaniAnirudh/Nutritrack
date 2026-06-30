@@ -412,10 +412,12 @@ async function handleRegister() {
   const payload = {
       name, email, password: pw,
       verified_token: window._otpVerifiedToken || '',
-      dob, weight, height, weightUnit, heightUnit,
-      gender: genderEl ? genderEl.value : null,
-      dietGoal: goalEl ? goalEl.value : 'maintain',
-      dietType: dietTypeEl ? dietTypeEl.value : 'nonveg',
+      body_stats: {
+        dob, weight, height, weightUnit, heightUnit,
+        gender: genderEl ? genderEl.value : null,
+        diet_goal: goalEl ? goalEl.value : 'maintain',
+        diet_type: dietTypeEl ? dietTypeEl.value : 'nonveg'
+      },
       goals: {
         calories: goalCal, protein: goalProt, carbs: 275, fat: 78,
         fiber: 28, sugar: 50, sodium: 2300, chol: 300,
@@ -1543,14 +1545,22 @@ function saveGoals() {
   // Save diet type change
   const dtSel = document.getElementById('editDietType');
   if (dtSel) currentUser.dietType = dtSel.value;
-  DB.setCurrentUser(currentUser);
-  const users = DB.getUsers();
-  const idx = users.findIndex(u => u.id === currentUser.id);
-  if (idx >= 0) {
-    users[idx].goals    = newGoals;
-    if (dtSel) users[idx].dietType = dtSel.value;
-    DB.saveUsers(users);
-  }
+  try {
+    const backendUrl = window._BACKEND_URL !== undefined ? window._BACKEND_URL : '';
+    fetch(`${backendUrl}/api/auth/update`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${currentUser.token}`
+      },
+      body: JSON.stringify({
+        goals: newGoals,
+        body_stats: {
+          diet_type: dtSel ? dtSel.value : currentUser.dietType
+        }
+      })
+    });
+  } catch(e) { console.error('Failed to update cloud profile'); }
   refreshDashboard();
   renderProfile();
   showToast('✓ Goals & diet type saved!', 'success');
