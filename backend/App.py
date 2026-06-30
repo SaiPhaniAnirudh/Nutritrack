@@ -319,6 +319,7 @@ with app.app_context():
         # Migration for missing columns in production
         from sqlalchemy import text
         columns_to_add = [
+            "diet_type VARCHAR(20)",
             "goal_sugar FLOAT DEFAULT 50",
             "goal_sodium FLOAT DEFAULT 2300",
             "goal_chol FLOAT DEFAULT 300",
