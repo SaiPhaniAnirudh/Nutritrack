@@ -303,16 +303,20 @@ with app.app_context():
         db.create_all()
         # Migration for missing columns in production
         from sqlalchemy import text
-        try:
-            db.session.execute(text("ALTER TABLE users ADD COLUMN goal_sugar FLOAT DEFAULT 50;"))
-            db.session.execute(text("ALTER TABLE users ADD COLUMN goal_sodium FLOAT DEFAULT 2300;"))
-            db.session.execute(text("ALTER TABLE users ADD COLUMN goal_chol FLOAT DEFAULT 300;"))
-            db.session.execute(text("ALTER TABLE users ADD COLUMN goal_vit_d FLOAT DEFAULT 20;"))
-            db.session.execute(text("ALTER TABLE users ADD COLUMN goal_iron FLOAT DEFAULT 18;"))
-            db.session.execute(text("ALTER TABLE users ADD COLUMN goal_folate FLOAT DEFAULT 400;"))
-            db.session.commit()
-        except Exception:
-            db.session.rollback() # Columns likely already exist
+        columns_to_add = [
+            "goal_sugar FLOAT DEFAULT 50",
+            "goal_sodium FLOAT DEFAULT 2300",
+            "goal_chol FLOAT DEFAULT 300",
+            "goal_vit_d FLOAT DEFAULT 20",
+            "goal_iron FLOAT DEFAULT 18",
+            "goal_folate FLOAT DEFAULT 400"
+        ]
+        for col in columns_to_add:
+            try:
+                db.session.execute(text(f"ALTER TABLE users ADD COLUMN {col};"))
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
         print("✅ Database tables initialized.")
     except Exception as e:
         print(f"⚠️ Warning: Could not initialize database tables: {e}")
