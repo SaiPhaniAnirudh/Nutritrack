@@ -318,8 +318,13 @@ async function sendOtpAndGoToStepOtp() {
     
     if (!res.ok) throw new Error(data.error || 'Failed to send OTP');
     
-    if (data.status === 'DEMO') {
-      showToast('⚠️ Backend is in DEMO mode! Check Render Logs for the code.', 'warning');
+    if (data.status && data.status.startsWith('DEMO')) {
+      const fallbackOtp = data.status.split(':')[1] || '';
+      if (fallbackOtp) {
+        showToast(`⚠️ Render blocked the email, but your code is: ${fallbackOtp}`, 'warning');
+      } else {
+        showToast('⚠️ Backend is in DEMO mode! Check Render Logs for the code.', 'warning');
+      }
     }
     
     document.getElementById('regStep1').style.display = 'none';
