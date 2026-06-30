@@ -8887,34 +8887,38 @@ def get_logs():
 @app.route('/api/logs', methods=['POST'])
 @jwt_required()
 def add_log():
-    uid  = int(get_jwt_identity())
-    data = request.get_json() or {}
+    try:
+        uid  = int(get_jwt_identity())
+        data = request.get_json() or {}
 
-    name = (data.get('name') or '').strip()
-    if not name:
-        return jsonify({'error': 'Food name is required'}), 400
+        name = (data.get('name') or '').strip()
+        if not name:
+            return jsonify({'error': 'Food name is required'}), 400
 
-    log = FoodLog(
-        user_id   = uid,
-        date      = data.get('date')     or _today(),
-        meal_type = data.get('mealType') or 'breakfast',
-        name      = name,
-        emoji     = data.get('emoji')    or '🍽️',
-        cal       = float(data.get('cal')    or 0),
-        pro       = float(data.get('pro')    or 0),
-        carb      = float(data.get('carb')   or 0),
-        fat       = float(data.get('fat')    or 0),
-        fiber     = float(data.get('fiber')  or 0),
-        sugar     = float(data.get('sugar')  or 0),
-        sodium    = float(data.get('sodium') or 0),
-        chol      = float(data.get('chol')   or 0),
-        vit_d     = float(data.get('vit_d')  or 0),
-        iron      = float(data.get('iron')   or 0),
-        folate    = float(data.get('folate') or 0),
-    )
-    db.session.add(log)
-    db.session.commit()
-    return jsonify(log.to_dict()), 201
+        log = FoodLog(
+            user_id   = uid,
+            date      = data.get('date')     or _today(),
+            meal_type = data.get('mealType') or 'breakfast',
+            name      = name,
+            emoji     = data.get('emoji')    or '🍽️',
+            cal       = float(data.get('cal')    or 0),
+            pro       = float(data.get('pro')    or 0),
+            carb      = float(data.get('carb')   or 0),
+            fat       = float(data.get('fat')    or 0),
+            fiber     = float(data.get('fiber')  or 0),
+            sugar     = float(data.get('sugar')  or 0),
+            sodium    = float(data.get('sodium') or 0),
+            chol      = float(data.get('chol')   or 0),
+            vit_d     = float(data.get('vit_d')  or 0),
+            iron      = float(data.get('iron')   or 0),
+            folate    = float(data.get('folate') or 0),
+        )
+        db.session.add(log)
+        db.session.commit()
+        return jsonify(log.to_dict()), 201
+    except Exception as e:
+        import traceback
+        return jsonify({'error': str(e), 'trace': traceback.format_exc()}), 500
 
 
 @app.route('/api/logs/<int:log_id>', methods=['DELETE'])
