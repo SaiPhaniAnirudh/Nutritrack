@@ -305,7 +305,7 @@ class FoodLog(db.Model):
     __tablename__ = 'food_logs'
 
     id        = db.Column(db.Integer, primary_key=True)
-    user_id   = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    user_id   = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
     date      = db.Column(db.String(10), nullable=False)       # YYYY-MM-DD
     meal_type = db.Column(db.String(20), default='breakfast')  # breakfast/lunch/dinner/snack
     name      = db.Column(db.String(200), nullable=False)
@@ -533,7 +533,7 @@ def send_email_otp(recipient_email, otp_code):
 @app.route('/api/auth/me', methods=['GET'])
 @jwt_required()
 def me():
-    uid  = int(get_jwt_identity())
+    uid  = get_jwt_identity()
     user = db.session.get(User, uid)
     if not user:
         return jsonify({'error': 'User not found'}), 404
@@ -543,7 +543,7 @@ def me():
 @app.route('/api/auth/update', methods=['PUT'])
 @jwt_required()
 def update_profile():
-    uid  = int(get_jwt_identity())
+    uid  = get_jwt_identity()
     user = db.session.get(User, uid)
     if not user:
         return jsonify({'error': 'User not found'}), 404
@@ -596,7 +596,7 @@ def update_profile():
 @app.route('/api/logs', methods=['GET'])
 @jwt_required()
 def get_logs():
-    uid  = int(get_jwt_identity())
+    uid  = get_jwt_identity()
     date = request.args.get('date')          # YYYY-MM-DD
     days = request.args.get('days', type=int)
 
@@ -616,7 +616,7 @@ def get_logs():
 @jwt_required()
 def add_log():
     try:
-        uid  = int(get_jwt_identity())
+        uid  = get_jwt_identity()
         data = request.get_json() or {}
 
         name = (data.get('name') or '').strip()
@@ -652,7 +652,7 @@ def add_log():
 @app.route('/api/logs/<int:log_id>', methods=['DELETE'])
 @jwt_required()
 def delete_log(log_id):
-    uid = int(get_jwt_identity())
+    uid = get_jwt_identity()
     log = FoodLog.query.filter_by(id=log_id, user_id=uid).first()
     if not log:
         return jsonify({'error': 'Log not found'}), 404
@@ -665,7 +665,7 @@ def delete_log(log_id):
 @jwt_required()
 def logs_summary():
     """Daily totals for past N days."""
-    uid  = int(get_jwt_identity())
+    uid  = get_jwt_identity()
     days = request.args.get('days', 30, type=int)
     dates = _date_range(days)
 
@@ -800,7 +800,7 @@ def ai_chat():
     Fetches the user's last 7 days of food logs + their goals,
     bundles them as context, and forwards to the LLM server.
     """
-    uid  = int(get_jwt_identity())
+    uid  = get_jwt_identity()
     user = db.session.get(User, uid)
     if not user:
         return jsonify({'error': 'User not found'}), 404
@@ -873,7 +873,7 @@ def ai_chat():
 @jwt_required()
 def streak():
     """How many consecutive days the user has logged food."""
-    uid = int(get_jwt_identity())
+    uid = get_jwt_identity()
     # Get all unique dates logged, sorted descending
     rows = (db.session.query(FoodLog.date)
             .filter_by(user_id=uid)
