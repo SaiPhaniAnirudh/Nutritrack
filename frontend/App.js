@@ -191,7 +191,8 @@ supabaseClient.auth.onAuthStateChange(async (event, session) => {
         .eq('id', session.user.id)
         .single();
         
-      if (userProfile && userProfile.body_stats) {
+      const hasProfile = userProfile && (userProfile.body_stats || userProfile.dob || userProfile.gender);
+      if (hasProfile) {
         // Returning user -> Dashboard
         loginSuccess(userProfile);
       } else {
@@ -316,17 +317,25 @@ async function handleFinishOnboarding() {
     id: user.id,
     email: user.email,
     name: name,
-    body_stats: {
-      dob, weight, height, weightUnit, heightUnit,
-      gender: genderEl,
-      diet_goal: goalEl,
-      diet_type: dietTypeEl
-    },
-    goals: {
-      calories: goalCal, protein: goalProt, carbs: 275, fat: 78,
-      fiber: 28, sugar: 50, sodium: 2300, chol: 300,
-      vit_d: 15, iron: 18, folate: 400
-    },
+    dob: dob,
+    weight: weight,
+    weight_unit: weightUnit,
+    height: height,
+    height_unit: heightUnit,
+    gender: genderEl,
+    diet_goal: goalEl,
+    diet_type: dietTypeEl,
+    goal_calories: goalCal,
+    goal_protein: goalProt,
+    goal_carbs: 275,
+    goal_fat: 78,
+    goal_fiber: 28,
+    goal_sugar: 50,
+    goal_sodium: 2300,
+    goal_chol: 300,
+    goal_vit_d: 15,
+    goal_iron: 18,
+    goal_folate: 400,
     created_at: new Date().toISOString()
   };
 
@@ -342,8 +351,65 @@ async function handleFinishOnboarding() {
   }
 }
 
+function normalizeUserProfile(p) {
+  if (!p) return null;
+  const rawStats = p.body_stats || {};
+  const rawGoals = p.goals || {};
+  
+  const id = p.id;
+  const name = p.name;
+  const email = p.email;
+  const created_at = p.created_at;
+  
+  const dob = p.dob || rawStats.dob;
+  const weight = p.weight || rawStats.weight;
+  const weightUnit = p.weight_unit || p.weightUnit || rawStats.weight_unit || rawStats.weightUnit || 'kg';
+  const height = p.height || rawStats.height;
+  const heightUnit = p.height_unit || p.heightUnit || rawStats.height_unit || rawStats.heightUnit || 'cm';
+  const gender = p.gender || rawStats.gender;
+  const dietGoal = p.diet_goal || p.dietGoal || rawStats.diet_goal || rawStats.dietGoal || 'maintain';
+  const dietType = p.diet_type || p.dietType || rawStats.diet_type || rawStats.dietType || 'nonveg';
+  
+  const goals = {
+    calories: rawGoals.calories || p.goal_calories || p.goals?.calories || 2000,
+    protein:  rawGoals.protein  || p.goal_protein  || p.goals?.protein  || 150,
+    carbs:    rawGoals.carbs    || p.goal_carbs    || p.goals?.carbs    || 250,
+    fat:      rawGoals.fat      || p.goal_fat      || p.goals?.fat      || 65,
+    fiber:    rawGoals.fiber    || p.goal_fiber    || p.goals?.fiber    || 28,
+    sugar:    rawGoals.sugar    || p.goal_sugar    || p.goals?.sugar    || 50,
+    sodium:   rawGoals.sodium   || p.goal_sodium   || p.goals?.sodium   || 2300,
+    chol:     rawGoals.chol     || p.goal_chol     || p.goals?.chol     || 300,
+    vit_d:    rawGoals.vit_d    || p.goal_vit_d    || p.goals?.vit_d    || 15,
+    iron:     rawGoals.iron     || p.goal_iron     || p.goals?.iron     || 18,
+    folate:   rawGoals.folate   || p.goal_folate   || p.goals?.folate   || 400
+  };
+  
+  return {
+    id, name, email, created_at,
+    dob, weight, weightUnit, height, heightUnit, gender, dietGoal, dietType,
+    weight_unit: weightUnit, height_unit: heightUnit, diet_goal: dietGoal, diet_type: dietType,
+    body_stats: {
+      dob, weight, weight_unit: weightUnit, weightUnit,
+      height, height_unit: heightUnit, heightUnit,
+      gender, diet_goal: dietGoal, dietGoal, diet_type: dietType, dietType
+    },
+    goals: goals,
+    goal_calories: goals.calories,
+    goal_protein:  goals.protein,
+    goal_carbs:    goals.carbs,
+    goal_fat:      goals.fat,
+    goal_fiber:    goals.fiber,
+    goal_sugar:    goals.sugar,
+    goal_sodium:   goals.sodium,
+    goal_chol:     goals.chol,
+    goal_vit_d:    goals.vit_d,
+    goal_iron:     goals.iron,
+    goal_folate:   goals.folate
+  };
+}
+
 function loginSuccess(userProfile) {
-  currentUser = { ...userProfile, ...(userProfile.body_stats || {}) };
+  currentUser = normalizeUserProfile(userProfile);
   
   // Try to grab JWT, ignoring errors if session doesn't load immediately
   supabaseClient.auth.getSession().then(({data}) => {
