@@ -56,8 +56,50 @@ try:
 except ImportError:
     _has_limiter = False
 from flask_sqlalchemy import SQLAlchemy
-from flask_jwt_extended import (
-    JWTManager, create_access_token, create_refresh_token,
+
+from functools import wraps
+from flask import g
+from supabase import create_client, Client
+
+# Initialize Supabase client for JWT verification
+SUPABASE_URL = os.environ.get("SUPABASE_URL")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL else None
+
+def jwt_required(optional=False, refresh=False):
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            if not supabase:
+                return jsonify({"error": "Supabase not configured"}), 500
+            
+            auth_header = request.headers.get("Authorization")
+            if not auth_header or not auth_header.startswith("Bearer "):
+                if optional:
+                    g.user_id = None
+                    return f(*args, **kwargs)
+                return jsonify({"error": "Missing or invalid Authorization header"}), 401
+            
+            token = auth_header.split(" ")[1]
+            try:
+                # Verify token with Supabase
+                res = supabase.auth.get_user(token)
+                if not res.user:
+                    raise Exception("Invalid token")
+                g.user_id = res.user.id
+            except Exception as e:
+                if optional:
+                    g.user_id = None
+                    return f(*args, **kwargs)
+                return jsonify({"error": "Token verification failed", "details": str(e)}), 401
+                
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
+def get_jwt_identity():
+    return getattr(g, 'user_id', None)
+JWTManager, create_access_token, create_refresh_token,
     jwt_required, get_jwt_identity
 )
 from dotenv import load_dotenv, find_dotenv
@@ -153,15 +195,12 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
 
 
 # JWT
-jwt_secret = os.getenv('JWT_SECRET_KEY', 'change-me-in-production')
-if jwt_secret == 'change-me-in-production':
-    print("⚠️  WARNING: Using default JWT_SECRET_KEY. Set a real one in .env!")
-app.config['JWT_SECRET_KEY']           = jwt_secret
+
 app.config['JWT_ACCESS_TOKEN_EXPIRES']  = timedelta(days=7)
 app.config['JWT_REFRESH_TOKEN_EXPIRES'] = timedelta(days=30)
 
 db  = SQLAlchemy(app)
-jwt = JWTManager(app)
+
 
 # CORS — allow frontend from local dev and production
 _cors_origins = [
@@ -186,7 +225,7 @@ CORS(app, origins=_cors_origins, supports_credentials=True)
 class User(db.Model):
     __tablename__ = 'users'
 
-    id         = db.Column(db.Integer, primary_key=True)
+    id         = db.Column(db.String(36), primary_key=True)
     name       = db.Column(db.String(120), nullable=False)
     email      = db.Column(db.String(200), unique=True, nullable=False)
     password   = db.Column(db.String(200), nullable=False)   # bcrypt hash
@@ -8654,7 +8693,7 @@ def send_email_otp(recipient_email, otp_code):
         # If Render blocks it, fallback to DEMO mode so the user isn't stuck
         return True, f"DEMO:{otp_code}"
 
-@app.route('/api/auth/send-otp', methods=['POST'])
+@app.route('/api/auth/disabled_send-otp', methods=['POST'])
 @limiter.limit('5 per minute')
 def send_otp():
     try:
@@ -8680,7 +8719,7 @@ def send_otp():
         # Catch unexpected errors to prevent 500 HTML
         return jsonify({'error': f"Unexpected server error: {str(e)}"}), 400
 
-@app.route('/api/auth/verify-otp', methods=['POST'])
+@app.route('/api/auth/disabled_verify-otp', methods=['POST'])
 @limiter.limit('10 per minute')
 def verify_otp():
     data = request.get_json() or {}
@@ -8703,8 +8742,7 @@ def verify_otp():
         
     del OTP_STORE[email]
     
-    from flask_jwt_extended import create_access_token
-    import datetime
+        import datetime
     # Issue a short-lived token just for completing registration
     verified_token = create_access_token(
         identity=f'otp_verified:{email}', 
@@ -8716,7 +8754,7 @@ def verify_otp():
         'verified_token': verified_token
     })
 
-@app.route('/api/auth/register', methods=['POST'])
+@app.route('/api/auth/disabled_register', methods=['POST'])
 
 @limiter.limit('5 per minute')
 def register():
@@ -8737,8 +8775,7 @@ def register():
     # Validate the email-verified token issued by /api/auth/verify-otp
     if verified_token:
         try:
-            from flask_jwt_extended import decode_token
-            decoded = decode_token(verified_token)
+                        decoded = decode_token(verified_token)
             expected_identity = f'otp_verified:{email}'
             if decoded.get('sub') != expected_identity:
                 return jsonify({'error': 'Email verification token does not match. Please verify your email first.'}), 403
@@ -8791,7 +8828,7 @@ def register():
     }), 201
 
 
-@app.route('/api/auth/login', methods=['POST'])
+@app.route('/api/auth/disabled_login', methods=['POST'])
 @limiter.limit('20 per minute')
 def login():
     data  = request.get_json() or {}
@@ -8811,7 +8848,7 @@ def login():
     })
 
 
-@app.route('/api/auth/refresh', methods=['POST'])
+@app.route('/api/auth/disabled_refresh', methods=['POST'])
 @jwt_required(refresh=True)
 def refresh():
     uid    = get_jwt_identity()
