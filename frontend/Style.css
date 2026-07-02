@@ -3670,3 +3670,18 @@ body {
 @media (max-width: 768px) {
   .auth-card { flex-direction: column !important; }
 }
+
+/* Responsive Auth Card */
+@media (max-width: 768px) {
+  #authSection .auth-card {
+    flex-direction: column !important;
+  }
+  #authSection .auth-divider {
+    width: 100% !important;
+    height: 1px !important;
+    margin: 0 !important;
+  }
+  #authSection .auth-left, #authSection .auth-right {
+    padding: 2rem !important;
+  }
+}
