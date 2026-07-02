@@ -83,73 +83,155 @@ function closeNonFoodModal() {
 }
 
 // ─────────────────────────────────────────────────
-//  AUTH — helpers
+//  SUPABASE AUTH INITIALIZATION
 // ─────────────────────────────────────────────────
-function switchTab(tab) {
-  document.querySelectorAll('.auth-tab').forEach((t, i) => {
-    t.classList.toggle('active', (i === 0) === (tab === 'login'));
-  });
-  document.getElementById('loginForm').style.display    = tab === 'login'    ? 'block' : 'none';
-  document.getElementById('registerForm').style.display = tab === 'register' ? 'block' : 'none';
-  hideAuthError();
-  if (tab === 'register') { goToStep(1); _prewarmBackend(); }
+const SUPABASE_URL = 'https://agzopmiiswitorldacud.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFnem9wbWlpc3dpdG9ybGRhY3VkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxMzI5MjEsImV4cCI6MjA5NzcwODkyMX0.BsazyuwecNc5ZWMxxxNEtL0tUM99JJQLXJj3Gv6Iupc';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+function showAuthError(msg, isSuccess=false) {
+  const el = isSuccess ? document.getElementById('authSuccess') : document.getElementById('authError');
+  const otherEl = isSuccess ? document.getElementById('authError') : document.getElementById('authSuccess');
+  if (otherEl) otherEl.style.display = 'none';
+  if (el) {
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+}
+function hideAuthError() {
+  document.getElementById('authError').style.display = 'none';
+  document.getElementById('authSuccess').style.display = 'none';
+  document.getElementById('onboardingError').style.display = 'none';
 }
 
-function showAuthError(msg) {
-  const el = document.getElementById('authError');
+// ─────────────────────────────────────────────────
+//  GOOGLE LOGIN
+// ─────────────────────────────────────────────────
+async function handleGoogleLogin() {
+  showLoader('Connecting to Google...');
+  try {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin + window.location.pathname }
+    });
+    if (error) throw error;
+  } catch (err) {
+    hideLoader();
+    showAuthError('⚠️ ' + err.message);
+  }
+}
+
+// ─────────────────────────────────────────────────
+//  EMAIL/PASSWORD LOGIN & REGISTER
+// ─────────────────────────────────────────────────
+async function handleEmailLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const pw    = document.getElementById('loginPassword').value;
+  if (!email || !pw) return showAuthError('⚠️ Email and password required.');
+  
+  showLoader('Signing in...');
+  try {
+    // 1. Try to sign in
+    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+      email: email,
+      password: pw,
+    });
+    
+    if (signInError) {
+      if (signInError.message.includes("Invalid login credentials")) {
+        // 2. If it fails, try to sign up automatically
+        showLoader('Creating account...');
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email: email,
+          password: pw,
+        });
+        
+        if (signUpError) throw signUpError;
+        if (signUpData.user && signUpData.user.identities && signUpData.user.identities.length === 0) {
+           throw new Error("Account already exists with this email, but password was incorrect.");
+        }
+        
+        showAuthError('Account created! Please check your email to verify your account, then sign in.', true);
+        hideLoader();
+        return;
+      }
+      throw signInError;
+    }
+    // Session state change will handle the rest
+  } catch (err) {
+    hideLoader();
+    showAuthError('⚠️ ' + err.message);
+  }
+}
+
+async function handleForgotPassword() {
+  const email = document.getElementById('loginEmail').value.trim();
+  if (!email) return showAuthError('⚠️ Please enter your email address first to reset password.');
+  
+  showLoader('Sending reset link...');
+  try {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + window.location.pathname,
+    });
+    if (error) throw error;
+    showAuthError('Reset link sent to your email!', true);
+  } catch (err) {
+    showAuthError('⚠️ ' + err.message);
+  } finally {
+    hideLoader();
+  }
+}
+
+// ─────────────────────────────────────────────────
+//  SESSION LISTENER & ONBOARDING ROUTING
+// ─────────────────────────────────────────────────
+supabase.auth.onAuthStateChange(async (event, session) => {
+  if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+    if (!session) return;
+    
+    showLoader('Loading profile...');
+    
+    // Check if user has body_stats in the database
+    const { data: userProfile, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', session.user.id)
+      .single();
+      
+    if (userProfile && userProfile.body_stats) {
+      // Returning user -> Dashboard
+      loginSuccess(userProfile);
+    } else {
+      // New user -> Show Onboarding Wizard
+      document.getElementById('authSection').style.display = 'none';
+      document.getElementById('onboardingSection').style.display = 'block';
+      hideLoader();
+    }
+  } else if (event === 'SIGNED_OUT') {
+    handleLogoutUI();
+  }
+});
+
+// ─────────────────────────────────────────────────
+//  ONBOARDING LOGIC
+// ─────────────────────────────────────────────────
+function goToStep(n) {
+  document.getElementById('regStep3').style.display = n === 3 ? 'block' : 'none';
+  document.getElementById('regStep4').style.display = n === 4 ? 'block' : 'none';
+  document.getElementById('onboardingError').style.display = 'none';
+}
+
+function showOnboardingError(msg) {
+  const el = document.getElementById('onboardingError');
   el.textContent = msg;
   el.style.display = 'block';
   el.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
-function hideAuthError() {
-  const el = document.getElementById('authError');
-  if (el) el.style.display = 'none';
-}
-
-// ─────────────────────────────────────────────────
-//  MULTI-STEP REGISTRATION  (change #7)
-// ─────────────────────────────────────────────────
-function goToStep(n) {
-  [1,2,3,4].forEach(i => {
-    const el = document.getElementById('regStep' + i);
-    if (el) el.style.display = i === n ? 'block' : 'none';
-  });
-  hideAuthError();
-}
-
-function goToStep2() {
-  // Validate Step 1 fully before advancing (change #7)
-  const name   = document.getElementById('regName').value.trim();
-  const email  = document.getElementById('regEmail').value.trim();
-  const pw     = document.getElementById('regPassword').value;
-  const pwConf = document.getElementById('regPasswordConfirm').value;
-
-  if (!name)              return showAuthError('⚠️ Please enter your full name.');
-  if (name.length < 2)    return showAuthError('⚠️ Name must be at least 2 characters.');
-
-  const emailRegex = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
-  if (!email)             return showAuthError('⚠️ Please enter your email address.');
-  if (!emailRegex.test(email)) return showAuthError('⚠️ Enter a valid email (e.g. name@domain.com).');
-
-  if (!pw)                return showAuthError('⚠️ Please enter a password.');
-  if (pw.length < 8)      return showAuthError('⚠️ Password must be at least 8 characters.');
-  if (getPasswordStrength(pw) < 2) return showAuthError('⚠️ Password is too weak. Mix letters, numbers, and symbols.');
-
-  if (!pwConf)            return showAuthError('⚠️ Please confirm your password.');
-  if (pw !== pwConf)      return showAuthError('⚠️ Passwords do not match. Please re-enter.');
-
-  const users = DB.getUsers();
-  if (users.find(u => u.email.toLowerCase() === email.toLowerCase())) {
-    return showAuthError('⚠️ An account with this email already exists. Sign in instead.');
-  }
-
-  goToStep(2);
-}
 
 function goToStep4() {
-  // Validate Step 2 fully (change #7)
+  // Validate Body Stats
   const dobStr  = document.getElementById('regDob').value;
-  if (!dobStr) return showAuthError('⚠️ Please enter your date of birth.');
+  if (!dobStr) return showOnboardingError('⚠️ Please enter your date of birth.');
   const dobDate = new Date(dobStr);
   let age = new Date().getFullYear() - dobDate.getFullYear();
   if (new Date() < new Date(dobDate.setFullYear(new Date().getFullYear()))) age--;
@@ -159,13 +241,13 @@ function goToStep4() {
   const gender  = document.querySelector('input[name="gender"]:checked');
   const goal    = document.querySelector('input[name="dietGoal"]:checked');
 
-  if (!age || age < 10 || age > 100) return showAuthError('⚠️ Please enter a valid age (10–100).');
-  if (!weight || weight < 20)        return showAuthError('⚠️ Please enter a valid weight.');
-  if (!height || height < 50)        return showAuthError('⚠️ Please enter a valid height.');
-  if (!gender)                        return showAuthError('⚠️ Please select your gender.');
-  if (!goal)                          return showAuthError('⚠️ Please select your diet goal.');
+  if (!age || age < 10 || age > 100) return showOnboardingError('⚠️ Please enter a valid age (10–100).');
+  if (!weight || weight < 20)        return showOnboardingError('⚠️ Please enter a valid weight.');
+  if (!height || height < 50)        return showOnboardingError('⚠️ Please enter a valid height.');
+  if (!gender)                        return showOnboardingError('⚠️ Please select your gender.');
+  if (!goal)                          return showOnboardingError('⚠️ Please select your diet goal.');
 
-  // Auto-calculate goals from body stats
+  // Auto-calculate goals
   const wUnit = document.getElementById('regWeightUnit').value;
   const hUnit = document.getElementById('regHeightUnit').value;
   const weightKg = wUnit === 'lbs' ? weight * 0.4536 : weight;
@@ -206,297 +288,95 @@ function _calcGoals(weightKg, heightCm, age, gender, goal) {
   if (goal === 'bulk')     calAdj = +500;
 
   const calories = Math.round(tdee + calAdj);
-  // Protein: 1.8g/kg for bulk, 1.6g/kg for gain, 1.4g/kg for lose/maintain
   const protMultiplier = goal === 'bulk' ? 1.8 : goal === 'gain' ? 1.6 : 1.4;
   const protein = Math.round(weightKg * protMultiplier);
 
   return { calories, protein };
 }
 
-// ─────────────────────────────────────────────────
-//  PASSWORD HASHING  (SHA-256 via WebCrypto — much safer than btoa)
-// ─────────────────────────────────────────────────
-async function hashPw(pw) {
-  // Prefix with a fixed pepper so bare SHA-256 of the password can't be looked up in rainbow tables
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('nt_pepper:' + pw));
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
-// Detect old btoa-encoded passwords so we can auto-migrate them on login
-function _isLegacyBtoa(hash) {
-  return !(hash && hash.length === 64 && /^[0-9a-f]+$/.test(hash));
-}
-
-// ─────────────────────────────────────────────────
-//  EMAIL / PASSWORD VALIDATORS
-// ─────────────────────────────────────────────────
-function validateEmailField(input) {
-  const email = input.value.trim();
-  const msgEl = document.getElementById('emailValidationMsg');
-  if (!email) { msgEl.style.display = 'none'; return; }
-  const valid = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(email);
-  msgEl.style.display = 'block';
-  if (valid) {
-    msgEl.textContent = '✓ Email format looks correct';
-    msgEl.style.color = '#7fbb6e';
-    msgEl.style.background = 'rgba(127,187,110,0.08)';
-    input.style.borderColor = 'rgba(127,187,110,0.4)';
-  } else {
-    msgEl.textContent = '✗ Please enter a valid email (e.g. name@domain.com)';
-    msgEl.style.color = '#F4613A';
-    msgEl.style.background = 'rgba(196,132,90,0.08)';
-    input.style.borderColor = 'rgba(196,132,90,0.4)';
-  }
-}
-
-function getPasswordStrength(pw) {
-  let score = 0;
-  if (pw.length >= 8)  score++;
-  if (pw.length >= 12) score++;
-  if (/[A-Z]/.test(pw)) score++;
-  if (/[0-9]/.test(pw)) score++;
-  if (/[^A-Za-z0-9]/.test(pw)) score++;
-  return score;
-}
-
-function validatePasswordField(input) {
-  const pw = input.value;
-  const barWrap = document.getElementById('passwordStrengthBar');
-  const fill    = document.getElementById('passwordStrengthFill');
-  const label   = document.getElementById('passwordStrengthLabel');
-  if (!pw) { barWrap.style.display = 'none'; return; }
-  barWrap.style.display = 'block';
-  const score = getPasswordStrength(pw);
-  const colors = ['#e05c5c','#e07e5c','#d4a853','#7fbb6e','#7fbb6e','#4CAF50'];
-  const labels = ['Very weak','Weak','Fair','Good','Strong','Very strong'];
-  fill.style.width      = Math.min(100, score*20) + '%';
-  fill.style.background = colors[score];
-  label.textContent     = labels[score];
-  label.style.color     = colors[score];
-}
-
-function validateConfirmPassword(input) {
-  const pw1 = document.getElementById('regPassword').value;
-  const msgEl = document.getElementById('confirmPasswordMsg');
-  msgEl.style.display = 'block';
-  if (input.value === pw1) {
-    msgEl.textContent = '✓ Passwords match';
-    msgEl.style.color = '#7fbb6e';
-    input.style.borderColor = 'rgba(127,187,110,0.4)';
-  } else {
-    msgEl.textContent = '✗ Passwords do not match';
-    msgEl.style.color = '#F4613A';
-    input.style.borderColor = 'rgba(196,132,90,0.4)';
-  }
-}
-
-// ─────────────────────────────────────────────────
-//  REGISTER
-// ─────────────────────────────────────────────────
-
-// --- OTP LOGIC ---
-async function sendOtpAndGoToStepOtp() {
-  const email = document.getElementById('regEmail').value.trim();
-  if (!email || !email.includes('@')) {
-    return showAuthError('?? Please enter a valid email address first.');
-  }
-  
-  // Basic pre-validation
-  const name = document.getElementById('regName').value.trim();
-  const pw = document.getElementById('regPassword').value;
-  const pwConf = document.getElementById('regPasswordConfirm').value;
-  if (!name || !pw || pw !== pwConf) {
-    return showAuthError('?? Please complete Name and matching Passwords.');
-  }
-
-  const btn = document.querySelector('#regStep1 .submit-btn');
-  const origText = btn.innerHTML;
-  btn.innerHTML = 'Sending... <div class="spinner"></div>';
-  btn.disabled = true;
-
-  try {
-    const backendUrl = window._BACKEND_URL !== undefined ? window._BACKEND_URL : '';
-    const res = await fetch(`${backendUrl}/api/auth/send-otp`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email })
-    });
-    const data = await res.json();
-    
-    if (!res.ok) throw new Error(data.error || 'Failed to send OTP');
-    
-    if (data.status && data.status.startsWith('DEMO')) {
-      const fallbackOtp = data.status.split(':')[1] || '';
-      if (fallbackOtp) {
-        showToast(`⚠️ Render blocked the email, but your code is: ${fallbackOtp}`, 'warning');
-      } else {
-        showToast('⚠️ Backend is in DEMO mode! Check Render Logs for the code.', 'warning');
-      }
-    }
-    
-    document.getElementById('regStep1').style.display = 'none';
-    document.getElementById('regStep2').style.display = 'block';
-    document.getElementById('authError').style.display = 'none';
-    
-  } catch(e) {
-    showAuthError('?? ' + e.message);
-  } finally {
-    btn.innerHTML = origText;
-    btn.disabled = false;
-  }
-}
-
-async function verifyOtpAndGoToStep3() {
-  const email = document.getElementById('regEmail').value.trim();
-  const otp = document.getElementById('regOtpCode').value.trim();
-  
-  if (!otp || otp.length < 5) return showAuthError('?? Please enter the 6-digit code.');
-
-  const btn = document.querySelector('#regStep2 .submit-btn');
-  const origText = btn.innerHTML;
-  btn.innerHTML = 'Verifying... <div class="spinner"></div>';
-  btn.disabled = true;
-
-  try {
-    const backendUrl = window._BACKEND_URL !== undefined ? window._BACKEND_URL : '';
-    const res = await fetch(`${backendUrl}/api/auth/verify-otp`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, otp })
-    });
-    const data = await res.json();
-    
-    if (!res.ok) throw new Error(data.error || 'Invalid OTP');
-    
-    window._otpVerifiedToken = data.verified_token;
-    
-    document.getElementById('regStep2').style.display = 'none';
-    document.getElementById('regStep3').style.display = 'block';
-    document.getElementById('authError').style.display = 'none';
-    
-  } catch(e) {
-    showAuthError('?? ' + e.message);
-  } finally {
-    btn.innerHTML = origText;
-    btn.disabled = false;
-  }
-}
-
-function goBackToStep1() {
-  document.getElementById('regStep2').style.display = 'none';
-  document.getElementById('regStep1').style.display = 'block';
-  document.getElementById('authError').style.display = 'none';
-}
-// -----------------
-
-async function handleRegister() {
-  const name    = document.getElementById('regName').value.trim();
-  const email   = document.getElementById('regEmail').value.trim();
-  const pw      = document.getElementById('regPassword').value;
-  const pwConf  = document.getElementById('regPasswordConfirm').value;
+async function handleFinishOnboarding() {
   const goalCal  = parseInt(document.getElementById('goalCalories').value) || 2000;
   const goalProt = parseInt(document.getElementById('goalProtein').value)  || 150;
+  if (goalCal < 500 || goalCal > 10000) return showOnboardingError('⚠️ Calorie goal must be between 500 and 10,000.');
 
-  if (!name || !email || !pw || pw !== pwConf) return showAuthError('⚠️ Please complete all steps correctly.');
-  if (goalCal < 500 || goalCal > 10000) return showAuthError('⚠️ Calorie goal must be between 500 and 10,000.');
-
-  const dob        = document.getElementById('regDob').value || null;
-  const weight     = parseFloat(document.getElementById('regWeight').value) || null;
-  const height     = parseFloat(document.getElementById('regHeight').value) || null;
+  const dob        = document.getElementById('regDob').value;
+  const weight     = parseFloat(document.getElementById('regWeight').value);
+  const height     = parseFloat(document.getElementById('regHeight').value);
   const weightUnit = document.getElementById('regWeightUnit').value;
   const heightUnit = document.getElementById('regHeightUnit').value;
-  const genderEl   = document.querySelector('input[name="gender"]:checked');
-  const goalEl     = document.querySelector('input[name="dietGoal"]:checked');
-  const dietTypeEl = document.querySelector('input[name="dietType"]:checked');
+  const genderEl   = document.querySelector('input[name="gender"]:checked').value;
+  const goalEl     = document.querySelector('input[name="dietGoal"]:checked').value;
+  const dietTypeEl = document.querySelector('input[name="dietType"]:checked').value;
 
-  const backendUrl = window._BACKEND_URL !== undefined ? window._BACKEND_URL : '';
+  showLoader('Saving your profile...');
+  
+  const { data: sessionData } = await supabase.auth.getSession();
+  if (!sessionData.session) return showOnboardingError('⚠️ Session expired. Please login again.');
+  
+  const user = sessionData.session.user;
+  const name = user.user_metadata?.full_name || user.email.split('@')[0];
+
   const payload = {
-      name, email, password: pw,
-      verified_token: window._otpVerifiedToken || '',
-      body_stats: {
-        dob, weight, height, weightUnit, heightUnit,
-        gender: genderEl ? genderEl.value : null,
-        diet_goal: goalEl ? goalEl.value : 'maintain',
-        diet_type: dietTypeEl ? dietTypeEl.value : 'nonveg'
-      },
-      goals: {
-        calories: goalCal, protein: goalProt, carbs: 275, fat: 78,
-        fiber: 28, sugar: 50, sodium: 2300, chol: 300,
-        vit_d: 15, iron: 18, folate: 400
-      }
+    id: user.id,
+    email: user.email,
+    name: name,
+    body_stats: {
+      dob, weight, height, weightUnit, heightUnit,
+      gender: genderEl,
+      diet_goal: goalEl,
+      diet_type: dietTypeEl
+    },
+    goals: {
+      calories: goalCal, protein: goalProt, carbs: 275, fat: 78,
+      fiber: 28, sugar: 50, sodium: 2300, chol: 300,
+      vit_d: 15, iron: 18, folate: 400
+    },
+    created_at: new Date().toISOString()
   };
 
-  showLoader('Creating your account...');
   try {
-      const res = await fetch(`${backendUrl}/api/auth/register`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-      });
-      const data = await res.json();
-      if (!res.ok) {
-          hideLoader();
-          return showAuthError('⚠️ ' + (data.error || 'Registration failed'));
-      }
-      window._otpVerifiedToken = null;
-      await _doLogin(email, pw);
+    const { error } = await supabase.from('users').upsert(payload);
+    if (error) throw error;
+    
+    document.getElementById('onboardingSection').style.display = 'none';
+    loginSuccess(payload);
   } catch (err) {
-      hideLoader();
-      return showAuthError('⚠️ Network error during registration.');
+    hideLoader();
+    showOnboardingError('⚠️ Failed to save profile: ' + err.message);
   }
 }
 
-async function handleLogin() {
-  const email = document.getElementById('loginEmail').value.trim();
-  const pw    = document.getElementById('loginPassword').value;
-  if (!email || !pw) return showAuthError('⚠️ Email and password required.');
-  showLoader('Signing you in...');
-  await _doLogin(email, pw);
-}
-
-async function _doLogin(email, pw) {
-  const backendUrl = window._BACKEND_URL !== undefined ? window._BACKEND_URL : '';
-  try {
-      const res = await fetch(`${backendUrl}/api/auth/login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password: pw })
-      });
-      const data = await res.json();
-      if (!res.ok) {
-          hideLoader();
-          return showAuthError('⚠️ ' + (data.error || 'Invalid credentials'));
-      }
-      localStorage.setItem('nt_access_token', data.access_token);
-      if (data.refresh_token) localStorage.setItem('nt_refresh_token', data.refresh_token);
-      loginSuccess(data.user);
-  } catch (err) {
-      hideLoader();
-      return showAuthError('⚠️ Network error during login.');
-  }
-}
-
-function loginSuccess(user) {
-  currentUser = { ...user, ...(user.body_stats || {}) };
-  currentUser.token = localStorage.getItem('nt_access_token');
+function loginSuccess(userProfile) {
+  currentUser = { ...userProfile, ...(userProfile.body_stats || {}) };
+  
+  // Try to grab JWT, ignoring errors if session doesn't load immediately
+  supabase.auth.getSession().then(({data}) => {
+     if (data && data.session) currentUser.token = data.session.access_token;
+  });
+  
   document.getElementById('authSection').style.display = 'none';
+  document.getElementById('onboardingSection').style.display = 'none';
   document.getElementById('mainApp').style.display = 'block';
+  
   initApp();
   fetchLogsFromCloud();
   hideLoader();
 }
 
-function handleLogout() {
+async function handleLogout() {
   showLoader('Signing out…');
-  setTimeout(() => {
-    currentUser = null;
-    DB.clearSession();
-    document.getElementById('mainApp').style.display   = 'none';
-    document.getElementById('authSection').style.display = 'block';
-    document.getElementById('loginEmail').value    = '';
-    document.getElementById('loginPassword').value = '';
-    hideLoader();
-  }, 500);
+  await supabase.auth.signOut();
+  // State change listener will trigger handleLogoutUI
+}
+
+function handleLogoutUI() {
+  currentUser = null;
+  DB.clearSession();
+  document.getElementById('mainApp').style.display   = 'none';
+  document.getElementById('authSection').style.display = 'block';
+  document.getElementById('loginEmail').value    = '';
+  document.getElementById('loginPassword').value = '';
+  hideLoader();
 }
 
 // ─────────────────────────────────────────────────

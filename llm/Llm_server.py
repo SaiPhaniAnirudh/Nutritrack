@@ -26,6 +26,7 @@ from dotenv import load_dotenv
 load_dotenv()
 from PIL import Image
 from flask import Flask, request, jsonify
+from supabase import create_client, Client
 
 # Windows Console Unicode/Emoji support
 if sys.platform == 'win32':
@@ -40,191 +41,7 @@ if sys.platform == 'win32':
 #  NUTRITION DATABASE  (80 items — Indian + global)
 # ──────────────────────────────────────────────────────────────────────────────
 
-NUTRITION_DB = {
-    # ── Fruits ──
-    'apple':          {'cal':95,  'pro':0.5,'carb':25, 'fat':0.3,'fiber':4.4,'sugar':19,'sodium':2,   'chol':0,  'serving':'1 medium (182g)'},
-    'banana':         {'cal':105, 'pro':1.3,'carb':27, 'fat':0.4,'fiber':3.1,'sugar':14,'sodium':1,   'chol':0,  'serving':'1 medium (118g)'},
-    'mango':          {'cal':99,  'pro':1.4,'carb':25, 'fat':0.6,'fiber':2.6,'sugar':22,'sodium':2,   'chol':0,  'serving':'1 cup sliced (165g)'},
-    'orange':         {'cal':62,  'pro':1.2,'carb':15, 'fat':0.2,'fiber':3.1,'sugar':12,'sodium':0,   'chol':0,  'serving':'1 medium (131g)'},
-    'watermelon':     {'cal':46,  'pro':0.9,'carb':12, 'fat':0.2,'fiber':0.6,'sugar':9, 'sodium':2,   'chol':0,  'serving':'2 cups diced (280g)'},
-    'grapes':         {'cal':104, 'pro':1.1,'carb':27, 'fat':0.2,'fiber':1.4,'sugar':23,'sodium':3,   'chol':0,  'serving':'1 cup (151g)'},
-    'strawberry':     {'cal':49,  'pro':1.0,'carb':12, 'fat':0.5,'fiber':3.0,'sugar':7, 'sodium':2,   'chol':0,  'serving':'1 cup (152g)'},
-    'pineapple':      {'cal':82,  'pro':0.9,'carb':22, 'fat':0.2,'fiber':2.3,'sugar':16,'sodium':2,   'chol':0,  'serving':'1 cup chunks (165g)'},
-    # ── Indian staples ──
-    'biryani':        {'cal':350, 'pro':15, 'carb':48, 'fat':12, 'fiber':2,  'sugar':3, 'sodium':480, 'chol':45, 'serving':'1 plate (300g)'},
-    'butter chicken': {'cal':300, 'pro':25, 'carb':12, 'fat':18, 'fiber':2,  'sugar':6, 'sodium':520, 'chol':80, 'serving':'1 bowl (200g)'},
-    'chole bhature':  {'cal':550, 'pro':16, 'carb':72, 'fat':22, 'fiber':8,  'sugar':4, 'sodium':640, 'chol':0,  'serving':'1 plate (350g)'},
-    'dal':            {'cal':170, 'pro':9,  'carb':22, 'fat':6,  'fiber':5,  'sugar':3, 'sodium':320, 'chol':10, 'serving':'1 bowl (200g)'},
-    'dal makhani':    {'cal':198, 'pro':10, 'carb':24, 'fat':8,  'fiber':6,  'sugar':3, 'sodium':380, 'chol':20, 'serving':'1 bowl (200g)'},
-    'dosa':           {'cal':168, 'pro':4,  'carb':30, 'fat':4,  'fiber':1,  'sugar':1, 'sodium':200, 'chol':0,  'serving':'1 dosa (80g)'},
-    'masala dosa':    {'cal':210, 'pro':5,  'carb':36, 'fat':6,  'fiber':2,  'sugar':2, 'sodium':380, 'chol':0,  'serving':'1 dosa (120g)'},
-    'idli':           {'cal':58,  'pro':2,  'carb':11, 'fat':0.4,'fiber':0.5,'sugar':0, 'sodium':120, 'chol':0,  'serving':'1 piece (39g)'},
-    'sambar':         {'cal':130, 'pro':6,  'carb':20, 'fat':3,  'fiber':5,  'sugar':4, 'sodium':480, 'chol':0,  'serving':'1 bowl (200g)'},
-    'uttapam':        {'cal':220, 'pro':6,  'carb':36, 'fat':6,  'fiber':3,  'sugar':3, 'sodium':380, 'chol':0,  'serving':'1 piece (120g)'},
-    'roti':           {'cal':71,  'pro':2.5,'carb':14, 'fat':0.9,'fiber':1.9,'sugar':0, 'sodium':2,   'chol':0,  'serving':'1 roti (30g)'},
-    'paratha':        {'cal':280, 'pro':7,  'carb':38, 'fat':11, 'fiber':3,  'sugar':1, 'sodium':320, 'chol':0,  'serving':'1 paratha (80g)'},
-    'naan':           {'cal':262, 'pro':8,  'carb':45, 'fat':5,  'fiber':2,  'sugar':3, 'sodium':530, 'chol':10, 'serving':'1 naan (90g)'},
-    'paneer':         {'cal':290, 'pro':18, 'carb':8,  'fat':20, 'fiber':1,  'sugar':3, 'sodium':480, 'chol':55, 'serving':'100g'},
-    'paneer tikka':   {'cal':290, 'pro':18, 'carb':8,  'fat':20, 'fiber':1,  'sugar':3, 'sodium':480, 'chol':55, 'serving':'4 pieces (150g)'},
-    'rajma':          {'cal':220, 'pro':12, 'carb':36, 'fat':4,  'fiber':8,  'sugar':3, 'sodium':380, 'chol':0,  'serving':'1 bowl (200g)'},
-    'pav bhaji':      {'cal':320, 'pro':8,  'carb':48, 'fat':11, 'fiber':4,  'sugar':6, 'sodium':680, 'chol':20, 'serving':'1 plate (250g)'},
-    'vada pav':       {'cal':280, 'pro':6,  'carb':42, 'fat':10, 'fiber':3,  'sugar':3, 'sodium':400, 'chol':0,  'serving':'1 piece (120g)'},
-    'samosa':         {'cal':150, 'pro':3,  'carb':20, 'fat':7,  'fiber':2,  'sugar':1, 'sodium':240, 'chol':0,  'serving':'1 piece (60g)'},
-    'poha':           {'cal':180, 'pro':4,  'carb':32, 'fat':4,  'fiber':2,  'sugar':2, 'sodium':280, 'chol':0,  'serving':'1 bowl (150g)'},
-    'upma':           {'cal':200, 'pro':5,  'carb':35, 'fat':5,  'fiber':3,  'sugar':2, 'sodium':350, 'chol':0,  'serving':'1 bowl (180g)'},
-    'khichdi':        {'cal':190, 'pro':8,  'carb':32, 'fat':5,  'fiber':4,  'sugar':2, 'sodium':320, 'chol':10, 'serving':'1 bowl (200g)'},
-    'chicken curry':  {'cal':260, 'pro':22, 'carb':10, 'fat':16, 'fiber':2,  'sugar':4, 'sodium':500, 'chol':70, 'serving':'1 bowl (200g)'},
-    'momos':          {'cal':240, 'pro':10, 'carb':30, 'fat':9,  'fiber':2,  'sugar':2, 'sodium':480, 'chol':35, 'serving':'6 pieces (150g)'},
-    'kebab':          {'cal':220, 'pro':22, 'carb':8,  'fat':12, 'fiber':1,  'sugar':2, 'sodium':480, 'chol':70, 'serving':'2 skewers (100g)'},
-    'lassi':          {'cal':150, 'pro':6,  'carb':22, 'fat':4,  'fiber':0,  'sugar':18,'sodium':80,  'chol':15, 'serving':'1 glass (200ml)'},
-    'mango lassi':    {'cal':180, 'pro':5,  'carb':32, 'fat':4,  'fiber':1,  'sugar':28,'sodium':60,  'chol':15, 'serving':'1 glass (200ml)'},
-    'gulab jamun':    {'cal':175, 'pro':3,  'carb':30, 'fat':5,  'fiber':0,  'sugar':26,'sodium':80,  'chol':20, 'serving':'2 pieces (80g)'},
-    'rasgulla':       {'cal':186, 'pro':4,  'carb':38, 'fat':2,  'fiber':0,  'sugar':34,'sodium':40,  'chol':0,  'serving':'2 pieces (100g)'},
-    'kheer':          {'cal':180, 'pro':5,  'carb':30, 'fat':5,  'fiber':0,  'sugar':24,'sodium':80,  'chol':20, 'serving':'1 bowl (150g)'},
-    # ── Global fast food ──
-    'burger':         {'cal':354, 'pro':20, 'carb':29, 'fat':17, 'fiber':1,  'sugar':6, 'sodium':497, 'chol':52, 'serving':'1 burger (150g)'},
-    'hamburger':      {'cal':354, 'pro':20, 'carb':29, 'fat':17, 'fiber':1,  'sugar':6, 'sodium':497, 'chol':52, 'serving':'1 burger (150g)'},
-    'french fries':   {'cal':312, 'pro':3.4,'carb':41, 'fat':15, 'fiber':3.8,'sugar':0, 'sodium':210, 'chol':0,  'serving':'medium (150g)'},
-    'pizza':          {'cal':266, 'pro':11, 'carb':33, 'fat':10, 'fiber':2.3,'sugar':3.6,'sodium':640,'chol':17, 'serving':'2 slices (200g)'},
-    'sandwich':       {'cal':280, 'pro':12, 'carb':36, 'fat':9,  'fiber':3,  'sugar':4, 'sodium':620, 'chol':25, 'serving':'1 sandwich (180g)'},
-    'hot dog':        {'cal':290, 'pro':11, 'carb':24, 'fat':18, 'fiber':1,  'sugar':4, 'sodium':670, 'chol':45, 'serving':'1 hot dog (150g)'},
-    # ── Noodles / rice dishes ──
-    'fried rice':     {'cal':242, 'pro':5,  'carb':42, 'fat':6,  'fiber':1,  'sugar':2, 'sodium':600, 'chol':40, 'serving':'1 bowl (200g)'},
-    'noodles':        {'cal':220, 'pro':7,  'carb':40, 'fat':4,  'fiber':2,  'sugar':2, 'sodium':400, 'chol':0,  'serving':'1 bowl (200g)'},
-    'ramen':          {'cal':436, 'pro':20, 'carb':58, 'fat':14, 'fiber':3,  'sugar':4, 'sodium':1260,'chol':55, 'serving':'1 bowl (450ml)'},
-    'pad thai':       {'cal':400, 'pro':18, 'carb':54, 'fat':13, 'fiber':3,  'sugar':6, 'sodium':920, 'chol':55, 'serving':'1 plate (250g)'},
-    'pho':            {'cal':320, 'pro':22, 'carb':42, 'fat':5,  'fiber':2,  'sugar':3, 'sodium':1020,'chol':40, 'serving':'1 bowl (450ml)'},
-    'sushi':          {'cal':200, 'pro':9,  'carb':38, 'fat':0.7,'fiber':1,  'sugar':4, 'sodium':600, 'chol':10, 'serving':'6 pieces (150g)'},
-    'pasta':          {'cal':220, 'pro':8,  'carb':43, 'fat':1.3,'fiber':2.5,'sugar':1, 'sodium':6,   'chol':0,  'serving':'1 cup cooked (140g)'},
-    'spaghetti':      {'cal':440, 'pro':24, 'carb':54, 'fat':14, 'fiber':4,  'sugar':8, 'sodium':580, 'chol':55, 'serving':'1 bowl (250g)'},
-    'tacos':          {'cal':210, 'pro':10, 'carb':20, 'fat':10, 'fiber':3,  'sugar':2, 'sodium':380, 'chol':25, 'serving':'2 tacos (120g)'},
-    # ── Breakfast ──
-    'pancakes':       {'cal':370, 'pro':8,  'carb':56, 'fat':13, 'fiber':2,  'sugar':18,'sodium':540, 'chol':70, 'serving':'3 pancakes (150g)'},
-    'waffles':        {'cal':290, 'pro':8,  'carb':42, 'fat':10, 'fiber':2,  'sugar':6, 'sodium':450, 'chol':95, 'serving':'1 waffle (100g)'},
-    'omelette':       {'cal':154, 'pro':11, 'carb':1,  'fat':12, 'fiber':0,  'sugar':1, 'sodium':342, 'chol':373,'serving':'2-egg (120g)'},
-    # ── Desserts ──
-    'apple pie':      {'cal':296, 'pro':2,  'carb':43, 'fat':14, 'fiber':2,  'sugar':23,'sodium':251, 'chol':0,  'serving':'1 slice (125g)'},
-    'cheesecake':     {'cal':401, 'pro':6,  'carb':36, 'fat':26, 'fiber':0,  'sugar':28,'sodium':280, 'chol':120,'serving':'1 slice (125g)'},
-    'chocolate cake': {'cal':367, 'pro':5,  'carb':51, 'fat':17, 'fiber':2,  'sugar':35,'sodium':352, 'chol':55, 'serving':'1 slice (100g)'},
-    'donuts':         {'cal':269, 'pro':4,  'carb':32, 'fat':15, 'fiber':1,  'sugar':11,'sodium':300, 'chol':25, 'serving':'1 donut (75g)'},
-    'ice cream':      {'cal':207, 'pro':3,  'carb':24, 'fat':11, 'fiber':1,  'sugar':21,'sodium':80,  'chol':44, 'serving':'1/2 cup (66g)'},
-    # ── Meat / protein ──
-    'steak':          {'cal':271, 'pro':26, 'carb':0,  'fat':18, 'fiber':0,  'sugar':0, 'sodium':54,  'chol':77, 'serving':'1 steak (150g)'},
-    'salad':          {'cal':100, 'pro':3,  'carb':12, 'fat':5,  'fiber':4,  'sugar':6, 'sodium':200, 'chol':0,  'serving':'1 bowl (150g)'},
-    'chicken nuggets':{'cal':296, 'pro':15, 'carb':16, 'fat':18, 'fiber':0.5,'sugar':0.1,'sodium':560, 'chol':45, 'serving':'6 pieces (100g)'},
-    'potato wedges':  {'cal':240, 'pro':3.5,'carb':34, 'fat':10, 'fiber':3.2,'sugar':0.5,'sodium':320, 'chol':0,  'serving':'1 portion (150g)'},
-    # ── Added Foods ──
-    'paneer butter masala': {'cal':320, 'pro':12, 'carb':10, 'fat':26, 'fiber':1.8, 'sugar':4, 'sodium':580, 'chol':60, 'serving':'1 bowl (200g)'},
-    'aloo gobi':           {'cal':140, 'pro':3,  'carb':16, 'fat':8,  'fiber':3.5, 'sugar':3, 'sodium':420, 'chol':0,  'serving':'1 bowl (150g)'},
-    'bhindi masala':       {'cal':120, 'pro':2.5,'carb':12, 'fat':7,  'fiber':3.8, 'sugar':2, 'sodium':380, 'chol':0,  'serving':'1 bowl (150g)'},
-    'chicken tikka masala':{'cal':300, 'pro':24, 'carb':10, 'fat':18, 'fiber':1.5, 'sugar':5, 'sodium':620, 'chol':85, 'serving':'1 bowl (200g)'},
-    'egg curry':           {'cal':220, 'pro':13, 'carb':8,  'fat':15, 'fiber':1.5, 'sugar':3, 'sodium':480, 'chol':370,'serving':'1 bowl (200g)'},
-    'fish curry':          {'cal':240, 'pro':22, 'carb':8,  'fat':14, 'fiber':1.2, 'sugar':2, 'sodium':520, 'chol':60, 'serving':'1 bowl (200g)'},
-    'poori bhaji':         {'cal':380, 'pro':7,  'carb':48, 'fat':18, 'fiber':4,  'sugar':2, 'sodium':560, 'chol':0,  'serving':'1 plate (2 pooris + bhaji)'},
-    'curd rice':           {'cal':190, 'pro':4.5,'carb':28, 'fat':6,  'fiber':1,  'sugar':3, 'sodium':320, 'chol':10, 'serving':'1 bowl (200g)'},
-    'lemon rice':          {'cal':240, 'pro':4,  'carb':44, 'fat':5,  'fiber':2,  'sugar':1, 'sodium':380, 'chol':0,  'serving':'1 bowl (200g)'},
-    'tamarind rice':       {'cal':260, 'pro':4,  'carb':48, 'fat':6,  'fiber':2.2,'sugar':1, 'sodium':420, 'chol':0,  'serving':'1 bowl (200g)'},
-    'pongal':              {'cal':280, 'pro':7,  'carb':42, 'fat':10, 'fiber':3,  'sugar':0, 'sodium':410, 'chol':15, 'serving':'1 plate (200g)'},
-    'methi thepla':        {'cal':110, 'pro':3.5,'carb':16, 'fat':3.5,'fiber':2.2,'sugar':1, 'sodium':180, 'chol':0,  'serving':'1 piece (40g)'},
-    'medu vada':           {'cal':190, 'pro':5,  'carb':22, 'fat':9,  'fiber':3,  'sugar':1, 'sodium':290, 'chol':0,  'serving':'2 pieces (80g)'},
-    'dhokla':              {'cal':120, 'pro':4.5,'carb':18, 'fat':3,  'fiber':1.5,'sugar':3, 'sodium':340, 'chol':0,  'serving':'2 pieces (80g)'},
-    'dal bati churma':     {'cal':580, 'pro':14, 'carb':80, 'fat':24, 'fiber':7,  'sugar':15,'sodium':680, 'chol':45, 'serving':'1 plate (350g)'},
-    'paneer bhurji':       {'cal':260, 'pro':14, 'carb':6,  'fat':20, 'fiber':1.5,'sugar':2, 'sodium':420, 'chol':40, 'serving':'1 plate (150g)'},
-    'malai kofta':         {'cal':340, 'pro':9,  'carb':20, 'fat':26, 'fiber':2.5,'sugar':6, 'sodium':540, 'chol':55, 'serving':'1 bowl (200g)'},
-    'chicken shawarma':    {'cal':390, 'pro':26, 'carb':32, 'fat':18, 'fiber':2.5,'sugar':3, 'sodium':740, 'chol':65, 'serving':'1 wrap (200g)'},
-    'fish fry':            {'cal':280, 'pro':20, 'carb':10, 'fat':18, 'fiber':0.8,'sugar':0.5,'sodium':480,'chol':55, 'serving':'1 piece (120g)'},
-    'mutton curry':        {'cal':310, 'pro':24, 'carb':8,  'fat':20, 'fiber':1.5,'sugar':2, 'sodium':510, 'chol':80, 'serving':'1 bowl (200g)'},
-    'jeera rice':          {'cal':180, 'pro':3.5,'carb':36, 'fat':2.5,'fiber':1,  'sugar':0.2,'sodium':220,'chol':5,  'serving':'1 bowl (150g)'},
-    'boiled egg':          {'cal':78,  'pro':6.3,'carb':0.6,'fat':5.3,'fiber':0,  'sugar':0.6,'sodium':62, 'chol':186,'serving':'1 large (50g)'},
-    'scrambled eggs':      {'cal':148, 'pro':10, 'carb':1.6,'fat':11, 'fiber':0,  'sugar':1.2,'sodium':240, 'chol':340,'serving':'2 large eggs (100g)'},
-    'egg bhurji':          {'cal':180, 'pro':11, 'carb':4,  'fat':14, 'fiber':1,  'sugar':2, 'sodium':320, 'chol':340,'serving':'1 plate (120g)'},
-    'oatmeal':             {'cal':150, 'pro':5,  'carb':27, 'fat':2.5,'fiber':4,  'sugar':1, 'sodium':120, 'chol':0,  'serving':'1 cup cooked (234g)'},
-    'cornflakes':          {'cal':110, 'pro':2,  'carb':24, 'fat':0.1,'fiber':1,  'sugar':2, 'sodium':200, 'chol':0,  'serving':'1 cup (30g)'},
-    'muesli':              {'cal':160, 'pro':4,  'carb':30, 'fat':3,  'fiber':4.5,'sugar':6, 'sodium':60,  'chol':0,  'serving':'1/2 cup (45g)'},
-    'garlic bread':        {'cal':150, 'pro':4,  'carb':20, 'fat':6,  'fiber':1.2,'sugar':1, 'sodium':280, 'chol':5,  'serving':'1 piece (40g)'},
-    'macaroni and cheese': {'cal':310, 'pro':10, 'carb':38, 'fat':13, 'fiber':1.6,'sugar':5, 'sodium':620, 'chol':30, 'serving':'1 cup (200g)'},
-    'lasagna':             {'cal':336, 'pro':19, 'carb':35, 'fat':14, 'fiber':2.8,'sugar':6, 'sodium':640, 'chol':45, 'serving':'1 piece (250g)'},
-    'nachos':              {'cal':306, 'pro':5,  'carb':34, 'fat':17, 'fiber':3.2,'sugar':1, 'sodium':420, 'chol':10, 'serving':'1 portion (100g)'},
-    'quesadilla':          {'cal':290, 'pro':13, 'carb':28, 'fat':14, 'fiber':2.5,'sugar':2, 'sodium':580, 'chol':35, 'serving':'1 piece (150g)'},
-    'chicken wings':       {'cal':290, 'pro':19, 'carb':12, 'fat':18, 'fiber':0.5,'sugar':3, 'sodium':680, 'chol':80, 'serving':'4 wings (150g)'},
-    'grilled cheese sandwich': {'cal':320, 'pro':11,'carb':30,'fat':17, 'fiber':1.8,'sugar':2, 'sodium':680, 'chol':40, 'serving':'1 sandwich (120g)'},
-    'french toast':        {'cal':230, 'pro':7,  'carb':28, 'fat':10, 'fiber':1.5,'sugar':9, 'sodium':310, 'chol':130,'serving':'2 slices (130g)'},
-    'croissant':           {'cal':231, 'pro':4.7,'carb':26, 'fat':12, 'fiber':1.3,'sugar':5, 'sodium':322, 'chol':30, 'serving':'1 large (57g)'},
-    'bagel':               {'cal':250, 'pro':10, 'carb':48, 'fat':1.5,'fiber':2.2,'sugar':6, 'sodium':380, 'chol':0,  'serving':'1 medium (85g)'},
-    'hummus':              {'cal':166, 'pro':7.9,'carb':14, 'fat':9.6,'fiber':6,  'sugar':0.3,'sodium':379,'chol':0,  'serving':'1/2 cup (100g)'},
-    'falafel':             {'cal':333, 'pro':13, 'carb':32, 'fat':17, 'fiber':5,  'sugar':2, 'sodium':290, 'chol':0,  'serving':'5 patties (150g)'},
-    'caesar salad':        {'cal':190, 'pro':4,  'carb':8,  'fat':16, 'fiber':2.1,'sugar':1.5,'sodium':460,'chol':25, 'serving':'1 bowl (150g)'},
-    'grilled chicken breast': {'cal':165, 'pro':31,'carb':0, 'fat':3.6,'fiber':0,  'sugar':0, 'sodium':74,  'chol':85, 'serving':'1 breast (100g)'},
-    'tofu':                {'cal':76,  'pro':8,  'carb':1.9,'fat':4.8,'fiber':0.3,'sugar':0, 'sodium':7,   'chol':0,  'serving':'100g'},
-    'boiled vegetables':   {'cal':54,  'pro':2.4,'carb':11, 'fat':0.3,'fiber':3.8,'sugar':3.5,'sodium':42,  'chol':0,  'serving':'1 cup (150g)'},
-    'protein shake':       {'cal':140, 'pro':25, 'carb':3,  'fat':2,  'fiber':1,  'sugar':1, 'sodium':160, 'chol':45, 'serving':'1 scoop (35g powder)'},
-    'protein bar':         {'cal':200, 'pro':20, 'carb':22, 'fat':6,  'fiber':8,  'sugar':2, 'sodium':180, 'chol':10, 'serving':'1 bar (60g)'},
-    'cucumber salad':      {'cal':45,  'pro':1,  'carb':6,  'fat':2,  'fiber':1.2,'sugar':3, 'sodium':150, 'chol':0,  'serving':'1 bowl (150g)'},
-    'papaya':              {'cal':43,  'pro':0.5,'carb':11, 'fat':0.3,'fiber':1.7,'sugar':8, 'sodium':8,   'chol':0,  'serving':'1 cup cubes (140g)'},
-    'guava':               {'cal':68,  'pro':2.6,'carb':14, 'fat':1,  'fiber':5.4,'sugar':9, 'sodium':2,   'chol':0,  'serving':'1 medium (100g)'},
-    'pomegranate':         {'cal':83,  'pro':1.7,'carb':19, 'fat':1.2,'fiber':4,  'sugar':14,'sodium':3,   'chol':0,  'serving':'100g seeds'},
-    'avocado':             {'cal':160, 'pro':2,  'carb':8.5,'fat':15, 'fiber':6.7,'sugar':0.7,'sodium':7,  'chol':0,  'serving':'1/2 avocado (100g)'},
-    'kiwi':                {'cal':61,  'pro':1.1,'carb':15, 'fat':0.5,'fiber':3,  'sugar':9, 'sodium':3,   'chol':0,  'serving':'1 medium (76g)'},
-    'blueberry':           {'cal':57,  'pro':0.7,'carb':14, 'fat':0.3,'fiber':2.4,'sugar':10,'sodium':1,   'chol':0,  'serving':'1 cup (148g)'},
-    'peach':               {'cal':59,  'pro':1.4,'carb':14, 'fat':0.4,'fiber':2.3,'sugar':13,'sodium':0,   'chol':0,  'serving':'1 medium (150g)'},
-    'pear':                {'cal':101, 'pro':0.6,'carb':27, 'fat':0.3,'fiber':5.5,'sugar':17,'sodium':2,   'chol':0,  'serving':'1 medium (178g)'},
-    'cherry':              {'cal':97,  'pro':1.6,'carb':25, 'fat':0.3,'fiber':3.2,'sugar':20,'sodium':0,   'chol':0,  'serving':'1 cup (154g)'},
-    'almonds':             {'cal':164, 'pro':6,  'carb':6,  'fat':14, 'fiber':3.5,'sugar':1.2,'sodium':1,   'chol':0,  'serving':'1 ounce (28g)'},
-    'walnuts':             {'cal':185, 'pro':4.3,'carb':3.9,'fat':18.5,'fiber':1.9,'sugar':0.7,'sodium':1, 'chol':0,  'serving':'1 ounce (28g)'},
-    'cashew nuts':         {'cal':157, 'pro':5.2,'carb':8.6,'fat':12.4,'fiber':0.9,'sugar':1.7,'sodium':3, 'chol':0,  'serving':'1 ounce (28g)'},
-    'peanut butter':       {'cal':188, 'pro':8,  'carb':6,  'fat':16, 'fiber':1.9,'sugar':3, 'sodium':150, 'chol':0,  'serving':'2 tbsp (32g)'},
-    'green tea':           {'cal':2,   'pro':0,  'carb':0,  'fat':0,  'fiber':0,  'sugar':0, 'sodium':0,   'chol':0,  'serving':'1 cup (240ml)'},
-    'black coffee':        {'cal':2,   'pro':0.3,'carb':0,  'fat':0,  'fiber':0,  'sugar':0, 'sodium':5,   'chol':0,  'serving':'1 cup (240ml)'},
-    'buttermilk':          {'cal':80,  'pro':3,  'carb':4,  'fat':2.5,'fiber':0,  'sugar':4, 'sodium':320, 'chol':10, 'serving':'1 glass (200ml)'},
-    'coconut water':       {'cal':44,  'pro':1.7,'carb':10.5,'fat':0.5,'fiber':2.6,'sugar':9.6,'sodium':252, 'chol':0,  'serving':'1 cup (240ml)'},
-    'lemonade':            {'cal':99,  'pro':0.1,'carb':26, 'fat':0.1,'fiber':0.1,'sugar':25,'sodium':10,  'chol':0,  'serving':'1 glass (240ml)'},
-    'soda':                {'cal':140, 'pro':0,  'carb':39, 'fat':0,  'fiber':0,  'sugar':39,'sodium':45,  'chol':0,  'serving':'1 can (355ml)'},
-    'milk':                {'cal':122, 'pro':8,  'carb':12, 'fat':4.8,'fiber':0,  'sugar':12,'sodium':100, 'chol':20, 'serving':'1 glass (244ml)'},
-    'soy milk':            {'cal':100, 'pro':7,  'carb':8,  'fat':4,  'fiber':1.5,'sugar':6, 'sodium':120, 'chol':0,  'serving':'1 glass (240ml)'},
-    'almond milk':         {'cal':39,  'pro':1,  'carb':1.5,'fat':3,  'fiber':0.5,'sugar':0.1,'sodium':180,'chol':0,  'serving':'1 glass (240ml)'},
-    'hot chocolate':       {'cal':190, 'pro':6,  'carb':28, 'fat':6,  'fiber':1,  'sugar':24,'sodium':140, 'chol':20, 'serving':'1 mug (240ml)'},
-    'iced tea':            {'cal':90,  'pro':0,  'carb':23, 'fat':0,  'fiber':0,  'sugar':22,'sodium':10,  'chol':0,  'serving':'1 glass (240ml)'},
-    'milkshake':           {'cal':350, 'pro':8,  'carb':54, 'fat':11, 'fiber':0.5,'sugar':48,'sodium':180, 'chol':40, 'serving':'1 glass (300ml)'},
-    'rasmalai':            {'cal':180, 'pro':5,  'carb':22, 'fat':8,  'fiber':0,  'sugar':18,'sodium':60,  'chol':25, 'serving':'2 pieces (100g)'},
-    'brownie':             {'cal':243, 'pro':3,  'carb':34, 'fat':11, 'fiber':1.5,'sugar':24,'sodium':145, 'chol':45, 'serving':'1 square (60g)'},
-    'chocolate chip cookie': {'cal':148,'pro':1.6,'carb':20,'fat':7.4,'fiber':0.7,'sugar':11,'sodium':104, 'chol':10, 'serving':'1 cookie (30g)'},
-    'custard':             {'cal':122, 'pro':3.6,'carb':17, 'fat':4.2,'fiber':0,  'sugar':14,'sodium':64,  'chol':80, 'serving':'1 portion (100g)'},
-    'pudding':             {'cal':112, 'pro':3,  'carb':19, 'fat':2.9,'fiber':0.1,'sugar':16,'sodium':135, 'chol':10, 'serving':'1 portion (100g)'},
-    # ── International Cuisine Additions ──
-    'burrito':             {'cal':440, 'pro':18, 'carb':58, 'fat':15, 'fiber':7,  'sugar':3, 'sodium':820, 'chol':40, 'serving':'1 medium (200g)'},
-    'enchiladas':          {'cal':380, 'pro':16, 'carb':38, 'fat':18, 'fiber':4,  'sugar':4, 'sodium':740, 'chol':50, 'serving':'2 pieces (220g)'},
-    'guacamole':           {'cal':150, 'pro':2,  'carb':8,  'fat':13, 'fiber':6,  'sugar':1, 'sodium':240, 'chol':0,  'serving':'1/2 cup (100g)'},
-    'fajitas':             {'cal':350, 'pro':26, 'carb':20, 'fat':19, 'fiber':3.5,'sugar':4, 'sodium':680, 'chol':70, 'serving':'1 plate (250g)'},
-    'queso dip':           {'cal':180, 'pro':8,  'carb':6,  'fat':14, 'fiber':0.5,'sugar':1, 'sodium':520, 'chol':35, 'serving':'1/2 cup (100g)'},
-    'risotto':             {'cal':310, 'pro':6,  'carb':45, 'fat':11, 'fiber':1,  'sugar':1, 'sodium':580, 'chol':25, 'serving':'1 bowl (200g)'},
-    'gnocchi':             {'cal':250, 'pro':5,  'carb':48, 'fat':3,  'fiber':2.2,'sugar':1, 'sodium':420, 'chol':0,  'serving':'1 plate (150g)'},
-    'bruschetta':          {'cal':120, 'pro':3,  'carb':16, 'fat':5,  'fiber':1.5,'sugar':2, 'sodium':220, 'chol':0,  'serving':'2 pieces (80g)'},
-    'minestrone soup':     {'cal':110, 'pro':4,  'carb':18, 'fat':2.5,'fiber':4.2,'sugar':3, 'sodium':540, 'chol':0,  'serving':'1 bowl (240ml)'},
-    'tiramisu':            {'cal':290, 'pro':4,  'carb':32, 'fat':16, 'fiber':0.5,'sugar':24,'sodium':110, 'chol':120,'serving':'1 piece (80g)'},
-    'tempura':             {'cal':220, 'pro':8,  'carb':24, 'fat':10, 'fiber':1,  'sugar':1, 'sodium':380, 'chol':45, 'serving':'4 pieces (120g)'},
-    'gyoza':               {'cal':180, 'pro':7,  'carb':22, 'fat':6,  'fiber':1.5,'sugar':1, 'sodium':480, 'chol':20, 'serving':'5 pieces (100g)'},
-    'edamame':             {'cal':122, 'pro':11, 'carb':10, 'fat':5,  'fiber':5.2,'sugar':2, 'sodium':6,   'chol':0,  'serving':'1 cup (155g)'},
-    'miso soup':           {'cal':45,  'pro':3,  'carb':5,  'fat':1.5,'fiber':1.2,'sugar':1, 'sodium':650, 'chol':0,  'serving':'1 bowl (240ml)'},
-    'chicken teriyaki':    {'cal':340, 'pro':28, 'carb':18, 'fat':16, 'fiber':0.5,'sugar':14,'sodium':720, 'chol':80, 'serving':'1 portion (200g)'},
-    'sweet and sour chicken': {'cal':380,'pro':22,'carb':48,'fat':11, 'fiber':1.5,'sugar':28,'sodium':580, 'chol':60, 'serving':'1 portion (200g)'},
-    'kung pao chicken':    {'cal':350, 'pro':24, 'carb':14, 'fat':22, 'fiber':2.2,'sugar':8, 'sodium':690, 'chol':70, 'serving':'1 portion (200g)'},
-    'mapo tofu':           {'cal':240, 'pro':14, 'carb':8,  'fat':17, 'fiber':1.8,'sugar':2, 'sodium':590, 'chol':25, 'serving':'1 bowl (200g)'},
-    'dim sum':             {'cal':160, 'pro':8,  'carb':20, 'fat':5,  'fiber':1,  'sugar':1, 'sodium':420, 'chol':30, 'serving':'4 pieces (120g)'},
-    'hot and sour soup':   {'cal':95,  'pro':5,  'carb':12, 'fat':3,  'fiber':1.5,'sugar':3, 'sodium':780, 'chol':25, 'serving':'1 bowl (240ml)'},
-    'tabbouleh':           {'cal':120, 'pro':2,  'carb':14, 'fat':6,  'fiber':3.5,'sugar':1.5,'sodium':180,'chol':0,  'serving':'1 cup (150g)'},
-    'baba ganoush':        {'cal':140, 'pro':2,  'carb':10, 'fat':10, 'fiber':4,  'sugar':2, 'sodium':260, 'chol':0,  'serving':'1/2 cup (100g)'},
-    'greek salad':         {'cal':150, 'pro':3,  'carb':8,  'fat':12, 'fiber':2.2,'sugar':4, 'sodium':380, 'chol':15, 'serving':'1 bowl (150g)'},
-    'gyro':                {'cal':480, 'pro':24, 'carb':42, 'fat':23, 'fiber':3,  'sugar':4, 'sodium':880, 'chol':65, 'serving':'1 wrap (220g)'},
-    'couscous':            {'cal':176, 'pro':6,  'carb':36, 'fat':0.3,'fiber':2.2,'sugar':0.2,'sodium':5,  'chol':0,  'serving':'1 cup cooked (157g)'},
-    'bbq ribs':            {'cal':420, 'pro':28, 'carb':12, 'fat':28, 'fiber':0.5,'sugar':10,'sodium':560, 'chol':95, 'serving':'3 ribs (150g)'},
-    'buffalo wings':       {'cal':320, 'pro':20, 'carb':2,  'fat':26, 'fiber':0.2,'sugar':0.2,'sodium':890,'chol':90, 'serving':'4 wings (120g)'},
-    'potato salad':        {'cal':240, 'pro':3,  'carb':28, 'fat':13, 'fiber':2.8,'sugar':3, 'sodium':490, 'chol':45, 'serving':'1 cup (150g)'},
-    'clam chowder':        {'cal':201, 'pro':9,  'carb':20, 'fat':10, 'fiber':1.5,'sugar':2.5,'sodium':790,'chol':30, 'serving':'1 cup (240ml)'},
-    'onion rings':         {'cal':280, 'pro':3,  'carb':32, 'fat':16, 'fiber':2.2,'sugar':4, 'sodium':380, 'chol':0,  'serving':'1 portion (100g)'},
-    'fried chicken':       {'cal':298, 'pro':22, 'carb':12, 'fat':18, 'fiber':0.5,'sugar':0.1,'sodium':490,'chol':80, 'serving':'1 breast (140g)'},
-    'baked potato':        {'cal':160, 'pro':4.3,'carb':37, 'fat':0.2,'fiber':4,  'sugar':1.5,'sodium':15, 'chol':0,  'serving':'1 medium (173g)'},
-    'popcorn':             {'cal':110, 'pro':3,  'carb':22, 'fat':1.5,'fiber':4,  'sugar':0.2,'sodium':150,'chol':0,  'serving':'3 cups popped (30g)'},
-}
+NUTRITION_DB = {}
 
 TIPS = {
     'biryani':        'High calorie — pair with raita for balance.',
@@ -404,63 +221,7 @@ VISION_PROMPT = (
 
 # ── Full candidate food list (what CLIP will score the image against) ────────
 # These ARE the NUTRITION_DB keys + extra aliases/variants
-_CLIP_CANDIDATES = [
-    # ── Indian staples ────────────────────────────────────────────────────────
-    'biryani', 'chicken biryani', 'vegetable biryani', 'mutton biryani',
-    'butter chicken', 'chicken curry', 'dal', 'dal makhani',
-    'chole bhature', 'chana masala', 'rajma', 'kadai paneer',
-    'paneer tikka', 'palak paneer', 'shahi paneer',
-    'masala dosa', 'dosa', 'idli', 'sambar', 'uttapam',
-    'roti', 'chapati', 'paratha', 'naan', 'puri',
-    'samosa', 'pav bhaji', 'vada pav', 'poha', 'upma', 'khichdi',
-    'momos', 'kebab', 'tandoori chicken',
-    # ── Indian sweets & drinks ────────────────────────────────────────────────
-    'gulab jamun', 'rasgulla', 'kheer', 'halwa', 'jalebi',
-    'kulfi', 'lassi', 'mango lassi', 'chai', 'masala chai',
-    'dhokla', 'pakora', 'bhajji', 'pani puri',
-    # ── Global fast food ─────────────────────────────────────────────────────
-    'pizza', 'burger', 'hamburger', 'cheeseburger',
-    'hot dog', 'french fries', 'tacos', 'sandwich',
-    'chicken nuggets', 'potato wedges',
-    # ── Asian ────────────────────────────────────────────────────────────────
-    'sushi', 'ramen', 'noodles', 'fried rice', 'pad thai', 'pho',
-    'dumplings', 'spring rolls', 'bibimbap', 'baklava',
-    # ── Western / global ─────────────────────────────────────────────────────
-    'pasta', 'spaghetti', 'steak', 'salad', 'omelette', 'waffles',
-    'pancakes', 'cheesecake', 'chocolate cake', 'apple pie',
-    'donuts', 'ice cream', 'sushi roll',
-    # ── Fruits ───────────────────────────────────────────────────────────────
-    'apple', 'banana', 'mango', 'orange', 'strawberry',
-    'pineapple', 'grapes', 'watermelon',
-    # ── Beverages ────────────────────────────────────────────────────────────
-    'coffee', 'juice', 'smoothie',
-    # ── Added Foods ──────────────────────────────────────────────────────────
-    'paneer butter masala', 'aloo gobi', 'bhindi masala', 'chicken tikka masala',
-    'egg curry', 'fish curry', 'poori bhaji', 'curd rice', 'lemon rice',
-    'tamarind rice', 'pongal', 'methi thepla', 'medu vada', 'dhokla',
-    'dal bati churma', 'paneer bhurji', 'malai kofta', 'chicken shawarma',
-    'fish fry', 'mutton curry', 'jeera rice', 'boiled egg', 'scrambled eggs',
-    'egg bhurji', 'oatmeal', 'cornflakes', 'muesli', 'garlic bread',
-    'macaroni and cheese', 'lasagna', 'nachos', 'quesadilla', 'chicken wings',
-    'grilled cheese sandwich', 'french toast', 'croissant', 'bagel', 'hummus',
-    'falafel', 'caesar salad', 'grilled chicken breast', 'tofu',
-    'boiled vegetables', 'protein shake', 'protein bar', 'cucumber salad',
-    'papaya', 'guava', 'pomegranate', 'avocado', 'kiwi', 'blueberry',
-    'peach', 'pear', 'cherry', 'almonds', 'walnuts', 'cashew nuts',
-    'peanut butter', 'green tea', 'black coffee', 'buttermilk', 'coconut water',
-    'lemonade', 'soda', 'milk', 'soy milk', 'almond milk', 'hot chocolate',
-    'iced tea', 'milkshake', 'rasmalai', 'brownie', 'chocolate chip cookie',
-    'custard', 'pudding',
-    # ── International Cuisine Additions ──
-    'burrito', 'enchiladas', 'guacamole', 'fajitas', 'queso dip',
-    'risotto', 'gnocchi', 'bruschetta', 'minestrone soup', 'tiramisu',
-    'tempura', 'gyoza', 'edamame', 'miso soup', 'chicken teriyaki',
-    'sweet and sour chicken', 'kung pao chicken', 'mapo tofu', 'dim sum',
-    'hot and sour soup', 'tabbouleh', 'baba ganoush', 'greek salad',
-    'gyro', 'couscous', 'bbq ribs', 'buffalo wings', 'potato salad',
-    'clam chowder', 'onion rings', 'fried chicken', 'baked potato',
-    'popcorn',
-]
+_CLIP_CANDIDATES = []
 
 # Map candidate label → exact NUTRITION_DB key (for labels that differ)
 _CLIP_DB_MAP = {
@@ -504,6 +265,53 @@ _CLIP_DB_MAP = {
     'potato wedges':     'potato wedges',
     'nuggets':           'chicken nuggets',
 }
+
+
+
+# ── Hybrid Cache: Load from Supabase on Startup ───────────────────────────────
+def load_nutrition_db():
+    global NUTRITION_DB, _CLIP_CANDIDATES
+    print("  [Supabase] Connecting to PostgreSQL to load Hybrid Cache...")
+    url = os.environ.get("SUPABASE_URL")
+    key = os.environ.get("SUPABASE_KEY")
+    if not url or not key:
+        print("  [Supabase] WARNING: Missing SUPABASE_URL or SUPABASE_KEY in .env")
+        return
+        
+    try:
+        supabase: Client = create_client(url, key)
+        # Fetch all foods
+        response = supabase.table("base_foods").select("*").execute()
+        foods = response.data
+        
+        if not foods:
+            print("  [Supabase] WARNING: No foods found in base_foods table.")
+            return
+            
+        NUTRITION_DB.clear()
+        _CLIP_CANDIDATES.clear()
+        
+        for f in foods:
+            name = f['name'].lower()
+            NUTRITION_DB[name] = {
+                'cal': f.get('calories', 0),
+                'pro': f.get('protein', 0),
+                'carb': f.get('carbs', 0),
+                'fat': f.get('fat', 0),
+                'fiber': f.get('fiber', 0),
+                'sugar': f.get('sugar', 0),
+                'sodium': f.get('sodium', 0),
+                'chol': f.get('chol', 0),
+                'serving': '1 portion'
+            }
+            _CLIP_CANDIDATES.append(name)
+            
+        print(f"  [Supabase] SUCCESS: Loaded {len(NUTRITION_DB)} foods into RAM.")
+    except Exception as e:
+        print(f"  [Supabase] ERROR: Failed to load from database: {e}")
+
+# Call it immediately on module load
+load_nutrition_db()
 
 
 def _scale_confidence(score: float, is_top: bool = False) -> int:

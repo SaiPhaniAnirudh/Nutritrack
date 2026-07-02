@@ -3664,3 +3664,9 @@ body {
   .nutribot-panel { bottom: 76px; right: 12px; left: 12px; width: auto; }
   .otp-digit { width: 2.3rem; height: 2.8rem; font-size: 1.2rem; }
 }
+
+
+/* Split Screen Auth Mobile */
+@media (max-width: 768px) {
+  .auth-card { flex-direction: column !important; }
+}
