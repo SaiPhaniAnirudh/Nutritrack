@@ -87,7 +87,7 @@ function closeNonFoodModal() {
 // ─────────────────────────────────────────────────
 const SUPABASE_URL = 'https://agzopmiiswitorldacud.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFnem9wbWlpc3dpdG9ybGRhY3VkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxMzI5MjEsImV4cCI6MjA5NzcwODkyMX0.BsazyuwecNc5ZWMxxxNEtL0tUM99JJQLXJj3Gv6Iupc';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 function showAuthError(msg, isSuccess=false) {
   const el = isSuccess ? document.getElementById('authSuccess') : document.getElementById('authError');
@@ -110,7 +110,7 @@ function hideAuthError() {
 async function handleGoogleLogin() {
   showLoader('Connecting to Google...');
   try {
-    const { data, error } = await supabase.auth.signInWithOAuth({
+    const { data, error } = await supabaseClient.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo: window.location.origin + window.location.pathname }
     });
@@ -132,7 +132,7 @@ async function handleEmailLogin() {
   showLoader('Signing in...');
   try {
     // 1. Try to sign in
-    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+    const { data: signInData, error: signInError } = await supabaseClient.auth.signInWithPassword({
       email: email,
       password: pw,
     });
@@ -141,7 +141,7 @@ async function handleEmailLogin() {
       if (signInError.message.includes("Invalid login credentials")) {
         // 2. If it fails, try to sign up automatically
         showLoader('Creating account...');
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        const { data: signUpData, error: signUpError } = await supabaseClient.auth.signUp({
           email: email,
           password: pw,
         });
@@ -170,7 +170,7 @@ async function handleForgotPassword() {
   
   showLoader('Sending reset link...');
   try {
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
       redirectTo: window.location.origin + window.location.pathname,
     });
     if (error) throw error;
@@ -185,14 +185,14 @@ async function handleForgotPassword() {
 // ─────────────────────────────────────────────────
 //  SESSION LISTENER & ONBOARDING ROUTING
 // ─────────────────────────────────────────────────
-supabase.auth.onAuthStateChange(async (event, session) => {
+supabaseClient.auth.onAuthStateChange(async (event, session) => {
   if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
     if (!session) return;
     
     showLoader('Loading profile...');
     
     // Check if user has body_stats in the database
-    const { data: userProfile, error } = await supabase
+    const { data: userProfile, error } = await supabaseClient
       .from('users')
       .select('*')
       .eq('id', session.user.id)
@@ -310,7 +310,7 @@ async function handleFinishOnboarding() {
 
   showLoader('Saving your profile...');
   
-  const { data: sessionData } = await supabase.auth.getSession();
+  const { data: sessionData } = await supabaseClient.auth.getSession();
   if (!sessionData.session) return showOnboardingError('⚠️ Session expired. Please login again.');
   
   const user = sessionData.session.user;
@@ -335,7 +335,7 @@ async function handleFinishOnboarding() {
   };
 
   try {
-    const { error } = await supabase.from('users').upsert(payload);
+    const { error } = await supabaseClient.from('users').upsert(payload);
     if (error) throw error;
     
     document.getElementById('onboardingSection').style.display = 'none';
@@ -350,7 +350,7 @@ function loginSuccess(userProfile) {
   currentUser = { ...userProfile, ...(userProfile.body_stats || {}) };
   
   // Try to grab JWT, ignoring errors if session doesn't load immediately
-  supabase.auth.getSession().then(({data}) => {
+  supabaseClient.auth.getSession().then(({data}) => {
      if (data && data.session) currentUser.token = data.session.access_token;
   });
   
@@ -365,7 +365,7 @@ function loginSuccess(userProfile) {
 
 async function handleLogout() {
   showLoader('Signing out…');
-  await supabase.auth.signOut();
+  await supabaseClient.auth.signOut();
   // State change listener will trigger handleLogoutUI
 }
 
