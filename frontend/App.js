@@ -2001,11 +2001,8 @@ function openDietModal() {
 // ─────────────────────────────────────────────────
 //  KEYBOARD SHORTCUTS
 // ─────────────────────────────────────────────────
-document.getElementById('loginPassword').addEventListener('keypress', e => { if(e.key==='Enter') handleLogin(); });
-document.getElementById('loginEmail').addEventListener('keypress',    e => { if(e.key==='Enter') handleLogin(); });
-// Registration Enter key -- routes through OTP verification flow
-document.getElementById('regEmail').addEventListener('keypress',    e => { if(e.key==='Enter') sendOtpAndGoToStepOtp(); });
-document.getElementById('regPassword').addEventListener('keypress', e => { if(e.key==='Enter') sendOtpAndGoToStepOtp(); });
+document.getElementById('loginPassword').addEventListener('keypress', e => { if(e.key==='Enter') handleEmailLogin(); });
+document.getElementById('loginEmail').addEventListener('keypress',    e => { if(e.key==='Enter') handleEmailLogin(); });
 
 
 
