@@ -385,10 +385,12 @@ function handleLogoutUI() {
 function initApp() {
   const hour = new Date().getHours();
   document.getElementById('timeGreet').textContent = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
-  document.getElementById('greetName').textContent  = currentUser.name.split(' ')[0];
+  
+  const displayName = currentUser.name || currentUser.email?.split('@')[0] || 'User';
+  document.getElementById('greetName').textContent  = displayName.split(' ')[0];
   document.getElementById('greetDate').textContent  = new Date().toLocaleDateString('en-IN', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
-  document.getElementById('navAvatar').textContent  = currentUser.name[0].toUpperCase();
-  document.getElementById('navName').textContent    = currentUser.name.split(' ')[0];
+  document.getElementById('navAvatar').textContent  = displayName[0].toUpperCase();
+  document.getElementById('navName').textContent    = displayName.split(' ')[0];
 
   const g = currentUser.goals || {calories:2000, protein:150, carbs:275, fat:78, fiber:28, sugar:50, sodium:2300, chol:300};
   document.getElementById('editCalGoal').value    = g.calories;
