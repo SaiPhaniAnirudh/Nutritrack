@@ -99,9 +99,7 @@ def jwt_required(optional=False, refresh=False):
 
 def get_jwt_identity():
     return getattr(g, 'user_id', None)
-JWTManager, create_access_token, create_refresh_token,
-    jwt_required, get_jwt_identity
-)
+
 from dotenv import load_dotenv, find_dotenv
 
 # Load .env from project root (works whether running from root or backend/ dir)
