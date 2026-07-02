@@ -226,7 +226,7 @@ class User(db.Model):
     id         = db.Column(db.String(36), primary_key=True)
     name       = db.Column(db.String(120), nullable=False)
     email      = db.Column(db.String(200), unique=True, nullable=False)
-    password   = db.Column(db.String(200), nullable=False)   # bcrypt hash
+    password   = db.Column(db.String(200), nullable=True)    # bcrypt hash (nullable for Supabase auth)
     created_at = db.Column(db.DateTime(timezone=True),
                            default=lambda: datetime.now(timezone.utc))
 
