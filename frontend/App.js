@@ -186,29 +186,36 @@ async function handleForgotPassword() {
 //  SESSION LISTENER & ONBOARDING ROUTING
 // ─────────────────────────────────────────────────
 supabaseClient.auth.onAuthStateChange(async (event, session) => {
-  if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
-    if (!session) return;
-    
-    showLoader('Loading profile...');
-    
-    // Check if user has body_stats in the database
-    const { data: userProfile, error } = await supabaseClient
-      .from('users')
-      .select('*')
-      .eq('id', session.user.id)
-      .single();
+  try {
+    if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+      if (!session) {
+        hideLoader();
+        return;
+      }
       
-    if (userProfile && userProfile.body_stats) {
-      // Returning user -> Dashboard
-      loginSuccess(userProfile);
-    } else {
-      // New user -> Show Onboarding Wizard
-      document.getElementById('authSection').style.display = 'none';
-      document.getElementById('onboardingSection').style.display = 'block';
-      hideLoader();
+      showLoader('Loading profile...');
+      
+      // Check if user has body_stats in the database
+      const { data: userProfile, error } = await supabaseClient
+        .from('users')
+        .select('*')
+        .eq('id', session.user.id)
+        .single();
+        
+      if (userProfile && userProfile.body_stats) {
+        // Returning user -> Dashboard
+        loginSuccess(userProfile);
+      } else {
+        // New user -> Show Onboarding Wizard
+        document.getElementById('authSection').style.display = 'none';
+        document.getElementById('onboardingSection').style.display = 'block';
+        hideLoader();
+      }
+    } else if (event === 'SIGNED_OUT') {
+      handleLogoutUI();
     }
-  } else if (event === 'SIGNED_OUT') {
-    handleLogoutUI();
+  } catch (err) {
+    document.body.innerHTML = `<div style="color:red;padding:20px;font-size:24px;background:white;z-index:999999;position:fixed;top:0;left:0;width:100vw;height:100vh;">CRASH in onAuthStateChange:<br><br>${err.message}<br><br>${err.stack}</div>`;
   }
 });
 
