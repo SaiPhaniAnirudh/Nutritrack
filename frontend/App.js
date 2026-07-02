@@ -538,6 +538,7 @@ function refreshDashboard() {
 
 function renderMacroChart(p, c, f, fiber, sugar, sodium, chol, cal) {
   const ctx2 = document.getElementById('macroChart').getContext('2d');
+  if (typeof Chart === 'undefined') return;
   if (macroChart) macroChart.destroy();
 
   const sodiumG = +(sodium/10).toFixed(1);
