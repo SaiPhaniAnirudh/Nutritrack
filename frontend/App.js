@@ -17,21 +17,10 @@ window._otpVerifiedToken = '';
 
 
 // ─────────────────────────────────────────────────
-//  PAGE LOADER  (change #10)
+//  PAGE LOADER  (change #10 - removed overlay)
 // ─────────────────────────────────────────────────
-function showLoader(msg = 'Loading…') {
-  const el = document.getElementById('pageLoader');
-  const ml = document.getElementById('loaderMsg');
-  if (ml) ml.textContent = msg;
-  if (el) el.classList.remove('hidden');
-}
-function hideLoader() {
-  const el = document.getElementById('pageLoader');
-  if (el) el.classList.add('hidden');
-}
-// Hide loader as soon as DOM + scripts are ready
-// Hide loader immediately when script loads
-hideLoader();
+function showLoader(msg = 'Loading…') {}
+function hideLoader() {}
 
 // ─────────────────────────────────────────────────
 //  LOCAL STORAGE DB
