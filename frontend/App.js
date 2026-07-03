@@ -205,7 +205,8 @@ supabaseClient.auth.onAuthStateChange(async (event, session) => {
         loginSuccess(userProfile);
       } else {
         // New user -> Show Onboarding Wizard
-        document.getElementById('authSection').style.display = 'none';
+        const aSec = document.getElementById('authSection');
+        if (aSec) aSec.style.display = 'none';
         document.getElementById('onboardingSection').style.display = 'block';
         hideLoader();
       }
@@ -426,9 +427,12 @@ function loginSuccess(userProfile) {
      if (data && data.session) currentUser.token = data.session.access_token;
   });
   
-  document.getElementById('authSection').style.display = 'none';
-  document.getElementById('onboardingSection').style.display = 'none';
-  document.getElementById('mainApp').style.display = 'block';
+  const authSec = document.getElementById('authSection');
+  if (authSec) authSec.style.display = 'none';
+  const onbSec = document.getElementById('onboardingSection');
+  if (onbSec) onbSec.style.display = 'none';
+  const mainApp = document.getElementById('mainApp');
+  if (mainApp) mainApp.style.display = 'block';
   
   initApp();
   fetchLogsFromCloud();
@@ -445,7 +449,8 @@ function handleLogoutUI() {
   currentUser = null;
   DB.clearSession();
   document.getElementById('mainApp').style.display   = 'none';
-  document.getElementById('authSection').style.display = 'block';
+  const aSec = document.getElementById('authSection');
+  if (aSec) aSec.style.display = 'block';
   document.getElementById('loginEmail').value    = '';
   document.getElementById('loginPassword').value = '';
   hideLoader();
@@ -2071,7 +2076,8 @@ function openDietModal() {
   const saved = DB.getCurrentUser();
   if (saved) {
     currentUser = saved;
-    document.getElementById('authSection').style.display = 'none';
+    const aSec = document.getElementById('authSection');
+    if (aSec) aSec.style.display = 'none';
     document.getElementById('mainApp').style.display     = 'block';
     initApp();
   }
