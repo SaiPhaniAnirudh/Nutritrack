@@ -585,7 +585,7 @@ def add_log():
         return jsonify({'error': 'Internal server error'}), 500
 
 
-@app.route('/api/logs/<int:log_id>', methods=['DELETE'])
+@app.route('/api/logs/<string:log_id>', methods=['DELETE'])
 @jwt_required()
 def delete_log(log_id):
     uid = get_jwt_identity()

@@ -2065,6 +2065,10 @@ body {
   background: var(--coral);
 }
 
+.toast.info {
+  background: var(--ink-80);
+}
+
 /* ── MISC ── */
 .spinner {
   width: 16px;

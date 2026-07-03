@@ -17,17 +17,13 @@
 
 
 // ─────────────────────────────────────────────────
-//  PAGE LOADER  (change #10 - removed overlay)
+//  PAGE LOADER  (non-blocking)
 // ─────────────────────────────────────────────────
 function showLoader(msg = 'Loading…') {
-  const msgEl = document.getElementById('loaderMsg');
-  if (msgEl) msgEl.textContent = msg;
-  const loader = document.getElementById('loader');
-  if (loader) loader.style.display = 'flex';
+  showToast(msg, 'info');
 }
 function hideLoader() {
-  const loader = document.getElementById('loader');
-  if (loader) loader.style.display = 'none';
+  // Do nothing, toast auto-hides
 }
 
 // ─────────────────────────────────────────────────
@@ -121,7 +117,13 @@ async function handleEmailLogin() {
   const pw = document.getElementById('loginPassword').value;
   if (!email || !pw) return showAuthError('⚠️ Email and password required.');
 
-  showLoader('Signing in...');
+  const btn = event && event.target ? event.target : document.querySelector('.submit-btn');
+  const originalText = btn ? btn.innerHTML : 'Sign In &rarr;';
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = 'Waking Database (wait ~30s)...';
+  }
+
   try {
     const { data: signInData, error: signInError } = await supabaseClient.auth.signInWithPassword({
       email: email,
@@ -131,7 +133,10 @@ async function handleEmailLogin() {
     if (signInError) throw signInError;
     // Session state change will handle the rest
   } catch (err) {
-    hideLoader();
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = originalText;
+    }
     showAuthError('⚠️ ' + err.message);
   }
 }
