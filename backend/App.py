@@ -122,7 +122,7 @@ load_dotenv(find_dotenv(usecwd=False, raise_error_if_not_found=False) or
 
 # Serve frontend from the sibling frontend/ folder
 _FRONTEND_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'frontend')
-app = Flask(__name__, static_folder=_FRONTEND_DIR, static_url_path='')
+app = Flask(__name__, static_folder=_FRONTEND_DIR)
 Compress(app)
 
 # Rate limiter setup
@@ -141,17 +141,19 @@ else:
             return decorator
     limiter = _NoopLimiter()
 
-@app.route('/')
-def serve_index():
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve_spa(path):
+    if path.startswith('api/'):
+        from flask import jsonify
+        return jsonify({"error": "Not found"}), 404
+        
+    # Check if the requested file physically exists in the frontend folder
+    if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
+        return app.send_static_file(path)
+        
+    # Otherwise, return index.html for all other routes to support HTML5 History API
     return app.send_static_file('index.html')
-
-@app.route('/sw.js')
-def serve_sw():
-    return app.send_static_file('sw.js')
-
-@app.route('/manifest.json')
-def serve_manifest():
-    return app.send_static_file('manifest.json')
 
 # Database — SQLite locally, Postgres in production
 db_url = os.getenv('DATABASE_URL', 'sqlite:///nutritrack.db').strip()

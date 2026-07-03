@@ -149,6 +149,9 @@ async function handleEmailLogin(event) {
     // because if session is already active, listener might not fire a NEW event!
     if (signInData && signInData.session) {
       await loadProfileForSession(signInData.session);
+    } else if (signInData && !signInData.session) {
+      clearTimeout(wakeTimeout);
+      showAuthError('⚠️ Please check your email to confirm your account before signing in.');
     }
   } catch (err) {
     clearTimeout(wakeTimeout);
@@ -275,6 +278,7 @@ supabaseClient.auth.onAuthStateChange(async (event, session) => {
   try {
     if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
       if (!session) {
+        document.getElementById('authSection').style.display = 'flex';
         hideLoader();
         return;
       }
@@ -513,6 +517,20 @@ async function loginSuccess(userProfile) {
 
   initApp();
   fetchLogsFromCloud();
+  
+  // Route to the correct tab based on URL path
+  let path = window.location.pathname.replace('/', '');
+  if (!path || path === 'index.html') path = 'dashboard';
+  
+  const validPages = ['dashboard', 'track', 'history', 'profile'];
+  if (validPages.includes(path)) {
+    const btnId = path === 'dashboard' ? 1 : path === 'track' ? 2 : path === 'history' ? 3 : 4;
+    const btn = document.querySelector(`.nav-btn:nth-child(${btnId})`);
+    showPage(path, btn, true);
+  } else {
+    const btn = document.querySelector('.nav-btn:nth-child(1)');
+    showPage('dashboard', btn, true);
+  }
 }
 
 async function handleLogout() {
@@ -582,7 +600,7 @@ const PAGE_NAMES = {
   profile: 'Profile',
 };
 
-function showPage(id, btn) {
+function showPage(id, btn, pushState = true) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.mob-nav-btn').forEach(b => b.classList.remove('active'));
@@ -597,7 +615,33 @@ function showPage(id, btn) {
   if (id === 'track') { autoSelectMeal(); searchFoods(document.getElementById('foodSearch').value || ''); }
   if (id === 'history') renderHistory();
   if (id === 'profile') renderProfile();
+  
+  if (pushState && typeof pushState !== 'object') {
+    if (window.location.pathname !== '/' + id) {
+      window.history.pushState({ page: id }, '', '/' + id);
+    }
+  }
 }
+
+window.addEventListener('popstate', (event) => {
+  const state = event.state;
+  if (state && state.page) {
+    // Find the corresponding nav button to highlight
+    const btnId = state.page === 'dashboard' ? 1 : state.page === 'track' ? 2 : state.page === 'history' ? 3 : 4;
+    const btn = document.querySelector(`.nav-btn:nth-child(${btnId})`);
+    showPage(state.page, btn, false);
+  } else {
+    // Determine from pathname
+    let path = window.location.pathname.replace('/', '');
+    if (!path) path = 'dashboard';
+    const validPages = ['dashboard', 'track', 'history', 'profile'];
+    if (validPages.includes(path)) {
+      const btnId = path === 'dashboard' ? 1 : path === 'track' ? 2 : path === 'history' ? 3 : 4;
+      const btn = document.querySelector(`.nav-btn:nth-child(${btnId})`);
+      showPage(path, btn, false);
+    }
+  }
+});
 
 // ─────────────────────────────────────────────────
 //  HELPERS
