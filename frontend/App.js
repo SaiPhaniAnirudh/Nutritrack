@@ -340,7 +340,9 @@ async function handleFinishOnboarding() {
   };
 
   try {
-    const { error } = await supabaseClient.from('users').upsert(payload);
+    const { error } = await supabaseClient
+      .from('users')
+      .upsert(payload, { onConflict: 'email' });
     if (error) throw error;
     
     document.getElementById('onboardingSection').style.display = 'none';
