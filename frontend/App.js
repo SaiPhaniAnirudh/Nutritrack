@@ -213,6 +213,11 @@ supabaseClient.auth.onAuthStateChange(async (event, session) => {
       }
 
       showLoader('Loading profile...');
+      
+      const wakeUpTimeout = setTimeout(() => {
+        const msgEl = document.getElementById('loaderMsg');
+        if (msgEl) msgEl.textContent = 'Waking up database... (this may take up to 30s)';
+      }, 5000);
 
       // Check if user has body_stats in the database
       const { data: userProfile, error } = await supabaseClient
@@ -220,6 +225,8 @@ supabaseClient.auth.onAuthStateChange(async (event, session) => {
         .select('*')
         .eq('id', session.user.id)
         .single();
+        
+      clearTimeout(wakeUpTimeout);
 
       const hasProfile = userProfile && (userProfile.body_stats || userProfile.dob || userProfile.gender);
       if (hasProfile) {

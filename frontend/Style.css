@@ -3627,6 +3627,45 @@ body {
   padding: 0.6rem 0.8rem; display: flex; flex-wrap: wrap; gap: 0.4rem;
   background: var(--white); border-top: 1px solid var(--border-soft);
 }
+/* Responsive Auth Card */
+@media (max-width: 768px) {
+  #authSection {
+    padding: 1rem !important;
+  }
+  #authSection .auth-card {
+    flex-direction: column !important;
+    border-radius: 16px !important;
+    border: none !important;
+    box-shadow: var(--shadow-md) !important;
+    overflow: hidden !important;
+  }
+  #authSection .auth-divider {
+    width: 100% !important;
+    height: 1px !important;
+    background: var(--border) !important;
+    margin: 0 !important;
+    position: relative;
+  }
+  #authSection .auth-divider::after {
+    content: "OR";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--white);
+    padding: 0 1rem;
+    color: var(--ink-50);
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+  #authSection .auth-left {
+    padding: 2.5rem 1.5rem !important;
+  }
+  #authSection .auth-right {
+    padding: 2.5rem 1.5rem !important;
+    background: var(--white) !important; /* blend seamlessly on mobile */
+  }
+}
 .nutribot-chip {
   font-family: inherit; font-size: 0.73rem; font-weight: 600;
   padding: 0.35rem 0.7rem; border-radius: 50px;
