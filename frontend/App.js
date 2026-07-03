@@ -19,8 +19,16 @@ window._otpVerifiedToken = '';
 // ─────────────────────────────────────────────────
 //  PAGE LOADER  (change #10 - removed overlay)
 // ─────────────────────────────────────────────────
-function showLoader(msg = 'Loading…') {}
-function hideLoader() {}
+function showLoader(msg = 'Loading…') {
+  const msgEl = document.getElementById('loaderMsg');
+  if (msgEl) msgEl.textContent = msg;
+  const loader = document.getElementById('loader');
+  if (loader) loader.style.display = 'flex';
+}
+function hideLoader() {
+  const loader = document.getElementById('loader');
+  if (loader) loader.style.display = 'none';
+}
 
 // ─────────────────────────────────────────────────
 //  LOCAL STORAGE DB
@@ -448,10 +456,14 @@ function handleLogoutUI() {
 // ─────────────────────────────────────────────────
 function initApp() {
   const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
   document.getElementById('timeGreet').textContent = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
   
   const displayName = currentUser.name || currentUser.email?.split('@')[0] || 'User';
-  document.getElementById('greetName').textContent  = displayName.split(' ')[0];
+  const greetingEl = document.getElementById('greeting') || document.querySelector('.greeting');
+  if (greetingEl) {
+    greetingEl.textContent = greeting + ', ' + (currentUser?.name ? currentUser.name.split(' ')[0] : 'User') + '!';
+  }
   document.getElementById('greetDate').textContent  = new Date().toLocaleDateString('en-IN', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
   document.getElementById('navAvatar').textContent  = displayName[0].toUpperCase();
   document.getElementById('navName').textContent    = displayName.split(' ')[0];
