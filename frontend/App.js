@@ -112,16 +112,20 @@ async function handleGoogleLogin() {
 // ─────────────────────────────────────────────────
 //  EMAIL/PASSWORD LOGIN & REGISTER
 // ─────────────────────────────────────────────────
-async function handleEmailLogin() {
+async function handleEmailLogin(event) {
   const email = document.getElementById('loginEmail').value.trim();
   const pw = document.getElementById('loginPassword').value;
   if (!email || !pw) return showAuthError('⚠️ Email and password required.');
 
   const btn = event && event.target ? event.target : document.querySelector('.submit-btn');
   const originalText = btn ? btn.innerHTML : 'Sign In &rarr;';
+  let wakeTimeout;
   if (btn) {
     btn.disabled = true;
-    btn.innerHTML = 'Waking Database (wait ~30s)...';
+    btn.innerHTML = 'Signing in...';
+    wakeTimeout = setTimeout(() => {
+      if (btn.disabled) btn.innerHTML = 'Waking Database (wait ~30s)...';
+    }, 3000);
   }
 
   try {
@@ -133,6 +137,7 @@ async function handleEmailLogin() {
     if (signInError) throw signInError;
     // Session state change will handle the rest
   } catch (err) {
+    clearTimeout(wakeTimeout);
     if (btn) {
       btn.disabled = false;
       btn.innerHTML = originalText;
@@ -141,14 +146,24 @@ async function handleEmailLogin() {
   }
 }
 
-async function handleEmailRegister() {
+async function handleEmailRegister(event) {
   const name = document.getElementById('regName').value.trim();
   const email = document.getElementById('regEmail').value.trim();
   const pw = document.getElementById('regPassword').value;
   
   if (!name || !email || !pw) return showAuthError('⚠️ Name, email, and password required.');
 
-  showLoader('Creating account...');
+  const btn = event && event.target ? event.target : document.querySelectorAll('.submit-btn')[1];
+  const originalText = btn ? btn.innerHTML : 'Sign Up &rarr;';
+  let wakeTimeout;
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = 'Creating Account...';
+    wakeTimeout = setTimeout(() => {
+      if (btn.disabled) btn.innerHTML = 'Waking Database (wait ~30s)...';
+    }, 3000);
+  }
+
   try {
     const { data, error } = await supabaseClient.auth.signUp({
       email: email,
@@ -164,12 +179,20 @@ async function handleEmailRegister() {
     if (data.user && data.user.identities && data.user.identities.length === 0) {
       throw new Error("Account already exists with this email.");
     }
-
+    
+    clearTimeout(wakeTimeout);
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = originalText;
+    }
     showAuthError('Account created! Please check your email to verify your account, then sign in.', true);
-    hideLoader();
     showLoginForm();
   } catch (err) {
-    hideLoader();
+    clearTimeout(wakeTimeout);
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = originalText;
+    }
     showAuthError('⚠️ ' + err.message);
   }
 }
