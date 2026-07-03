@@ -3,7 +3,7 @@ NutriTrack — Llm_server.py
 Multimodal LLM Inference Server  (v3 — Ollama Edition)
 
 Engine priority:
-  1. Ollama Local  — Qwen2-VL-7B  (6-8 s CPU / <2 s GPU, zero API key)  ← PRIMARY
+  1. Ollama Local  — llava-phi3  (6-8 s CPU / <2 s GPU, zero API key)  ← PRIMARY
   2. Moondream2    — local 1.8B fallback via transformers
 
 Nutrition data (priority):
@@ -15,7 +15,7 @@ Port: 5002
 
 Quick-start (Ollama path — recommended):
     1. Install Ollama  →  https://ollama.com/download
-    2. ollama pull qwen2-vl:7b
+    2. ollama pull llava-phi3
     3. pip install flask flask-cors flask-limiter python-dotenv requests Pillow
     4. python Llm_server.py
 """

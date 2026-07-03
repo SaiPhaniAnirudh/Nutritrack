@@ -1,4 +1,4 @@
-window._otpVerifiedToken = '';
+
 /* ═══════════════════════════════════════════════════
    NutriTrack — app.js  v2.0
    Changes vs v1:
@@ -33,15 +33,7 @@ function hideLoader() {
 // ─────────────────────────────────────────────────
 //  LOCAL STORAGE DB
 // ─────────────────────────────────────────────────
-const DB = {
-  getUsers:       ()  => JSON.parse(localStorage.getItem('nt_users')   || '[]'),
-  saveUsers:      (u) => localStorage.setItem('nt_users', JSON.stringify(u)),
-  getLogs:        ()  => JSON.parse(localStorage.getItem('nt_logs')    || '[]'),
-  saveLogs:       (l) => localStorage.setItem('nt_logs', JSON.stringify(l)),
-  getCurrentUser: ()  => JSON.parse(sessionStorage.getItem('nt_current') || 'null'),
-  setCurrentUser: (u) => sessionStorage.setItem('nt_current', JSON.stringify(u)),
-  clearSession:   ()  => sessionStorage.removeItem('nt_current'),
-};
+
 
 // ─────────────────────────────────────────────────
 //  APP STATE
@@ -589,12 +581,14 @@ function refreshDashboard() {
   if (logs.length === 0) {
     logEl.innerHTML = `<div class="empty-log"><div class="empty-icon">🍽️</div><p>No meals logged today.<br>Head to Track Food to get started.</p></div>`;
   } else {
-    logEl.innerHTML = logs.map(l => `
+    logEl.innerHTML = logs.map(l => {
+      const safeName = String(l.name).replace(/[&<>"']/g, m => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[m]));
+      return `
       <div class="log-item">
         <div class="log-item-left">
           <div class="food-emoji">${l.emoji||'🍽️'}</div>
           <div>
-            <div class="log-item-name">${l.name}</div>
+            <div class="log-item-name">${safeName}</div>
             <div class="log-item-meta">${l.mealType} · ${l.pro}g P · ${l.carb}g C · ${l.fat}g F</div>
             <div class="nutrient-pills">
               ${l.fiber  ? `<span class="npill fiber">🌿 ${l.fiber}g fiber</span>` : ''}

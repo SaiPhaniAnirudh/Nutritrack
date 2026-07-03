@@ -411,25 +411,6 @@ def _find_closest_food(name):
     return None
 
 
-def _hash_password(pw):
-    try:
-        import bcrypt
-        return bcrypt.hashpw(pw.encode(), bcrypt.gensalt(12)).decode()
-    except ImportError:
-        # Fallback if bcrypt not installed (dev only — NOT for production)
-        import hashlib
-        return 'sha256:' + hashlib.sha256(pw.encode()).hexdigest()
-
-def _check_password(pw, hashed):
-    try:
-        import bcrypt
-        if hashed.startswith('sha256:'):
-            import hashlib
-            return 'sha256:' + hashlib.sha256(pw.encode()).hexdigest() == hashed
-        return bcrypt.checkpw(pw.encode(), hashed.encode())
-    except ImportError:
-        import hashlib
-        return 'sha256:' + hashlib.sha256(pw.encode()).hexdigest() == hashed
 
 def _validate_email(email):
     """Strict email validation — checks format, TLD length, and total length."""
@@ -456,79 +437,6 @@ def _date_range(days):
 
 
 
-# -------------------------------------------------------------------------
-#  OTP VERIFICATION
-# -------------------------------------------------------------------------
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-import random
-import time
-
-OTP_STORE = {}
-
-def send_email_otp(recipient_email, otp_code):
-    webhook_url = os.environ.get('GOOGLE_WEBHOOK_URL')
-    subject = "Your NutriTrack Verification Code"
-    
-    body = f"""
-    <html>
-    <body style="font-family: Arial, sans-serif; background-color: #f4f7f6; padding: 20px;">
-        <div style="max-width: 500px; margin: auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); text-align: center;">
-            <h2 style="color: #2c3e50; margin-bottom: 20px;">Verify your email</h2>
-            <p style="color: #7f8c8d; font-size: 16px; margin-bottom: 30px;">Use the code below to complete your NutriTrack registration.</p>
-            <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #3ecf8e; margin-bottom: 30px;">
-                {otp_code}
-            </div>
-            <p style="color: #bdc3c7; font-size: 14px;">This code expires in 10 minutes.</p>
-        </div>
-    </body>
-    </html>
-    """
-    
-    if webhook_url:
-        try:
-            payload = {
-                "email": recipient_email,
-                "subject": subject,
-                "body": body
-            }
-            r = requests.post(webhook_url, json=payload, timeout=10)
-            if r.status_code == 200:
-                return True, "SUCCESS"
-            else:
-                return True, f"DEMO:{otp_code}"
-        except Exception as e:
-            print(f"Webhook error: {e}")
-            return True, f"DEMO:{otp_code}"
-
-    # Fallback to standard SMTP if webhook is not set
-    sender_email = os.environ.get('SMTP_EMAIL') or os.environ.get('MAIL_USERNAME')
-    sender_password = os.environ.get('SMTP_APP_PASSWORD') or os.environ.get('MAIL_PASSWORD')
-    
-    if not sender_email or not sender_password:
-        print("WARNING: Email credentials not set. Pretending email was sent.")
-        print(f"--- DEMO OTP for {recipient_email}: {otp_code} ---")
-        return True, "DEMO"
-        
-    try:
-        msg = MIMEMultipart()
-        msg['From'] = sender_email
-        msg['To'] = recipient_email
-        msg['Subject'] = subject
-        msg.attach(MIMEText(body, 'html'))
-        
-        # Add a 5-second timeout so Render's firewall doesn't cause it to hang forever
-        server = smtplib.SMTP('smtp.gmail.com', 587, timeout=5)
-        server.starttls()
-        server.login(sender_email, sender_password)
-        server.send_message(msg)
-        server.quit()
-        return True, "SUCCESS"
-    except Exception as e:
-        print(f"Error sending email: {e}")
-        # If Render blocks it, fallback to DEMO mode so the user isn't stuck
-        return True, f"DEMO:{otp_code}"
 
 @app.route('/api/auth/me', methods=['GET'])
 @jwt_required()
@@ -566,24 +474,17 @@ def update_profile():
     if stats.get('diet_type'):   user.diet_type   = stats['diet_type']
 
     # Update nutrition goals
-    if goals.get('calories'): user.goal_calories = int(goals['calories'])
-    if goals.get('protein'):  user.goal_protein  = int(goals['protein'])
-    if goals.get('carbs'):    user.goal_carbs    = int(goals['carbs'])
-    if goals.get('fat'):      user.goal_fat      = int(goals['fat'])
-    if goals.get('fiber'):    user.goal_fiber    = int(goals['fiber'])
-    if goals.get('sugar'):    user.goal_sugar    = int(goals['sugar'])
-    if goals.get('sodium'):   user.goal_sodium   = int(goals['sodium'])
-    if goals.get('chol'):     user.goal_chol     = int(goals['chol'])
-    if goals.get('vit_d'):    user.goal_vit_d    = int(goals['vit_d'])
-    if goals.get('iron'):     user.goal_iron     = int(goals['iron'])
-    if goals.get('folate'):   user.goal_folate   = int(goals['folate'])
-    if goals.get('protein'):  user.goal_protein  = int(goals['protein'])
-    if goals.get('carbs'):    user.goal_carbs     = int(goals['carbs'])
-    if goals.get('fat'):      user.goal_fat       = int(goals['fat'])
-    if goals.get('fiber'):    user.goal_fiber     = int(goals['fiber'])
-    if goals.get('sugar'):    user.goal_sugar     = int(goals['sugar'])
-    if goals.get('sodium'):   user.goal_sodium    = int(goals['sodium'])
-    if goals.get('chol'):     user.goal_chol      = int(goals['chol'])
+    if 'calories' in goals: user.goal_calories = int(goals['calories'])
+    if 'protein' in goals:  user.goal_protein  = int(goals['protein'])
+    if 'carbs' in goals:    user.goal_carbs    = int(goals['carbs'])
+    if 'fat' in goals:      user.goal_fat      = int(goals['fat'])
+    if 'fiber' in goals:    user.goal_fiber    = int(goals['fiber'])
+    if 'sugar' in goals:    user.goal_sugar    = int(goals['sugar'])
+    if 'sodium' in goals:   user.goal_sodium   = int(goals['sodium'])
+    if 'chol' in goals:     user.goal_chol     = int(goals['chol'])
+    if 'vit_d' in goals:    user.goal_vit_d    = int(goals['vit_d'])
+    if 'iron' in goals:     user.goal_iron     = int(goals['iron'])
+    if 'folate' in goals:   user.goal_folate   = int(goals['folate'])
 
     db.session.commit()
     return jsonify(user.to_dict())
@@ -645,8 +546,8 @@ def add_log():
         db.session.commit()
         return jsonify(log.to_dict()), 201
     except Exception as e:
-        import traceback
-        return jsonify({'error': str(e), 'trace': traceback.format_exc()}), 500
+        print(f"Error adding log: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
 
 
 @app.route('/api/logs/<int:log_id>', methods=['DELETE'])
@@ -895,24 +796,7 @@ def streak():
 #  HEALTH CHECK
 # ══════════════════════════════════════════════════
 
-@app.route('/api/debug/db')
-def debug_db():
-    try:
-        from sqlalchemy import text
-        result = db.session.execute(text("SELECT 1")).fetchone()
-        return jsonify({
-            'status': 'connected',
-            'result': str(result),
-            'database_uri_masked': app.config['SQLALCHEMY_DATABASE_URI'].split('@')[-1] if 'SQLALCHEMY_DATABASE_URI' in app.config else 'not_set'
-        })
-    except Exception as e:
-        import traceback
-        return jsonify({
-            'status': 'error',
-            'error': str(e),
-            'traceback': traceback.format_exc(),
-            'database_uri_masked': app.config['SQLALCHEMY_DATABASE_URI'].split('@')[-1] if 'SQLALCHEMY_DATABASE_URI' in app.config else 'not_set'
-        }), 500
+
 
 
 @app.route('/api/health', methods=['GET'])

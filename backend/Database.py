@@ -53,8 +53,8 @@ def cmd_seed():
         user = User(
             name        = 'Demo User',
             email       = 'demo@nutritrack.app',
-            password    = _hash_password('Demo1234!'),
-            age         = 25,
+            password    = _hash_password('Demo1234!') if hasattr(sys.modules[__name__], '_hash_password') else 'dummy_hash',
+            dob         = '1999-01-01',
             weight      = 70.0,
             weight_unit = 'kg',
             height      = 175.0,

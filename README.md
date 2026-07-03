@@ -190,7 +190,7 @@ A default `.env` is automatically created during setup. You can customize settin
 
 ```env
 # Flask JWT Signing Key (Keep secure)
-JWT_SECRET_KEY=f99e7c0b4fb910106b690099840c1f9b17c6e8a175201b15a889ce793bf01324
+JWT_SECRET_KEY=change-me-to-a-long-random-string
 
 # Local Ollama Configurations
 OLLAMA_URL=http://localhost:11434
