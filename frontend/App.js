@@ -82,6 +82,15 @@ function showAuthError(msg, isSuccess = false) {
     el.textContent = msg;
     el.style.display = 'block';
   }
+  
+  if (!isSuccess) {
+    document.querySelectorAll('.submit-btn').forEach(btn => {
+      btn.disabled = false;
+      const oc = btn.getAttribute('onclick') || '';
+      if (oc.includes('handleEmailLogin')) btn.innerHTML = 'Sign In &rarr;';
+      if (oc.includes('handleEmailRegister')) btn.innerHTML = 'Create Account &rarr;';
+    });
+  }
 }
 function hideAuthError() {
   document.getElementById('authError').style.display = 'none';
@@ -135,13 +144,14 @@ async function handleEmailLogin(event) {
     });
 
     if (signInError) throw signInError;
-    // Session state change will handle the rest
+    
+    // Explicitly load profile instead of relying on state change listener
+    // because if session is already active, listener might not fire a NEW event!
+    if (signInData && signInData.session) {
+      await loadProfileForSession(signInData.session);
+    }
   } catch (err) {
     clearTimeout(wakeTimeout);
-    if (btn) {
-      btn.disabled = false;
-      btn.innerHTML = originalText;
-    }
     showAuthError('⚠️ ' + err.message);
   }
 }
@@ -232,6 +242,35 @@ async function handleForgotPassword() {
 // ─────────────────────────────────────────────────
 //  SESSION LISTENER & ONBOARDING ROUTING
 // ─────────────────────────────────────────────────
+async function loadProfileForSession(session) {
+  if (!session) return;
+  showAuthError('Loading profile...', true);
+  try {
+    const { data: userProfile, error } = await supabaseClient
+      .from('users')
+      .select('*')
+      .eq('id', session.user.id)
+      .single();
+      
+    if (error && error.code !== 'PGRST116') {
+       showAuthError('Error connecting to database. Please try again.');
+       return;
+    }
+
+    const hasProfile = userProfile && (userProfile.body_stats || userProfile.dob || userProfile.gender);
+    if (hasProfile) {
+      loginSuccess(userProfile);
+    } else {
+      const aSec = document.getElementById('authSection');
+      if (aSec) aSec.style.display = 'none';
+      document.getElementById('onboardingSection').style.display = 'block';
+      hideLoader();
+    }
+  } catch (err) {
+    showAuthError('⚠️ ' + err.message);
+  }
+}
+
 supabaseClient.auth.onAuthStateChange(async (event, session) => {
   try {
     if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
@@ -239,38 +278,12 @@ supabaseClient.auth.onAuthStateChange(async (event, session) => {
         hideLoader();
         return;
       }
-
-      // Instead of blocking loader, show non-blocking status on auth screen
-      showAuthError('Loading profile...', true);
-
-      // Check if user has body_stats in the database
-      const { data: userProfile, error } = await supabaseClient
-        .from('users')
-        .select('*')
-        .eq('id', session.user.id)
-        .single();
-        
-      if (error && error.code !== 'PGRST116') {
-         showAuthError('Error connecting to database. Please try again.');
-         return;
-      }
-
-      const hasProfile = userProfile && (userProfile.body_stats || userProfile.dob || userProfile.gender);
-      if (hasProfile) {
-        // Returning user -> Dashboard
-        loginSuccess(userProfile);
-      } else {
-        // New user -> Show Onboarding Wizard
-        const aSec = document.getElementById('authSection');
-        if (aSec) aSec.style.display = 'none';
-        document.getElementById('onboardingSection').style.display = 'block';
-        hideLoader();
-      }
+      await loadProfileForSession(session);
     } else if (event === 'SIGNED_OUT') {
       handleLogoutUI();
     }
   } catch (err) {
-    document.body.innerHTML = `<div style="color:red;padding:20px;font-size:24px;background:white;z-index:999999;position:fixed;top:0;left:0;width:100vw;height:100vh;">CRASH in onAuthStateChange:<br><br>${err.message}<br><br>${err.stack}</div>`;
+    console.error('onAuthStateChange error', err);
   }
 });
 
