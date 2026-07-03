@@ -106,12 +106,12 @@
   <!-- ════════════════════════════════════════
      AUTH
 ════════════════════════════════════════ -->
-  <div id="authSection" class="auth-section">
+  <div id="authSection" style="display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 2rem;">
     <div class="auth-wrapper" style="width: 100%; max-width: 900px;">
-      <div class="auth-card auth-card-layout">
+      <div class="auth-card" style="display: flex; flex-direction: row; flex-wrap: wrap; align-items: stretch; padding: 0; overflow: hidden; background: var(--white); border-radius: 24px; border: 1px solid var(--border); box-shadow: var(--shadow-lg); max-width: 100%;">
         
         <!-- Left Side: Email/Password -->
-        <div class="auth-left auth-panel-left">
+        <div class="auth-left" style="flex: 1; min-width: 320px; padding: 3.5rem; display: flex; flex-direction: column; justify-content: center; position: relative;">
           <div class="auth-logo" style="margin-bottom: 2rem; text-align: left;">
             <div class="logo-mark" style="width: auto; height: auto; background: transparent; border: none; box-shadow: none; margin-bottom: 0; display: inline-flex;">
               <!-- Changed to logo-nav.png to ensure visibility on light background -->
@@ -164,15 +164,15 @@
         </div>
 
         <!-- Divider -->
-        <div class="auth-divider auth-panel-divider"></div>
+        <div class="auth-divider" style="width: 1px; background: var(--border); margin: 0;"></div>
 
         <!-- Right Side: Google OAuth -->
-        <div class="auth-right auth-panel-right">
-          <div class="auth-right-icon">&#9889;</div>
-          <h3 class="auth-right-title">Fast & Secure</h3>
-          <p class="auth-right-text">Log in instantly with your Google account. No passwords to remember.</p>
+        <div class="auth-right" style="flex: 1; min-width: 320px; padding: 3.5rem; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; background: var(--smoke);">
+          <div style="font-size: 3rem; margin-bottom: 1.5rem;">&#9889;</div>
+          <h3 style="margin-bottom: 1rem; font-weight: 700; font-size: 1.5rem; color: var(--ink);">Fast & Secure</h3>
+          <p style="color: var(--ink-50); font-size: 0.95rem; line-height: 1.5; margin-bottom: 2.5rem; max-width: 280px;">Log in instantly with your Google account. No passwords to remember.</p>
           
-          <button type="button" class="google-btn" onclick="handleGoogleLogin()">
+          <button type="button" class="submit-btn" onclick="handleGoogleLogin()" style="background: var(--white); color: var(--ink); font-weight: 600; font-size: 1rem; display: flex; align-items: center; justify-content: center; gap: 12px; border: 1px solid var(--border); padding: 0.9rem 1.5rem; border-radius: 12px; box-shadow: var(--shadow-sm); width: 100%; max-width: 280px; transition: transform 0.2s, box-shadow 0.2s; cursor: pointer;">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
               <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
