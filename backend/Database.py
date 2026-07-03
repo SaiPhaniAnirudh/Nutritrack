@@ -23,7 +23,7 @@ from datetime import datetime, timezone, timedelta
 from dotenv import load_dotenv
 load_dotenv()
 
-from App import app, db, User, FoodLog, _hash_password
+from App import app, db, User, FoodLog
 
 
 # ══════════════════════════════════════════════════
@@ -53,7 +53,7 @@ def cmd_seed():
         user = User(
             name        = 'Demo User',
             email       = 'demo@nutritrack.app',
-            password    = _hash_password('Demo1234!') if hasattr(sys.modules[__name__], '_hash_password') else 'dummy_hash',
+            password    = 'dummy_hash',
             dob         = '1999-01-01',
             weight      = 70.0,
             weight_unit = 'kg',

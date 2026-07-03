@@ -87,6 +87,16 @@ def jwt_required(optional=False, refresh=False):
                 if not res.user:
                     raise Exception("Invalid token")
                 g.user_id = res.user.id
+                
+                # Lazy create local user if not exists
+                user_record = db.session.get(User, g.user_id)
+                if not user_record:
+                    email = res.user.email
+                    meta = res.user.user_metadata or {}
+                    name = meta.get('full_name', meta.get('name', email.split('@')[0]))
+                    new_user = User(id=g.user_id, email=email, name=name)
+                    db.session.add(new_user)
+                    db.session.commit()
             except Exception as e:
                 if optional:
                     g.user_id = None
@@ -660,9 +670,9 @@ def ai_analyze():
                 food_name = result.get('food_name', result.get('name', ''))
                 rag_match = _find_closest_food(food_name)
                 if rag_match:
-                    result['calories'] = rag_match.get('cal', 0)
-                    result['protein_g'] = rag_match.get('pro', 0)
-                    result['carbs_g'] = rag_match.get('carb', 0)
+                    result['calories'] = rag_match.get('calories', 0)
+                    result['protein_g'] = rag_match.get('protein', 0)
+                    result['carbs_g'] = rag_match.get('carbs', 0)
                     result['fat_g'] = rag_match.get('fat', 0)
                     result['fiber_g'] = rag_match.get('fiber', 0)
                     result['sugar_g'] = rag_match.get('sugar', 0)

@@ -378,8 +378,11 @@ class ViTFoodEngine:
         self._load()
 
     def _load(self):
-        from transformers import pipeline as hf_pipeline
-
+        try:
+            from transformers import pipeline as hf_pipeline
+        except ImportError:
+            print('  [FoodAI] transformers library not found, skipping SigLIP/Food101 (safe if using Ollama)')
+            return
         # ── Load SigLIP (primary — zero-shot, covers all our foods) ────────────
         print('  [FoodAI] loading SigLIP zero-shot classifier...')
         try:
@@ -1194,7 +1197,7 @@ if __name__ == '__main__':
                     choices=['auto', 'vit', 'ollama', 'moondream'],
                     help='Force a specific engine (default: auto = ViT -> Ollama -> Moondream)')
     ap.add_argument('--ollama-model', default=None,
-                    help='Override Ollama model name (default: moondream)')
+                    help='Override Ollama model name (default: llava-phi3)')
     args = ap.parse_args()
 
     print()
@@ -1212,7 +1215,7 @@ if __name__ == '__main__':
     elif args.engine == 'ollama':
         engine = OllamaEngine()
         if not engine.loaded:
-            print('  Ollama not ready. Run: ollama pull moondream')
+            print('  Ollama not ready. Run: ollama pull llava-phi3')
     elif args.engine == 'moondream':
         engine = MoondreamEngine()
     else:
@@ -1227,7 +1230,7 @@ if __name__ == '__main__':
             ollama = OllamaEngine()
             if ollama.loaded:
                 engine = ollama
-                print(f'  Engine: Ollama / {os.getenv("OLLAMA_MODEL","moondream")} (slow on CPU)')
+                print(f'  Engine: Ollama / {os.getenv("OLLAMA_MODEL","llava-phi3")} (slow on CPU)')
             else:
                 print('  Ollama not available — trying Moondream2 fallback...')
                 md = MoondreamEngine()

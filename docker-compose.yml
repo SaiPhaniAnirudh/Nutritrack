@@ -96,6 +96,8 @@ services:
       - DATABASE_URL=${DATABASE_URL:-sqlite:///nutritrack.db}
       - LLM_SERVER_URL=http://llm:5002
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5000}
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
     volumes:
       - db-data:/app/instance
     healthcheck:

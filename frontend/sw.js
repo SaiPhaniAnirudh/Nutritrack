@@ -118,8 +118,8 @@ self.addEventListener('push', (event) => {
   event.waitUntil(
     self.registration.showNotification(data.title || 'NutriTrack', {
       body: data.body || 'Time to log your meal!',
-      icon: '/icons/icon-192.png',
-      badge: '/icons/icon-72.png',
+      icon: '/icons/icon.png',
+      badge: '/icons/icon.png',
       tag: 'nutritrack-notification',
     })
   );

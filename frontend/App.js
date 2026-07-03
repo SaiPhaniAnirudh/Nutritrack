@@ -411,13 +411,12 @@ function normalizeUserProfile(p) {
   };
 }
 
-function loginSuccess(userProfile) {
+async function loginSuccess(userProfile) {
   currentUser = normalizeUserProfile(userProfile);
 
   // Try to grab JWT, ignoring errors if session doesn't load immediately
-  supabaseClient.auth.getSession().then(({ data }) => {
-    if (data && data.session) currentUser.token = data.session.access_token;
-  });
+  const { data } = await supabaseClient.auth.getSession();
+  if (data && data.session) currentUser.token = data.session.access_token;
 
   const authSec = document.getElementById('authSection');
   if (authSec) authSec.style.display = 'none';
@@ -1284,13 +1283,14 @@ function searchFoods(query) {
 
   const container = document.getElementById('foodResults');
   if (results.length === 0) {
-    container.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:2rem;color:var(--ink-50)">No foods found for "<strong>${q}</strong>"</div>`;
+    const safeQ = String(q).replace(/[&<>'"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'}[c]));
+    container.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:2rem;color:var(--ink-50)">No foods found for "<strong>${safeQ}</strong>"</div>`;
     return;
   }
   container.innerHTML = results.map(f => {
     const desc = f.desc || FOOD_DESCRIPTIONS[f.cat] || ''; // change #2
     return `
-    <div class="food-result-card" onclick='addFoodToLog(${JSON.stringify(f)})'>
+    <div class="food-result-card" onclick='addFoodToLog(${JSON.stringify(f).replace(/'/g, "&#39;")})'>
       <div class="emoji">${f.emoji}</div>
       <div class="name">${f.name}</div>
       ${desc ? `<div class="desc">${desc}</div>` : ''}
@@ -2170,7 +2170,8 @@ function _renderMessages() {
   container.innerHTML = _chatHistory.map((msg, i) => {
     const isUser = msg.role === 'user';
     // Convert **bold** markdown to <strong>
-    const formatted = msg.text
+    const safeText = String(msg.text).replace(/[&<>'"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'}[c]));
+    const formatted = safeText
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       .replace(/\n/g, '<br>');
     return `
@@ -2284,7 +2285,7 @@ async function _callNutriBot(message) {
 }
 
 function _getJwt() {
-  // Get JWT from localStorage so it persists across tab closes
+  if (currentUser && currentUser.token) return currentUser.token;
   try {
     const s = localStorage.getItem('nt_jwt');
     if (s) return s;
