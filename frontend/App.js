@@ -446,7 +446,6 @@ async function handleLogout() {
 
 function handleLogoutUI() {
   currentUser = null;
-  DB.clearSession();
   document.getElementById('mainApp').style.display = 'none';
   const aSec = document.getElementById('authSection');
   if (aSec) aSec.style.display = 'block';
@@ -2106,20 +2105,6 @@ function openDietModal() {
   dpSwitchTab('overview', document.querySelector('.dp-tab'));
 }
 
-
-// ─────────────────────────────────────────────────
-//  AUTO-LOGIN
-// ─────────────────────────────────────────────────
-(function () {
-  const saved = DB.getCurrentUser();
-  if (saved) {
-    currentUser = saved;
-    const aSec = document.getElementById('authSection');
-    if (aSec) aSec.style.display = 'none';
-    document.getElementById('mainApp').style.display = 'block';
-    initApp();
-  }
-})();
 
 // ─────────────────────────────────────────────────
 //  KEYBOARD SHORTCUTS
