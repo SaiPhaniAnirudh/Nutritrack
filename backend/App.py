@@ -706,9 +706,38 @@ def ai_analyze_stream():
             timeout=120
         )
         def generate():
-            for chunk in resp.iter_content(chunk_size=1024):
-                if chunk:
-                    yield chunk
+            for line in resp.iter_lines():
+                if not line:
+                    continue
+                decoded = line.decode('utf-8')
+                if decoded.startswith('data:'):
+                    json_str = decoded[5:].strip()
+                    if json_str:
+                        try:
+                            evt = json.loads(json_str)
+                            if 'result' in evt:
+                                result = evt['result']
+                                if 'items' in result and isinstance(result['items'], list) and len(result['items']) > 0:
+                                    all_rag = True
+                                    for item in result['items']:
+                                        is_rag = _enrich_with_rag(item)
+                                        if not is_rag: all_rag = False
+                                    
+                                    if len(result['items']) == 1:
+                                        result['source'] = result['items'][0].get('source', 'Vision AI')
+                                    else:
+                                        result['source'] = 'Mixed / Multiple Items'
+                                else:
+                                    _enrich_with_rag(result)
+                                # Serialize back to SSE
+                                yield f"data: {json.dumps({'result': result})}\n\n".encode('utf-8')
+                            else:
+                                # Heartbeats or other events
+                                yield f"{decoded}\n\n".encode('utf-8')
+                        except json.JSONDecodeError:
+                            yield f"{decoded}\n\n".encode('utf-8')
+                else:
+                    yield f"{decoded}\n\n".encode('utf-8')
         return app.response_class(generate(), content_type='text/event-stream')
     except requests.exceptions.ConnectionError:
         return jsonify({
