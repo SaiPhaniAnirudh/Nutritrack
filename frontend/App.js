@@ -418,6 +418,13 @@ async function loginSuccess(userProfile) {
   const { data } = await supabaseClient.auth.getSession();
   if (data && data.session) currentUser.token = data.session.access_token;
 
+  document.getElementById('editCarbGoal').value = currentUser.goals.carbs;
+  document.getElementById('editFatGoal').value = currentUser.goals.fat;
+  document.getElementById('editFiberGoal').value = currentUser.goals.fiber;
+
+  const dietTag = document.getElementById('dietWidgetTag');
+  if (dietTag) dietTag.textContent = 'View targets';
+
   const authSec = document.getElementById('authSection');
   if (authSec) authSec.style.display = 'none';
   const onbSec = document.getElementById('onboardingSection');
@@ -425,9 +432,10 @@ async function loginSuccess(userProfile) {
   const mainApp = document.getElementById('mainApp');
   if (mainApp) mainApp.style.display = 'block';
 
+  hideLoader();
+
   initApp();
   fetchLogsFromCloud();
-  hideLoader();
 }
 
 async function handleLogout() {
@@ -456,10 +464,9 @@ function initApp() {
   document.getElementById('timeGreet').textContent = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
 
   const displayName = currentUser.name || currentUser.email?.split('@')[0] || 'User';
-  const greetingEl = document.getElementById('greeting') || document.querySelector('.greeting');
-  if (greetingEl) {
-    greetingEl.textContent = greeting + ', ' + (currentUser?.name ? currentUser.name.split(' ')[0] : 'User') + '!';
-  }
+  
+  const greetNameEl = document.getElementById('greetName');
+  if (greetNameEl) greetNameEl.textContent = displayName.split(' ')[0];
   document.getElementById('greetDate').textContent = new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   document.getElementById('navAvatar').textContent = displayName[0].toUpperCase();
   document.getElementById('navName').textContent = displayName.split(' ')[0];
@@ -1104,7 +1111,7 @@ function _renderScanResult(r) {
         <div style="width:${ifW}%;background:#F4613A;border-radius:2px"></div>
       </div>
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.3rem;font-size:0.67rem;color:var(--ink-50);margin-bottom:0.6rem;">
-        <span>💪 ${f.pro}g</span><span>🌾 ${f.carb}g</span><span>🫒 ${f.fat}g</span><span>🌿 ${f.fiber}g</span>
+        <span>💪 ${f.pro}g</span><span>🌾 ${f.carb}g</span><span>🥑 ${f.fat}g</span><span>🌿 ${f.fiber}g</span>
         <span>🍬 ${f.sugar}g</span><span>🧂 ${f.sod}mg</span><span>❤️ ${f.chol}mg</span>
       </div>
       <button class="scan-add-btn" style="padding:0.45rem;font-size:0.78rem;" onclick='addFoodToLog(${foodJson})'>
@@ -1137,12 +1144,12 @@ function _renderScanResult(r) {
         <div class="scan-macro-seg" style="width:${fW}%;background:#F4613A"></div>
       </div>
       <div style="display:flex;gap:1rem;font-size:0.67rem;color:var(--ink-50);margin-bottom:1rem;">
-        <span>💪 P ${pW}%</span><span>🌾 C ${cW}%</span><span>🫒 F ${fW}%</span>
+        <span>💪 P ${pW}%</span><span>🌾 C ${cW}%</span><span>🥑 F ${fW}%</span>
       </div>
       <div class="scan-nutrient-grid">
         ${_buildNutrientCell('💪', 'Protein', total.pro, 'g', false)}
         ${_buildNutrientCell('🌾', 'Carbs', total.carb, 'g', false)}
-        ${_buildNutrientCell('🫒', 'Fat', total.fat, 'g', false)}
+        ${_buildNutrientCell('🥑', 'Fat', total.fat, 'g', false)}
         ${_buildNutrientCell('🌿', 'Fiber', total.fiber, 'g', false)}
         ${_buildNutrientCell('🍬', 'Sugar', total.sugar, 'g', sugarWarn)}
         ${_buildNutrientCell('🧂', 'Salt', total.sod, 'mg', sodWarn)}<!-- change #13 -->
@@ -1425,7 +1432,7 @@ function renderHistory() {
       ['🔥', 'Total Calories', Math.round(monthTotals.cal) + ' kcal'],
       ['💪', 'Avg Protein/day', Math.round(monthTotals.pro / days) + 'g'],
       ['🌾', 'Avg Carbs/day', Math.round(monthTotals.carb / days) + 'g'],
-      ['🫒', 'Avg Fat/day', Math.round(monthTotals.fat / days) + 'g'],
+      ['🥑', 'Avg Fat/day', Math.round(monthTotals.fat / days) + 'g'],
       ['🌿', 'Avg Fiber/day', Math.round(monthTotals.fiber / days) + 'g'],
       ['🍬', 'Avg Sugar/day', Math.round(monthTotals.sugar / days) + 'g'],
       ['🧂', 'Avg Salt/day', Math.round(monthTotals.sodium / days) + 'mg'],
@@ -1828,7 +1835,7 @@ function openDietModal() {
     { icon: '🔥', val: g.calories, unit: ' kcal', label: 'Daily Target', accent: '#F5A623' },
     { icon: '💪', val: g.protein + 'g', unit: '', label: 'Protein/Day', accent: '#7fb8d4' },
     { icon: '🌾', val: (g.carbs || 275) + 'g', unit: '', label: 'Carbs/Day', accent: '#c4a87f' },
-    { icon: '🫒', val: (g.fat || 78) + 'g', unit: '', label: 'Fat/Day', accent: '#F4613A' },
+    { icon: '🥑', val: (g.fat || 78) + 'g', unit: '', label: 'Fat/Day', accent: '#F4613A' },
   ].map(s => `<div class="dp-stat" style="--dp-accent:${s.accent}">
     <div class="dp-stat-icon">${s.icon}</div>
     <div class="dp-stat-val">${s.val}<span class="dp-stat-unit">${s.unit}</span></div>
@@ -1935,14 +1942,14 @@ function openDietModal() {
       <div class="dp-macro-rings">
         <div class="dp-macro-ring-item">${_dpRing(proPct, '#7fb8d4', 90, 9)}<div class="dp-mring-val">${g.protein}g</div><div class="dp-mring-label">💪 Protein</div></div>
         <div class="dp-macro-ring-item">${_dpRing(carbPct, '#c4a87f', 90, 9)}<div class="dp-mring-val">${g.carbs || 275}g</div><div class="dp-mring-label">🌾 Carbs</div></div>
-        <div class="dp-macro-ring-item">${_dpRing(fatPct, '#F4613A', 90, 9)}<div class="dp-mring-val">${g.fat || 78}g</div><div class="dp-mring-label">🫒 Fat</div></div>
+        <div class="dp-macro-ring-item">${_dpRing(fatPct, '#F4613A', 90, 9)}<div class="dp-mring-val">${g.fat || 78}g</div><div class="dp-mring-label">🥑 Fat</div></div>
       </div>
     </div>
     <div class="dp-card">
       <div class="dp-card-title">⚡ Calorie Breakdown</div>
       ${[['💪 Protein', proKcal, proKcal / totalMK, '#7fb8d4', `${g.protein}g × 4`],
     ['🌾 Carbs', carbKcal, carbKcal / totalMK, '#c4a87f', `${g.carbs || 275}g × 4`],
-    ['🫒 Fat', fatKcal, fatKcal / totalMK, '#F4613A', `${g.fat || 78}g × 9`]
+    ['🥑 Fat', fatKcal, fatKcal / totalMK, '#F4613A', `${g.fat || 78}g × 9`]
     ].map(([label, kcal, ratio, color, note]) => `
         <div style="margin-bottom:0.85rem">
           <div style="display:flex;justify-content:space-between;font-size:0.78rem;margin-bottom:0.35rem">
