@@ -123,37 +123,64 @@ async function handleEmailLogin() {
 
   showLoader('Signing in...');
   try {
-    // 1. Try to sign in
     const { data: signInData, error: signInError } = await supabaseClient.auth.signInWithPassword({
       email: email,
       password: pw,
     });
 
-    if (signInError) {
-      if (signInError.message.includes("Invalid login credentials")) {
-        // 2. If it fails, try to sign up automatically
-        showLoader('Creating account...');
-        const { data: signUpData, error: signUpError } = await supabaseClient.auth.signUp({
-          email: email,
-          password: pw,
-        });
-
-        if (signUpError) throw signUpError;
-        if (signUpData.user && signUpData.user.identities && signUpData.user.identities.length === 0) {
-          throw new Error("Account already exists with this email, but password was incorrect.");
-        }
-
-        showAuthError('Account created! Please check your email to verify your account, then sign in.', true);
-        hideLoader();
-        return;
-      }
-      throw signInError;
-    }
+    if (signInError) throw signInError;
     // Session state change will handle the rest
   } catch (err) {
     hideLoader();
     showAuthError('⚠️ ' + err.message);
   }
+}
+
+async function handleEmailRegister() {
+  const name = document.getElementById('regName').value.trim();
+  const email = document.getElementById('regEmail').value.trim();
+  const pw = document.getElementById('regPassword').value;
+  
+  if (!name || !email || !pw) return showAuthError('⚠️ Name, email, and password required.');
+
+  showLoader('Creating account...');
+  try {
+    const { data, error } = await supabaseClient.auth.signUp({
+      email: email,
+      password: pw,
+      options: {
+        data: {
+          full_name: name
+        }
+      }
+    });
+
+    if (error) throw error;
+    if (data.user && data.user.identities && data.user.identities.length === 0) {
+      throw new Error("Account already exists with this email.");
+    }
+
+    showAuthError('Account created! Please check your email to verify your account, then sign in.', true);
+    hideLoader();
+    showLoginForm();
+  } catch (err) {
+    hideLoader();
+    showAuthError('⚠️ ' + err.message);
+  }
+}
+
+function showRegisterForm() {
+  document.getElementById('loginForm').style.display = 'none';
+  document.getElementById('registerForm').style.display = 'block';
+  document.getElementById('authError').style.display = 'none';
+  document.getElementById('authSuccess').style.display = 'none';
+}
+
+function showLoginForm() {
+  document.getElementById('registerForm').style.display = 'none';
+  document.getElementById('loginForm').style.display = 'block';
+  document.getElementById('authError').style.display = 'none';
+  document.getElementById('authSuccess').style.display = 'none';
 }
 
 async function handleForgotPassword() {
