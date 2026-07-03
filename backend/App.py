@@ -413,9 +413,25 @@ with app.app_context():
 def _find_closest_food(name):
     if not name or not supabase: return None
     try:
+        # 1. Try exact or substring match first
         res = supabase.table('base_foods').select('*').ilike('name', f'%{name}%').limit(1).execute()
         if res.data:
             return res.data[0]
+            
+        # 2. Intelligent keyword fallback
+        # Remove common cooking adjectives that LLM hallucinates
+        import re
+        stop_words = {'roasted', 'steamed', 'cooked', 'fried', 'baked', 'boiled', 'raw', 'fresh', 'slice', 'piece', 'bowl', 'plate', 'dish', 'with', 'and', 'the', 'a', 'an'}
+        words = [w for w in re.split(r'[^a-zA-Z0-9]', name.lower()) if len(w) > 2 and w not in stop_words]
+        
+        # Try matching the longest remaining word (most likely the core ingredient)
+        if words:
+            words.sort(key=len, reverse=True)
+            for w in words:
+                res = supabase.table('base_foods').select('*').ilike('name', f'%{w}%').limit(1).execute()
+                if res.data:
+                    return res.data[0]
+                    
     except Exception as e:
         print("Error searching food in Supabase:", e)
     return None
