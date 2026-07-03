@@ -114,8 +114,7 @@
         <div class="auth-left" style="flex: 1; min-width: 320px; padding: 3.5rem; display: flex; flex-direction: column; justify-content: center; position: relative;">
           <div class="auth-logo" style="margin-bottom: 2rem; text-align: left;">
             <div class="logo-mark" style="width: auto; height: auto; background: transparent; border: none; box-shadow: none; margin-bottom: 0; display: inline-flex;">
-              <!-- Changed to logo-nav.png to ensure visibility on light background -->
-              <img src="logo-nav.png" alt="Auth Logo" style="width: 220px; height: auto;" />
+              <img src="/logo-nav.png" alt="Auth Logo" style="width: 220px; height: auto;" />
             </div>
             <p style="color: var(--ink-50); margin-top: 0.8rem; font-size: 0.95rem;">Sign in to continue your journey</p>
           </div>
@@ -302,9 +301,9 @@
     <!-- TOP NAV -->
     <nav class="topnav">
       <div class="nav-brand">
-        <div class="mark" style="width: auto; height: auto; display: flex; align-items: center;">
-          <img src="logo-nav.png" alt="Nav Logo" style="height: 28px; width: auto;" />
-        </div>
+        <a href="/" style="display: flex; align-items: center; text-decoration: none;">
+          <img src="/logo-nav.png" alt="Nav Logo" style="height: 28px; width: auto;" />
+        </a>
         <!-- Brand name commented out because it is built into the logo image -->
         <!-- <span class="nav-brand-name">NutriTrack</span> -->
       </div>
@@ -816,8 +815,8 @@
       if (btn) btn.classList.add('active');
     }
   </script>
-  <script src="Foods.js" defer></script>
-  <script src="App.js?v=11" defer></script>
+  <script src="/Foods.js" defer></script>
+  <script src="/App.js?v=11" defer></script>
 
   <!-- PWA Install Prompt Banner -->
   <div id="pwaInstallBanner" style="
@@ -829,7 +828,7 @@
     box-shadow:0 8px 32px rgba(0,0,0,0.4); animation:slideUp 0.4s ease;
   ">
     <div style="display:flex;align-items:center;gap:0.8rem;">
-      <img src="icons/icon.svg" alt="NutriTrack" width="40" height="40" style="border-radius:10px;">
+      <img src="/icons/icon.svg" alt="NutriTrack" width="40" height="40" style="border-radius:10px;">
       <div style="flex:1">
         <div style="font-weight:600;font-size:0.88rem;color:#e8f5e9;">Install NutriTrack</div>
         <div style="font-size:0.72rem;color:rgba(184,201,186,0.7);margin-top:2px;">Add to home screen for quick access
