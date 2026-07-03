@@ -606,7 +606,8 @@ function refreshDashboard() {
           <button class="remove-item-btn" onclick="removeLog('${l.id}')">✕</button>
         </div>
       </div>
-    `).join('');
+    `;
+    }).join('');
   }
   renderMacroChart(totals.pro, totals.carb, totals.fat, totals.fiber, totals.sugar, totals.sodium, totals.chol, totals.cal);
 }
