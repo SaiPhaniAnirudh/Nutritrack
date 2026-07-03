@@ -67,6 +67,8 @@ services:
     depends_on:
       ollama:
         condition: service_healthy
+      ollama-pull:
+        condition: service_completed_successfully
     ports:
       - "5002:5002"
     environment:

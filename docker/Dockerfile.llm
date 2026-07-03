@@ -20,7 +20,8 @@ RUN pip install --no-cache-dir \
     flask-limiter==3.5.0 \
     python-dotenv==1.0.1 \
     requests==2.32.3 \
-    Pillow
+    Pillow \
+    supabase
 
 COPY llm/Llm_server.py .
 COPY .env.example .env

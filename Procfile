@@ -1,1 +1,1 @@
-web: gunicorn --bind 0.0.0.0:$PORT --workers 1 --timeout 120 --chdir backend App:app
+web: gunicorn -c gunicorn.conf.py --chdir backend App:app

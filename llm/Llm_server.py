@@ -97,6 +97,9 @@ def _db_row(name: str, d: dict, confidence: int = 90) -> dict:
         'sugar_g':        d['sugar'],
         'sodium_mg':      d['sodium'],
         'cholesterol_mg': d['chol'],
+        'vit_d':          d.get('vit_d', 0.0),
+        'iron':           d.get('iron', 0.0),
+        'folate':         d.get('folate', 0.0),
     }
 
 def _fallback_item(name: str) -> dict:
@@ -113,6 +116,9 @@ def _fallback_item(name: str) -> dict:
         'sugar_g':        4,
         'sodium_mg':      300,
         'cholesterol_mg': 20,
+        'vit_d':          0.0,
+        'iron':           0.0,
+        'folate':         0.0,
     }
 
 def _tip(food_name: str) -> str:
@@ -150,7 +156,10 @@ def _parse_pipe_response(text: str) -> list:
                     'sugar_g':        round(_n(parts[6], 3), 1) if len(parts) > 6 else 3.0,
                     'sodium_mg':      round(_n(parts[7], 300))  if len(parts) > 7 else 300,
                     'cholesterol_mg': round(_n(parts[8], 20))   if len(parts) > 8 else 20,
-                    'serving_size':   parts[9].strip()          if len(parts) > 9 else '1 serving',
+                    'vit_d':          round(_n(parts[9], 0), 1) if len(parts) > 9 else 0.0,
+                    'iron':           round(_n(parts[10], 0), 1) if len(parts) > 10 else 0.0,
+                    'folate':         round(_n(parts[11], 0), 1) if len(parts) > 11 else 0.0,
+                    'serving_size':   parts[12].strip()         if len(parts) > 12 else '1 serving',
                     'confidence':     88,
                 }
                 if item['calories'] > 0:
@@ -205,7 +214,7 @@ VISION_PROMPT = (
     "- Use specific names (e.g. 'Chicken Wing' not 'Fried Chicken', 'White Rice' not 'Rice').\n"
     "- If NO food visible: reply NOT_FOOD\n"
     "For each clearly visible food, output exactly one line:\n"
-    "FoodName|calories|protein_g|carbs_g|fat_g|fiber_g|sugar_g|sodium_mg|cholesterol_mg|serving_size\n"
+    "FoodName|calories|protein_g|carbs_g|fat_g|fiber_g|sugar_g|sodium_mg|cholesterol_mg|vit_d_mcg|iron_mg|folate_mcg|serving_size\n"
     "Output ONLY the data lines. No explanation. Max 5 items."
 )
 
@@ -302,6 +311,9 @@ def load_nutrition_db():
                 'sugar': f.get('sugar', 0),
                 'sodium': f.get('sodium', 0),
                 'chol': f.get('chol', 0),
+                'vit_d': f.get('vit_d', 0),
+                'iron': f.get('iron', 0),
+                'folate': f.get('folate', 0),
                 'serving': '1 portion'
             }
             _CLIP_CANDIDATES.append(name)

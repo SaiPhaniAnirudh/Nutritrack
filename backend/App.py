@@ -420,6 +420,31 @@ def _find_closest_food(name):
         print("Error searching food in Supabase:", e)
     return None
 
+def _enrich_with_rag(item, original_name=None):
+    """Takes a parsed item dict (with a food_name), queries RAG, and enriches it if found. Modifies in place."""
+    fname = original_name or item.get('food_name', item.get('name', ''))
+    match = _find_closest_food(fname)
+    if match:
+        item['calories'] = match.get('calories', 0)
+        item['protein_g'] = match.get('protein', 0)
+        item['carbs_g'] = match.get('carbs', 0)
+        item['fat_g'] = match.get('fat', 0)
+        item['fiber_g'] = match.get('fiber', 0)
+        item['sugar_g'] = match.get('sugar', 0)
+        item['sodium_mg'] = match.get('sodium', 0)
+        item['cholesterol_mg'] = match.get('chol', 0)
+        item['vit_d'] = match.get('vit_d', 0.0)
+        item['iron'] = match.get('iron', 0.0)
+        item['folate'] = match.get('folate', 0.0)
+        item['source'] = 'Supabase RAG Database'
+        item['food_name'] = match.get('name', fname).title()
+        return True
+    else:
+        item['source'] = 'MLLM Estimation'
+        for key in ['vit_d', 'iron', 'folate']:
+            if key not in item: item[key] = 0
+        return False
+
 
 
 def _validate_email(email):
@@ -641,55 +666,50 @@ def ai_analyze():
             if 'items' in result and isinstance(result['items'], list) and len(result['items']) > 0:
                 all_rag = True
                 for item in result['items']:
-                    fname = item.get('food_name', item.get('name', ''))
-                    match = _find_closest_food(fname)
-                    if match:
-                        item['calories'] = match.get('calories', 0)
-                        item['protein_g'] = match.get('protein', 0)
-                        item['carbs_g'] = match.get('carbs', 0)
-                        item['fat_g'] = match.get('fat', 0)
-                        item['fiber_g'] = match.get('fiber', 0)
-                        item['sugar_g'] = match.get('sugar', 0)
-                        item['sodium_mg'] = match.get('sodium', 0)
-                        item['cholesterol_mg'] = match.get('chol', 0)
-                        item['vit_d'] = match.get('vit_d', 0.0)
-                        item['iron'] = match.get('iron', 0.0)
-                        item['folate'] = match.get('folate', 0.0)
-                        item['source'] = 'Supabase RAG Database'
-                        item['food_name'] = match.get('name', fname).title()
-                    else:
-                        all_rag = False
-                        item['source'] = 'MLLM Estimation'
-                        for key in ['vit_d', 'iron', 'folate']:
-                            if key not in item: item[key] = 0
+                    is_rag = _enrich_with_rag(item)
+                    if not is_rag: all_rag = False
+                
                 if len(result['items']) == 1:
                     result['source'] = result['items'][0]['source']
                 else:
                     result['source'] = 'Mixed / Multiple Items'
             else:
-                food_name = result.get('food_name', result.get('name', ''))
-                rag_match = _find_closest_food(food_name)
-                if rag_match:
-                    result['calories'] = rag_match.get('calories', 0)
-                    result['protein_g'] = rag_match.get('protein', 0)
-                    result['carbs_g'] = rag_match.get('carbs', 0)
-                    result['fat_g'] = rag_match.get('fat', 0)
-                    result['fiber_g'] = rag_match.get('fiber', 0)
-                    result['sugar_g'] = rag_match.get('sugar', 0)
-                    result['sodium_mg'] = rag_match.get('sodium', 0)
-                    result['cholesterol_mg'] = rag_match.get('chol', 0)
-                    result['vit_d'] = rag_match.get('vit_d', 0.0)
-                    result['iron'] = rag_match.get('iron', 0.0)
-                    result['folate'] = rag_match.get('folate', 0.0)
-                    result['source'] = 'Supabase RAG Database'
-                    result['food_name'] = rag_match.get('name', food_name).title()
-                else:
-                    result['source'] = 'MLLM Estimation'
-                    for key in ['vit_d', 'iron', 'folate']:
-                        if key not in result: result[key] = 0
+                _enrich_with_rag(result)
             
             return jsonify(result)
         return jsonify({'error': 'LLM server error'}), 502
+    except requests.exceptions.ConnectionError:
+        return jsonify({
+            'error': 'Multimodal LLM server not running. Start it with: python llm/Llm_server.py'
+        }), 503
+    except requests.exceptions.Timeout:
+        return jsonify({'error': 'LLM server timed out'}), 504
+
+@app.route('/api/ai/analyze/stream', methods=['POST'])
+@limiter.limit('10 per minute')
+@jwt_required(optional=True)
+def ai_analyze_stream():
+    """Proxy streaming endpoint for the LLM."""
+    data  = request.get_json() or {}
+    image = data.get('image', '')
+
+    if not image:
+        return jsonify({'error': 'No image provided'}), 400
+
+    llm_url = os.getenv('LLM_SERVER_URL', 'http://localhost:5002')
+    try:
+        # We must stream=True on the requests call and yield the bytes
+        resp = requests.post(
+            f'{llm_url}/api/ai/analyze/stream',
+            json={'image': image},
+            stream=True,
+            timeout=120
+        )
+        def generate():
+            for chunk in resp.iter_content(chunk_size=1024):
+                if chunk:
+                    yield chunk
+        return app.response_class(generate(), content_type='text/event-stream')
     except requests.exceptions.ConnectionError:
         return jsonify({
             'error': 'Multimodal LLM server not running. Start it with: python llm/Llm_server.py'
