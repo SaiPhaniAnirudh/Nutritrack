@@ -212,12 +212,8 @@ supabaseClient.auth.onAuthStateChange(async (event, session) => {
         return;
       }
 
-      showLoader('Loading profile...');
-      
-      const wakeUpTimeout = setTimeout(() => {
-        const msgEl = document.getElementById('loaderMsg');
-        if (msgEl) msgEl.textContent = 'Waking up database... (this may take up to 30s)';
-      }, 5000);
+      // Instead of blocking loader, show non-blocking status on auth screen
+      showAuthError('Loading profile...', true);
 
       // Check if user has body_stats in the database
       const { data: userProfile, error } = await supabaseClient
@@ -226,7 +222,10 @@ supabaseClient.auth.onAuthStateChange(async (event, session) => {
         .eq('id', session.user.id)
         .single();
         
-      clearTimeout(wakeUpTimeout);
+      if (error && error.code !== 'PGRST116') {
+         showAuthError('Error connecting to database. Please try again.');
+         return;
+      }
 
       const hasProfile = userProfile && (userProfile.body_stats || userProfile.dob || userProfile.gender);
       if (hasProfile) {
