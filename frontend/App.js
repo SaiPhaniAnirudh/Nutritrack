@@ -101,7 +101,10 @@ async function handleGoogleLogin() {
   try {
     const { data, error } = await supabaseClient.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: window.location.origin + window.location.pathname }
+      options: { 
+        redirectTo: window.location.origin + window.location.pathname,
+        queryParams: { prompt: 'select_account' }
+      }
     });
     if (error) throw error;
   } catch (err) {
