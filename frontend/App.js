@@ -448,7 +448,7 @@ function handleLogoutUI() {
   currentUser = null;
   document.getElementById('mainApp').style.display = 'none';
   const aSec = document.getElementById('authSection');
-  if (aSec) aSec.style.display = 'block';
+  if (aSec) aSec.style.display = 'flex';
   document.getElementById('loginEmail').value = '';
   document.getElementById('loginPassword').value = '';
   hideLoader();
