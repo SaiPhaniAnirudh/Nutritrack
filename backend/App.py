@@ -733,9 +733,9 @@ def ai_analyze():
                     fname = item.get('food_name', item.get('name', ''))
                     match = _find_closest_food(fname)
                     if match:
-                        item['calories'] = match.get('cal', 0)
-                        item['protein_g'] = match.get('pro', 0)
-                        item['carbs_g'] = match.get('carb', 0)
+                        item['calories'] = match.get('calories', 0)
+                        item['protein_g'] = match.get('protein', 0)
+                        item['carbs_g'] = match.get('carbs', 0)
                         item['fat_g'] = match.get('fat', 0)
                         item['fiber_g'] = match.get('fiber', 0)
                         item['sugar_g'] = match.get('sugar', 0)
