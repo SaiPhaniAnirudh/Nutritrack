@@ -71,7 +71,69 @@ function closeNonFoodModal() {
 // ─────────────────────────────────────────────────
 const SUPABASE_URL = 'https://agzopmiiswitorldacud.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFnem9wbWlpc3dpdG9ybGRhY3VkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxMzI5MjEsImV4cCI6MjA5NzcwODkyMX0.BsazyuwecNc5ZWMxxxNEtL0tUM99JJQLXJj3Gv6Iupc';
-const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// This used to be a bare, unguarded `window.supabase.createClient(...)` call.
+// If the supabase-js CDN script (cdn.jsdelivr.net) fails to load — or if the
+// browser's storage/tracking-prevention feature causes createClient()'s
+// internal localStorage access to throw (both are known to happen under
+// Edge/Chrome "strict" tracking prevention) — that call throws a plain,
+// uncaught error at the top of this script. Because it's the very first
+// executable statement in App.js, that throw halts *all* remaining code in
+// this file, including the auth-state listener registration a few lines
+// down. Since #mainApp and #authSection both default to display:none, the
+// result is a permanently blank page with no error shown to the user at
+// all (only visible via DevTools console) — this is the most likely cause
+// of the "blank page" reports. Now guarded, with a real visible fallback.
+let supabaseClient;
+try {
+  if (!window.supabase) {
+    throw new Error('supabase-js failed to load from cdn.jsdelivr.net');
+  }
+  supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+} catch (err) {
+  console.error('[NutriTrack] Supabase init failed — showing fallback error UI:', err);
+  const showFatalError = () => {
+    const authSec = document.getElementById('authSection');
+    const target = authSec || document.body;
+    target.style.display = 'flex';
+    target.style.alignItems = 'center';
+    target.style.justifyContent = 'center';
+    target.style.minHeight = '100vh';
+    target.innerHTML = `
+      <div style="max-width:440px;text-align:center;padding:2rem;font-family:inherit;">
+        <div style="font-size:2.5rem;margin-bottom:0.5rem;">⚠️</div>
+        <h2 style="margin:0 0 1rem;">Couldn't load NutriTrack</h2>
+        <p style="opacity:0.75;line-height:1.5;margin-bottom:1.5rem;">
+          A required script failed to load. This usually happens when a browser's
+          tracking/privacy protection (e.g. Edge or Chrome "strict" tracking
+          prevention) blocks cdn.jsdelivr.net, or when you're offline.
+          Try disabling strict tracking prevention for this site, or reload.
+        </p>
+        <button onclick="location.reload()"
+          style="padding:0.7rem 1.4rem;border-radius:8px;border:none;background:#3ecf8e;color:#fff;font-weight:600;cursor:pointer;font-size:1rem;">
+          Reload page
+        </button>
+      </div>`;
+  };
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', showFatalError);
+  } else {
+    showFatalError();
+  }
+  // Minimal no-op stand-in so any later code that references
+  // supabaseClient.auth.* below doesn't throw a second, more confusing
+  // error on top of the one we already showed the user.
+  supabaseClient = {
+    auth: {
+      onAuthStateChange: () => ({ data: { subscription: { unsubscribe() { } } } }),
+      getSession: async () => ({ data: { session: null } }),
+      signOut: async () => { },
+      signInWithPassword: async () => ({ error: new Error('App failed to initialize') }),
+      signUp: async () => ({ error: new Error('App failed to initialize') }),
+      signInWithOAuth: async () => ({ error: new Error('App failed to initialize') }),
+    },
+  };
+}
 
 function showAuthError(msg, isSuccess = false) {
   const el = isSuccess ? document.getElementById('authSuccess') : document.getElementById('authError');
@@ -2380,9 +2442,16 @@ async function _callNutriBot(message) {
 
   // Client-side fallback: call LLM server directly with local log context
   const context = _buildLocalChatContext();
-  const llmUrl = window.LLM_SERVER_URL || 'https://energyvenom-nutritrack-llm.hf.space';
+  // NOTE: window.LLM_SERVER_URL is set (in index.html) to the *analyze*
+  // endpoint's full URL (".../api/ai/analyze"), not a bare origin. Appending
+  // "/api/ai/chat" directly onto it used to produce a malformed URL like
+  // ".../api/ai/analyze/api/ai/chat", which 404'd every time this fallback
+  // ran. Strip the known /api/ai/analyze suffix (if present) to get the
+  // real base origin first.
+  const llmBase = (window.LLM_SERVER_URL || 'https://energyvenom-nutritrack-llm.hf.space/api/ai/analyze')
+    .replace(/\/api\/ai\/analyze\/?$/, '');
   try {
-    const res = await fetch(`${llmUrl}/api/ai/chat`, {
+    const res = await fetch(`${llmBase}/api/ai/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message, context }),
