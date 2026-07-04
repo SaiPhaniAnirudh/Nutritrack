@@ -1,4 +1,3 @@
-
 /* ═══════════════════════════════════════════════════
    NutriTrack — app.js  v2.0
    Changes vs v1:
@@ -82,7 +81,7 @@ function showAuthError(msg, isSuccess = false) {
     el.textContent = msg;
     el.style.display = 'block';
   }
-  
+
   if (!isSuccess) {
     document.querySelectorAll('.submit-btn').forEach(btn => {
       btn.disabled = false;
@@ -106,7 +105,7 @@ async function handleGoogleLogin() {
   try {
     const { data, error } = await supabaseClient.auth.signInWithOAuth({
       provider: 'google',
-      options: { 
+      options: {
         redirectTo: window.location.origin + window.location.pathname,
         queryParams: { prompt: 'select_account' }
       }
@@ -144,7 +143,7 @@ async function handleEmailLogin(event) {
     });
 
     if (signInError) throw signInError;
-    
+
     // Explicitly load profile instead of relying on state change listener
     // because if session is already active, listener might not fire a NEW event!
     if (signInData && signInData.session) {
@@ -163,7 +162,7 @@ async function handleEmailRegister(event) {
   const name = document.getElementById('regName').value.trim();
   const email = document.getElementById('regEmail').value.trim();
   const pw = document.getElementById('regPassword').value;
-  
+
   if (!name || !email || !pw) return showAuthError('⚠️ Name, email, and password required.');
 
   const btn = event && event.target ? event.target : document.querySelectorAll('.submit-btn')[1];
@@ -192,7 +191,7 @@ async function handleEmailRegister(event) {
     if (data.user && data.user.identities && data.user.identities.length === 0) {
       throw new Error("Account already exists with this email.");
     }
-    
+
     clearTimeout(wakeTimeout);
     if (btn) {
       btn.disabled = false;
@@ -254,10 +253,10 @@ async function loadProfileForSession(session) {
       .select('*')
       .eq('id', session.user.id)
       .single();
-      
+
     if (error && error.code !== 'PGRST116') {
-       showAuthError('Error connecting to database. Please try again.');
-       return;
+      showAuthError('Error connecting to database. Please try again.');
+      return;
     }
 
     const hasProfile = userProfile && (userProfile.body_stats || userProfile.dob || userProfile.gender);
@@ -279,6 +278,8 @@ supabaseClient.auth.onAuthStateChange(async (event, session) => {
     if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
       if (!session) {
         document.getElementById('authSection').style.display = 'flex';
+        const mApp = document.getElementById('mainApp');
+        if (mApp) mApp.style.display = 'none';
         hideLoader();
         return;
       }
@@ -517,11 +518,11 @@ async function loginSuccess(userProfile) {
 
   initApp();
   fetchLogsFromCloud();
-  
+
   // Route to the correct tab based on URL path
   let path = window.location.pathname.replace('/', '');
   if (!path || path === 'index.html') path = 'dashboard';
-  
+
   const validPages = ['dashboard', 'track', 'history', 'profile'];
   if (validPages.includes(path)) {
     const btnId = path === 'dashboard' ? 1 : path === 'track' ? 2 : path === 'history' ? 3 : 4;
@@ -558,7 +559,7 @@ function initApp() {
   document.getElementById('timeGreet').textContent = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
 
   const displayName = currentUser.name || currentUser.email?.split('@')[0] || 'User';
-  
+
   const greetNameEl = document.getElementById('greetName');
   if (greetNameEl) greetNameEl.textContent = displayName.split(' ')[0];
   document.getElementById('greetDate').textContent = new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -615,7 +616,7 @@ function showPage(id, btn, pushState = true) {
   if (id === 'track') { autoSelectMeal(); searchFoods(document.getElementById('foodSearch').value || ''); }
   if (id === 'history') renderHistory();
   if (id === 'profile') renderProfile();
-  
+
   if (pushState && typeof pushState !== 'object') {
     if (window.location.pathname !== '/' + id) {
       window.history.pushState({ page: id }, '', '/' + id);
@@ -1410,7 +1411,7 @@ function searchFoods(query) {
 
   const container = document.getElementById('foodResults');
   if (results.length === 0) {
-    const safeQ = String(q).replace(/[&<>'"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'}[c]));
+    const safeQ = String(q).replace(/[&<>'"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[c]));
     container.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:2rem;color:var(--ink-50)">No foods found for "<strong>${safeQ}</strong>"</div>`;
     return;
   }
@@ -2283,7 +2284,7 @@ function _renderMessages() {
   container.innerHTML = _chatHistory.map((msg, i) => {
     const isUser = msg.role === 'user';
     // Convert **bold** markdown to <strong>
-    const safeText = String(msg.text).replace(/[&<>'"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'}[c]));
+    const safeText = String(msg.text).replace(/[&<>'"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[c]));
     const formatted = safeText
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       .replace(/\n/g, '<br>');

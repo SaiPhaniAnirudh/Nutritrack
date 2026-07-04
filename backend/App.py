@@ -439,7 +439,16 @@ def _find_closest_food(name):
     return None
 
 def _enrich_with_rag(item, original_name=None):
-    """Takes a parsed item dict (with a food_name), queries RAG, and enriches it if found. Modifies in place."""
+    """Takes a parsed item dict (with a food_name), queries RAG, and enriches it if found. Modifies in place.
+
+    NOTE: base_foods (see foods_seed.sql) has no vit_d/iron/folate columns —
+    only calories/protein/carbs/fat/fiber/sugar/sodium/chol. So match.get('vit_d'/'iron'/'folate', 0.0)
+    below will always fall back to 0 for RAG-matched foods; these three are
+    only ever populated when the LLM itself estimates them (MLLM Estimation
+    path). This is a real data gap, not a bug — flagging so it isn't
+    mistaken for one. Fixing it properly means adding those columns and
+    populating them with real values, not guessing numbers.
+    """
     fname = original_name or item.get('food_name', item.get('name', ''))
     match = _find_closest_food(fname)
     if match:
@@ -723,6 +732,9 @@ def ai_analyze_stream():
             stream=True,
             timeout=120
         )
+        if resp.status_code != 200:
+            return jsonify({'error': 'LLM server error'}), 502
+
         def generate():
             for line in resp.iter_lines():
                 if not line:
@@ -756,7 +768,19 @@ def ai_analyze_stream():
                             yield f"{decoded}\n\n".encode('utf-8')
                 else:
                     yield f"{decoded}\n\n".encode('utf-8')
-        return app.response_class(generate(), content_type='text/event-stream')
+        return app.response_class(
+            generate(),
+            content_type='text/event-stream',
+            headers={
+                'Cache-Control':     'no-cache',
+                # Disable reverse-proxy buffering (nginx on HF Spaces, etc.) —
+                # without this, the whole SSE stream can get buffered and sent
+                # as one chunk, which defeats the point of streaming: heartbeats
+                # exist specifically to keep the connection alive and avoid
+                # HF's 60-second gateway timeout on slow cold-start inference.
+                'X-Accel-Buffering': 'no',
+            }
+        )
     except requests.exceptions.ConnectionError:
         return jsonify({
             'error': 'Multimodal LLM server not running. Start it with: python llm/Llm_server.py'
