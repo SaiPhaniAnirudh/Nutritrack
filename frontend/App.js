@@ -199,10 +199,21 @@ async function handleEmailLogin(event) {
   }
 
   try {
-    const { data: signInData, error: signInError } = await supabaseClient.auth.signInWithPassword({
+    const signInPromise = supabaseClient.auth.signInWithPassword({
       email: email,
       password: pw,
     });
+    // The "Waking Database" text above was only ever a hopeful UI hint —
+    // there was no actual bound on this call, so a paused/slow Supabase
+    // project could hang it indefinitely with zero recovery. Race it
+    // against a real timeout so it fails predictably instead. (The first
+    // attempt reaching Supabase's servers typically still wakes the
+    // project even if it times out client-side — which is why retrying,
+    // or logging in via Google first, tends to work right after.)
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('TIMEOUT')), 25000)
+    );
+    const { data: signInData, error: signInError } = await Promise.race([signInPromise, timeoutPromise]);
 
     if (signInError) throw signInError;
 
@@ -216,7 +227,11 @@ async function handleEmailLogin(event) {
     }
   } catch (err) {
     clearTimeout(wakeTimeout);
-    showAuthError('⚠️ ' + err.message);
+    if (err && err.message === 'TIMEOUT') {
+      showAuthError('⚠️ Login timed out — the database may still be waking up from sleep. Please try again in a few seconds.');
+    } else {
+      showAuthError('⚠️ ' + err.message);
+    }
   }
 }
 
@@ -239,7 +254,7 @@ async function handleEmailRegister(event) {
   }
 
   try {
-    const { data, error } = await supabaseClient.auth.signUp({
+    const signUpPromise = supabaseClient.auth.signUp({
       email: email,
       password: pw,
       options: {
@@ -248,6 +263,10 @@ async function handleEmailRegister(event) {
         }
       }
     });
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('TIMEOUT')), 25000)
+    );
+    const { data, error } = await Promise.race([signUpPromise, timeoutPromise]);
 
     if (error) throw error;
     if (data.user && data.user.identities && data.user.identities.length === 0) {
@@ -267,7 +286,11 @@ async function handleEmailRegister(event) {
       btn.disabled = false;
       btn.innerHTML = originalText;
     }
-    showAuthError('⚠️ ' + err.message);
+    if (err && err.message === 'TIMEOUT') {
+      showAuthError('⚠️ Sign-up timed out — the database may still be waking up from sleep. Please try again in a few seconds.');
+    } else {
+      showAuthError('⚠️ ' + err.message);
+    }
   }
 }
 
@@ -291,13 +314,21 @@ async function handleForgotPassword() {
 
   showLoader('Sending reset link...');
   try {
-    const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+    const resetPromise = supabaseClient.auth.resetPasswordForEmail(email, {
       redirectTo: window.location.origin + window.location.pathname,
     });
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('TIMEOUT')), 25000)
+    );
+    const { error } = await Promise.race([resetPromise, timeoutPromise]);
     if (error) throw error;
     showAuthError('Reset link sent to your email!', true);
   } catch (err) {
-    showAuthError('⚠️ ' + err.message);
+    if (err && err.message === 'TIMEOUT') {
+      showAuthError('⚠️ Timed out — the database may still be waking up from sleep. Please try again in a few seconds.');
+    } else {
+      showAuthError('⚠️ ' + err.message);
+    }
   } finally {
     hideLoader();
   }
@@ -362,6 +393,27 @@ supabaseClient.auth.onAuthStateChange(async (event, session) => {
     if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
       _authResolved = true;
       if (!session) {
+        // A null session specifically on INITIAL_SESSION (the check that
+        // runs once on page load) is ambiguous: it can mean "genuinely
+        // logged out", OR it can mean supabase-js's own internal
+        // token-refresh network call failed transiently (e.g. a paused/
+        // waking Supabase project — this project has had DB-pause issues
+        // before, see .github/workflows/keepalive.yml). Both look
+        // identical here. Rather than immediately bouncing a real,
+        // still-valid session to the login screen, do one quick explicit
+        // re-check first.
+        if (event === 'INITIAL_SESSION') {
+          try {
+            const retryTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 8000));
+            const { data: retryData } = await Promise.race([supabaseClient.auth.getSession(), retryTimeout]);
+            if (retryData && retryData.session) {
+              await loadProfileForSession(retryData.session);
+              return;
+            }
+          } catch (e) {
+            // Retry itself failed/timed out — fall through to showing login.
+          }
+        }
         document.getElementById('authSection').style.display = 'flex';
         const mApp = document.getElementById('mainApp');
         if (mApp) mApp.style.display = 'none';
