@@ -128,11 +128,11 @@ Compress(app)
 # Rate limiter setup
 if _has_limiter:
     limiter = Limiter(
-    get_remote_address, app=app,
-    default_limits=['1000 per hour'],
-    storage_uri='memory://'
-)
-    print("  Rate limiter active (200 req/hr default)")
+        get_remote_address, app=app,
+        default_limits=['1000 per hour'],
+        storage_uri='memory://'
+    )
+    print("  Rate limiter active (1000 req/hr default)")
 else:
     from contextlib import contextmanager
     class _NoopLimiter:
