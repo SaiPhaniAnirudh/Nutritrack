@@ -14,7 +14,7 @@
  *   - Images                           → Stale While Revalidate
  */
 
-const CACHE_NAME = 'nutritrack-v12'; // bumped from v11 to evict stale HTML cached under the old Cache-First strategy
+const CACHE_NAME = 'nutritrack-v13'; // bumped again (v12->v13) to force-evict any client still on the pre-fix App.js, since same-URL assets are Cache-First and won't refetch on their own
 const APP_SHELL = [
   '/',
   '/index.html',
