@@ -13,7 +13,7 @@
 - 🍛 **Indian Cuisine Specialist** — Built-in offline fallback database covering Biryani, Dosa, Dal, Paratha, and 80+ other regional foods.
 - 🧮 **Comprehensive Macro Tracking** — Calculates Calories, Protein, Carbs, Fat, Fiber, Sugar, Sodium, and Cholesterol.
 - 📊 **30-Day Progress History** — Daily calorie budget bars, weekly macro breakdowns, and consecutive streak tracking.
-- 🔒 **Secure Offline Auth** — Multi-device register/login with passwords hashed using SHA-256 (WebCrypto API).
+- 🔒 **Secure Auth via Supabase** — Email/password and Google OAuth, with multi-device session sync.
 - 📱 **Progressive Web App (PWA)** — Install directly onto your mobile home screen with full offline capability and service worker caching.
 - 📱 **Responsive Mobile Design** — Bottom navigation bar with dynamic active-tab sync, and a dashboard quick-access banner for mobile diet planning.
 - 🛡️ **SigLIP Food-Only Rejection Guard** — Built-in zero-shot classifier that automatically filters out non-food uploads (e.g. hands, body parts, or household items) before wasting LLM API cycles.
@@ -249,11 +249,12 @@ OLLAMA_MODEL=llava-phi3
     ```
 
 ### 2. User Authentication
+Registration, login, logout, and Google OAuth are all handled client-side via
+[Supabase Auth](https://supabase.com/docs/guides/auth) — the backend never
+sees a password. It only verifies the Supabase-issued JWT on the routes below.
+
 | Method | Endpoint | Description |
 |---|---|---|
-| `POST` | `/api/auth/register` | Create a new user profile |
-| `POST` | `/api/auth/login` | Log in and receive a secure JWT |
-| `POST` | `/api/auth/refresh` | Refresh an expiring session token |
 | `GET` | `/api/auth/me` | Fetch profile configurations and calorie targets |
 | `PUT` | `/api/auth/update` | Update daily calorie/macro goals and profile |
 
