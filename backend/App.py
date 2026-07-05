@@ -3,12 +3,13 @@ NutriTrack — backend/App.py
 Flask REST API backend
 
 Endpoints:
-  POST /api/auth/register      — create account (requires verified OTP token)
-  POST /api/auth/login         — login, get JWT
-  POST /api/auth/refresh       — refresh access token
-  GET  /api/auth/me            — current user info
-  POST /api/auth/send-otp      — send 6-digit OTP to email for verification
-  POST /api/auth/verify-otp    — verify OTP, receive short-lived verified token
+  GET  /api/auth/me            — current user info (requires Supabase JWT)
+  PUT  /api/auth/update        — update profile / body stats / goals
+
+  Note: registration, login, refresh, and email verification are NOT
+  handled here — they're done entirely client-side via Supabase Auth
+  (see frontend/App.js, supabaseClient.auth.*). This backend only
+  verifies the Supabase-issued JWT on protected routes.
 
   GET  /api/logs               — get logs (?date=YYYY-MM-DD or ?days=30)
   POST /api/logs               — add food log
@@ -16,9 +17,10 @@ Endpoints:
   GET  /api/logs/summary       — daily totals (?days=30)
 
   POST /api/ai/analyze         — AI food photo via Ollama/llava-phi3 LLM
+  POST /api/ai/analyze/stream  — same, but streamed via SSE (avoids HF Space's 60s gateway timeout)
   POST /api/ai/chat            — AI nutritionist chatbot (proxied to LLM server)
   GET  /api/analytics/streak   — logging streak
-  GET  /api/health             — health check
+  GET  /api/health              — health check
 
 Start (from project root):
     pip install -r requirements.txt
@@ -616,12 +618,23 @@ def add_log():
 @jwt_required()
 def delete_log(log_id):
     uid = get_jwt_identity()
-    log = FoodLog.query.filter_by(id=log_id, user_id=uid).first()
-    if not log:
+    # FoodLog.id is an Integer column — validate before it ever reaches the
+    # DB. Previously this route took any string and passed it straight into
+    # filter_by(id=...) with no try/except; a non-numeric id (e.g. a stale
+    # client-side temp id) could raise an unhandled DB-level error instead
+    # of a clean 404.
+    if not log_id.isdigit():
         return jsonify({'error': 'Log not found'}), 404
-    db.session.delete(log)
-    db.session.commit()
-    return jsonify({'deleted': True})
+    try:
+        log = FoodLog.query.filter_by(id=int(log_id), user_id=uid).first()
+        if not log:
+            return jsonify({'error': 'Log not found'}), 404
+        db.session.delete(log)
+        db.session.commit()
+        return jsonify({'deleted': True})
+    except Exception as e:
+        print(f"Error deleting log: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
 
 
 @app.route('/api/logs/summary', methods=['GET'])
@@ -833,7 +846,7 @@ def ai_chat():
         })
 
     context = {
-        'user_name':  user.name.split()[0],
+        'user_name':  (user.name.split()[0] if user.name and user.name.strip() else 'there'),
         'goals': {
             'calories': user.goal_calories,
             'protein':  user.goal_protein,

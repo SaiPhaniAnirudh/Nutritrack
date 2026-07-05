@@ -16,9 +16,9 @@
   <link rel="apple-touch-icon" href="/icons/icon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="/Style.css?v=10">
+  <link rel="stylesheet" href="/Style.css?v=11">
   <link
-    href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;0,9..144,900;1,9..144,300&family=DM+Sans:wght@300;400;500&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;0,9..144,900;1,9..144,300&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
     rel="stylesheet" media="print" onload="this.media='all'">
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -106,108 +106,157 @@
   <!-- ════════════════════════════════════════
      AUTH
 ════════════════════════════════════════ -->
-  <div id="authSection"
-    style="display: none; align-items: center; justify-content: center; min-height: 100vh; padding: 2rem;">
-    <div class="auth-wrapper" style="width: 100%; max-width: 900px;">
-      <div class="auth-card"
-        style="display: flex; flex-direction: row; flex-wrap: wrap; align-items: stretch; padding: 0; overflow: hidden; background: var(--white); border-radius: 24px; border: 1px solid var(--border); box-shadow: var(--shadow-lg); max-width: 100%;">
+  <div id="authSection" class="auth-shell">
+    <div class="auth-blobs" aria-hidden="true">
+      <div class="auth-blob auth-blob-1"></div>
+      <div class="auth-blob auth-blob-2"></div>
+      <div class="auth-blob auth-blob-3"></div>
+    </div>
 
-        <!-- Left Side: Email/Password -->
-        <div class="auth-left"
-          style="flex: 1; min-width: 320px; padding: 3.5rem; display: flex; flex-direction: column; justify-content: center; position: relative;">
-          <div class="auth-logo" style="margin-bottom: 2rem; text-align: left;">
-            <div class="logo-mark"
-              style="width: auto; height: auto; background: transparent; border: none; box-shadow: none; margin-bottom: 0; display: inline-flex;">
-              <img src="/logo-nav.png" alt="Auth Logo" style="width: 220px; height: auto;" />
+    <div class="auth-container">
+      <div class="auth-panel auth-panel-form">
+        <div class="auth-logo">
+          <img src="/logo-nav.png" alt="NutriTrack" class="auth-logo-img" />
+        </div>
+
+        <h1 class="auth-headline">Know exactly<br>what's on your plate.</h1>
+        <p class="auth-subhead">Snap a photo — our AI identifies the dish and logs your macros in seconds.</p>
+
+        <div id="authError" class="auth-error"></div>
+        <div id="authSuccess" class="auth-error auth-success"></div>
+
+        <!-- LOGIN FORM -->
+        <div id="loginForm">
+          <div class="field-group field-icon-group">
+            <label for="loginEmail">Email Address</label>
+            <div class="input-icon-wrap">
+              <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                xmlns="http://www.w3.org/2000/svg">
+                <path
+                  d="M3 6.5C3 5.67 3.67 5 4.5 5h15c.83 0 1.5.67 1.5 1.5v11c0 .83-.67 1.5-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5v-11Z"
+                  stroke="currentColor" stroke-width="1.6" />
+                <path d="m4 6.5 8 6.5 8-6.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"
+                  stroke-linejoin="round" />
+              </svg>
+              <input type="email" id="loginEmail" placeholder="you@example.com" autocomplete="email">
             </div>
-            <p style="color: var(--ink-50); margin-top: 0.8rem; font-size: 0.95rem;">Sign in to continue your journey
-            </p>
           </div>
-
-          <div id="authError" class="auth-error" style="display: none; margin-bottom: 1rem;"></div>
-          <div id="authSuccess" class="auth-error"
-            style="display: none; margin-bottom: 1rem; background: rgba(62,207,142,0.1); color: #3ecf8e; border-color: rgba(62,207,142,0.3);">
+          <div class="field-group field-icon-group">
+            <div class="field-label-row">
+              <label for="loginPassword">Password</label>
+              <a href="#" class="auth-link-small" onclick="handleForgotPassword()">Forgot password?</a>
+            </div>
+            <div class="input-icon-wrap">
+              <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                xmlns="http://www.w3.org/2000/svg">
+                <rect x="5" y="10.5" width="14" height="9" rx="2" stroke="currentColor" stroke-width="1.6" />
+                <path d="M8 10.5V7.5a4 4 0 1 1 8 0v3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+              </svg>
+              <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password">
+            </div>
           </div>
+          <button type="button" class="submit-btn auth-submit" onclick="handleEmailLogin(event)">Sign In &rarr;</button>
+          <p class="auth-switch-text">
+            Don't have an account? <a href="#" onclick="showRegisterForm()">Sign Up</a>
+          </p>
+        </div>
 
-          <!-- LOGIN FORM -->
-          <div id="loginForm">
-            <div class="field-group">
-              <label for="loginEmail">Email Address</label>
-              <input type="email" id="loginEmail" placeholder="you@example.com">
+        <!-- REGISTER FORM (Hidden by default) -->
+        <div id="registerForm" style="display: none;">
+          <div class="field-group field-icon-group">
+            <label for="regName">Full Name</label>
+            <div class="input-icon-wrap">
+              <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="8" r="3.3" stroke="currentColor" stroke-width="1.6" />
+                <path d="M5 19.5c1.4-3.4 4.2-5 7-5s5.6 1.6 7 5" stroke="currentColor" stroke-width="1.6"
+                  stroke-linecap="round" />
+              </svg>
+              <input type="text" id="regName" placeholder="John Doe" autocomplete="name">
             </div>
-            <div class="field-group" style="position: relative;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
-                <label for="loginPassword" style="margin-bottom: 0;">Password</label>
-                <a href="#" onclick="handleForgotPassword()"
-                  style="font-size: 0.8rem; color: var(--kiwi); text-decoration: none; font-weight: 600;">Forgot
-                  password?</a>
-              </div>
-              <input type="password" id="loginPassword" placeholder="••••••••">
-            </div>
-            <button type="button" class="submit-btn" onclick="handleEmailLogin()"
-              style="margin-top: 0.5rem; margin-bottom: 1.5rem; font-size: 1rem; padding: 0.9rem; width: 100%;">Sign In
-              &rarr;</button>
-            <p style="font-size: 0.9rem; color: var(--ink-50); text-align: center;">
-              Don't have an account? <a href="#" onclick="showRegisterForm()"
-                style="color: var(--kiwi); font-weight: 600; text-decoration: none;">Sign Up</a>
-            </p>
           </div>
+          <div class="field-group field-icon-group">
+            <label for="regEmail">Email Address</label>
+            <div class="input-icon-wrap">
+              <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                xmlns="http://www.w3.org/2000/svg">
+                <path
+                  d="M3 6.5C3 5.67 3.67 5 4.5 5h15c.83 0 1.5.67 1.5 1.5v11c0 .83-.67 1.5-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5v-11Z"
+                  stroke="currentColor" stroke-width="1.6" />
+                <path d="m4 6.5 8 6.5 8-6.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"
+                  stroke-linejoin="round" />
+              </svg>
+              <input type="email" id="regEmail" placeholder="you@example.com" autocomplete="email">
+            </div>
+          </div>
+          <div class="field-group field-icon-group">
+            <label for="regPassword">Password</label>
+            <div class="input-icon-wrap">
+              <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                xmlns="http://www.w3.org/2000/svg">
+                <rect x="5" y="10.5" width="14" height="9" rx="2" stroke="currentColor" stroke-width="1.6" />
+                <path d="M8 10.5V7.5a4 4 0 1 1 8 0v3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+              </svg>
+              <input type="password" id="regPassword" placeholder="••••••••" autocomplete="new-password">
+            </div>
+          </div>
+          <button type="button" class="submit-btn auth-submit" onclick="handleEmailRegister(event)">Create Account
+            &rarr;</button>
+          <p class="auth-switch-text">
+            Already have an account? <a href="#" onclick="showLoginForm()">Sign In</a>
+          </p>
+        </div>
+      </div>
 
-          <!-- REGISTER FORM (Hidden by default) -->
-          <div id="registerForm" style="display: none;">
-            <div class="field-group">
-              <label for="regName">Full Name</label>
-              <input type="text" id="regName" placeholder="John Doe">
+      <!-- Right Side: signature showcase + Google OAuth -->
+      <div class="auth-panel auth-panel-showcase">
+        <div class="scan-showcase" aria-hidden="true">
+          <div class="scan-card scan-card-1">
+            <span class="scan-emoji">🥗</span>
+            <div class="scan-info">
+              <span class="scan-name">Paneer Tikka Bowl</span>
+              <span class="scan-kcal">340 kcal &middot; 24g protein</span>
             </div>
-            <div class="field-group">
-              <label for="regEmail">Email Address</label>
-              <input type="email" id="regEmail" placeholder="you@example.com">
+            <span class="scan-badge">AI matched</span>
+          </div>
+          <div class="scan-card scan-card-2">
+            <span class="scan-emoji">🍛</span>
+            <div class="scan-info">
+              <span class="scan-name">Dal Tadka &amp; Rice</span>
+              <span class="scan-kcal">410 kcal &middot; 14g protein</span>
             </div>
-            <div class="field-group">
-              <label for="regPassword">Password</label>
-              <input type="password" id="regPassword" placeholder="••••••••">
+            <span class="scan-badge">AI matched</span>
+          </div>
+          <div class="scan-card scan-card-3">
+            <span class="scan-emoji">🥣</span>
+            <div class="scan-info">
+              <span class="scan-name">Greek Yogurt &amp; Berries</span>
+              <span class="scan-kcal">220 kcal &middot; 18g protein</span>
             </div>
-            <button type="button" class="submit-btn" onclick="handleEmailRegister()"
-              style="margin-top: 0.5rem; margin-bottom: 1.5rem; font-size: 1rem; padding: 0.9rem; width: 100%;">Create
-              Account &rarr;</button>
-            <p style="font-size: 0.9rem; color: var(--ink-50); text-align: center;">
-              Already have an account? <a href="#" onclick="showLoginForm()"
-                style="color: var(--kiwi); font-weight: 600; text-decoration: none;">Sign In</a>
-            </p>
+            <span class="scan-badge">AI matched</span>
           </div>
         </div>
 
-        <!-- Divider -->
-        <div class="auth-divider" style="width: 1px; background: var(--border); margin: 0;"></div>
+        <h3 class="showcase-title">Fast &amp; secure sign-in</h3>
+        <p class="showcase-sub">Continue with Google — no passwords to remember.</p>
 
-        <!-- Right Side: Google OAuth -->
-        <div class="auth-right"
-          style="flex: 1; min-width: 320px; padding: 3.5rem; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; background: var(--smoke);">
-          <div style="font-size: 3rem; margin-bottom: 1.5rem;">&#9889;</div>
-          <h3 style="margin-bottom: 1rem; font-weight: 700; font-size: 1.5rem; color: var(--ink);">Fast & Secure</h3>
-          <p
-            style="color: var(--ink-50); font-size: 0.95rem; line-height: 1.5; margin-bottom: 2.5rem; max-width: 280px;">
-            Log in instantly with your Google account. No passwords to remember.</p>
-
-          <button type="button" class="submit-btn" onclick="handleGoogleLogin()"
-            style="background: var(--white); color: var(--ink); font-weight: 600; font-size: 1rem; display: flex; align-items: center; justify-content: center; gap: 12px; border: 1px solid var(--border); padding: 0.9rem 1.5rem; border-radius: 12px; box-shadow: var(--shadow-sm); width: 100%; max-width: 280px; transition: transform 0.2s, box-shadow 0.2s; cursor: pointer;">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path
-                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                fill="#4285F4" />
-              <path
-                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                fill="#34A853" />
-              <path
-                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                fill="#FBBC05" />
-              <path
-                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                fill="#EA4335" />
-            </svg>
-            Continue with Google
-          </button>
-        </div>
+        <button type="button" class="google-btn" onclick="handleGoogleLogin()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path
+              d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+              fill="#4285F4" />
+            <path
+              d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+              fill="#34A853" />
+            <path
+              d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+              fill="#FBBC05" />
+            <path
+              d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+              fill="#EA4335" />
+          </svg>
+          Continue with Google
+        </button>
       </div>
     </div>
   </div>
