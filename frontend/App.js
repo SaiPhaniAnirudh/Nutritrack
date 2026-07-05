@@ -424,51 +424,20 @@ window.addEventListener('pageshow', (event) => {
   }
 });
 
-// ─────────────────────────────────────────────────
-//  HARD REFRESH DETECTION
-//  Product requirement: a normal refresh (F5 / browser refresh button)
-//  should preserve the session and current page. A hard refresh
-//  (Ctrl+Shift+R / Ctrl+F5) should instead force the user back to the
-//  login screen.
-//
-//  Heuristic: a hard/bypass reload explicitly skips the Service Worker for
-//  the navigation request in Chromium and Firefox, so the resulting page
-//  is NOT "controlled" by the SW even though one is already registered and
-//  active — a normal refresh IS controlled. This only counts as a "hard
-//  refresh" when a SW registration already exists, so a genuine first-ever
-//  visit (also uncontrolled, since there's no SW yet) isn't mistaken for
-//  one — which is fine anyway, since a new visitor has no session to
-//  preserve either way. Note this is a heuristic, not a guaranteed signal;
-//  it's the best one available client-side for this specific distinction.
-// ─────────────────────────────────────────────────
-const _hardRefreshCheck = (async () => {
-  try {
-    if (!('serviceWorker' in navigator)) return false;
-    const reg = await navigator.serviceWorker.getRegistration();
-    const hasExistingSW = !!reg;
-    const isControlled = !!navigator.serviceWorker.controller;
-    return hasExistingSW && !isControlled;
-  } catch (e) {
-    return false;
-  }
-})();
+// NOTE: an earlier version of this file tried to distinguish a normal
+// refresh from a hard refresh (Ctrl+Shift+R) using
+// navigator.serviceWorker.controller as a heuristic, to sign out only on
+// hard refresh. In real testing it came back null on *every* refresh, not
+// just hard ones, which meant normal refresh incorrectly signed people out
+// too — worse than not having the feature. There's no standard, guaranteed
+// browser API for this specific distinction, so it's been removed. Every
+// refresh (normal or hard) now consistently preserves the session and
+// current page, which is also the behavior almost all web apps use.
 
 supabaseClient.auth.onAuthStateChange(async (event, session) => {
   try {
     if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
       _authResolved = true;
-
-      if (event === 'INITIAL_SESSION' && session) {
-        const wasHardRefresh = await _hardRefreshCheck;
-        if (wasHardRefresh) {
-          await supabaseClient.auth.signOut();
-          document.getElementById('authSection').style.display = 'flex';
-          const mApp = document.getElementById('mainApp');
-          if (mApp) mApp.style.display = 'none';
-          hideLoader();
-          return;
-        }
-      }
 
       if (!session) {
         // A null session specifically on INITIAL_SESSION (the check that
