@@ -198,22 +198,30 @@ async function handleEmailLogin(event) {
     }, 3000);
   }
 
-  try {
-    const signInPromise = supabaseClient.auth.signInWithPassword({
-      email: email,
-      password: pw,
-    });
-    // The "Waking Database" text above was only ever a hopeful UI hint —
-    // there was no actual bound on this call, so a paused/slow Supabase
-    // project could hang it indefinitely with zero recovery. Race it
-    // against a real timeout so it fails predictably instead. (The first
-    // attempt reaching Supabase's servers typically still wakes the
-    // project even if it times out client-side — which is why retrying,
-    // or logging in via Google first, tends to work right after.)
+  // The first request to a paused/sleeping Supabase project both wakes it
+  // up AND is the one most likely to time out — so a single silent retry
+  // right after covers the common case automatically, instead of making
+  // the person manually click "Sign In" a second time themselves.
+  const attemptSignIn = () => {
+    const signInPromise = supabaseClient.auth.signInWithPassword({ email, password: pw });
     const timeoutPromise = new Promise((_, reject) =>
       setTimeout(() => reject(new Error('TIMEOUT')), 25000)
     );
-    const { data: signInData, error: signInError } = await Promise.race([signInPromise, timeoutPromise]);
+    return Promise.race([signInPromise, timeoutPromise]);
+  };
+
+  try {
+    let signInData, signInError;
+    try {
+      ({ data: signInData, error: signInError } = await attemptSignIn());
+    } catch (firstErr) {
+      if (firstErr && firstErr.message === 'TIMEOUT') {
+        if (btn) btn.innerHTML = 'Still waking up — retrying...';
+        ({ data: signInData, error: signInError } = await attemptSignIn());
+      } else {
+        throw firstErr;
+      }
+    }
 
     if (signInError) throw signInError;
 
@@ -227,8 +235,9 @@ async function handleEmailLogin(event) {
     }
   } catch (err) {
     clearTimeout(wakeTimeout);
+    if (btn) { btn.disabled = false; btn.innerHTML = originalText; }
     if (err && err.message === 'TIMEOUT') {
-      showAuthError('⚠️ Login timed out — the database may still be waking up from sleep. Please try again in a few seconds.');
+      showAuthError('⚠️ The database is taking unusually long to wake up. Please try again in a moment.');
     } else {
       showAuthError('⚠️ ' + err.message);
     }
@@ -253,20 +262,30 @@ async function handleEmailRegister(event) {
     }, 3000);
   }
 
-  try {
+  const attemptSignUp = () => {
     const signUpPromise = supabaseClient.auth.signUp({
       email: email,
       password: pw,
-      options: {
-        data: {
-          full_name: name
-        }
-      }
+      options: { data: { full_name: name } }
     });
     const timeoutPromise = new Promise((_, reject) =>
       setTimeout(() => reject(new Error('TIMEOUT')), 25000)
     );
-    const { data, error } = await Promise.race([signUpPromise, timeoutPromise]);
+    return Promise.race([signUpPromise, timeoutPromise]);
+  };
+
+  try {
+    let data, error;
+    try {
+      ({ data, error } = await attemptSignUp());
+    } catch (firstErr) {
+      if (firstErr && firstErr.message === 'TIMEOUT') {
+        if (btn) btn.innerHTML = 'Still waking up — retrying...';
+        ({ data, error } = await attemptSignUp());
+      } else {
+        throw firstErr;
+      }
+    }
 
     if (error) throw error;
     if (data.user && data.user.identities && data.user.identities.length === 0) {
@@ -287,7 +306,7 @@ async function handleEmailRegister(event) {
       btn.innerHTML = originalText;
     }
     if (err && err.message === 'TIMEOUT') {
-      showAuthError('⚠️ Sign-up timed out — the database may still be waking up from sleep. Please try again in a few seconds.');
+      showAuthError('⚠️ The database is taking unusually long to wake up. Please try again in a moment.');
     } else {
       showAuthError('⚠️ ' + err.message);
     }
@@ -388,10 +407,69 @@ async function loadProfileForSession(session) {
   }
 }
 
+// ─────────────────────────────────────────────────
+//  BFCACHE FIX (Google account-switching bug)
+//  When returning from Google's OAuth redirect, some browsers restore this
+//  page from the back-forward cache (bfcache) instead of re-running this
+//  script from scratch. That means Supabase's session/account detection
+//  (which only runs on a fresh script load) never re-fires for the NEW
+//  account — so switching Google accounts (sign out account A, sign in as
+//  account B) kept showing account A's already-loaded dashboard until the
+//  user did a manual refresh. Force a real reload whenever bfcache restore
+//  is detected, so the new session is always picked up immediately.
+// ─────────────────────────────────────────────────
+window.addEventListener('pageshow', (event) => {
+  if (event.persisted) {
+    location.reload();
+  }
+});
+
+// ─────────────────────────────────────────────────
+//  HARD REFRESH DETECTION
+//  Product requirement: a normal refresh (F5 / browser refresh button)
+//  should preserve the session and current page. A hard refresh
+//  (Ctrl+Shift+R / Ctrl+F5) should instead force the user back to the
+//  login screen.
+//
+//  Heuristic: a hard/bypass reload explicitly skips the Service Worker for
+//  the navigation request in Chromium and Firefox, so the resulting page
+//  is NOT "controlled" by the SW even though one is already registered and
+//  active — a normal refresh IS controlled. This only counts as a "hard
+//  refresh" when a SW registration already exists, so a genuine first-ever
+//  visit (also uncontrolled, since there's no SW yet) isn't mistaken for
+//  one — which is fine anyway, since a new visitor has no session to
+//  preserve either way. Note this is a heuristic, not a guaranteed signal;
+//  it's the best one available client-side for this specific distinction.
+// ─────────────────────────────────────────────────
+const _hardRefreshCheck = (async () => {
+  try {
+    if (!('serviceWorker' in navigator)) return false;
+    const reg = await navigator.serviceWorker.getRegistration();
+    const hasExistingSW = !!reg;
+    const isControlled = !!navigator.serviceWorker.controller;
+    return hasExistingSW && !isControlled;
+  } catch (e) {
+    return false;
+  }
+})();
+
 supabaseClient.auth.onAuthStateChange(async (event, session) => {
   try {
     if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
       _authResolved = true;
+
+      if (event === 'INITIAL_SESSION' && session) {
+        const wasHardRefresh = await _hardRefreshCheck;
+        if (wasHardRefresh) {
+          await supabaseClient.auth.signOut();
+          document.getElementById('authSection').style.display = 'flex';
+          const mApp = document.getElementById('mainApp');
+          if (mApp) mApp.style.display = 'none';
+          hideLoader();
+          return;
+        }
+      }
+
       if (!session) {
         // A null session specifically on INITIAL_SESSION (the check that
         // runs once on page load) is ambiguous: it can mean "genuinely
