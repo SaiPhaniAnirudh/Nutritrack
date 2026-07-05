@@ -12,8 +12,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Ping Supabase REST API
+        # SUPABASE_ANON_KEY must be added under
+        # Settings → Secrets and variables → Actions → New repository secret.
+        # (This is the public anon key, already exposed in frontend/App.js —
+        # moving it to a secret here is just for easier rotation, not because
+        # it was a new leak.)
+        env:
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
           curl --request GET \
             --url 'https://agzopmiiswitorldacud.supabase.co/rest/v1/base_foods?select=id&limit=1' \
-            --header 'apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFnem9wbWlpc3dpdG9ybGRhY3VkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxMzI5MjEsImV4cCI6MjA5NzcwODkyMX0.BsazyuwecNc5ZWMxxxNEtL0tUM99JJQLXJj3Gv6Iupc' \
-            --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFnem9wbWlpc3dpdG9ybGRhY3VkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxMzI5MjEsImV4cCI6MjA5NzcwODkyMX0.BsazyuwecNc5ZWMxxxNEtL0tUM99JJQLXJj3Gv6Iupc'
+            --header "apikey: ${SUPABASE_ANON_KEY}" \
+            --header "Authorization: Bearer ${SUPABASE_ANON_KEY}"
