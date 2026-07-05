@@ -46,7 +46,7 @@ if sys.platform == 'win32':
     except Exception:
         pass
 
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify
 from flask_compress import Compress
 from flask_cors import CORS
 
@@ -147,7 +147,6 @@ else:
 @app.route('/<path:path>')
 def serve_spa(path):
     if path.startswith('api/'):
-        from flask import jsonify
         return jsonify({"error": "Not found"}), 404
         
     # Check if the requested file physically exists in the frontend folder
@@ -205,11 +204,6 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
 }
 
 
-
-# JWT
-
-app.config['JWT_ACCESS_TOKEN_EXPIRES']  = timedelta(days=7)
-app.config['JWT_REFRESH_TOKEN_EXPIRES'] = timedelta(days=30)
 
 db  = SQLAlchemy(app)
 

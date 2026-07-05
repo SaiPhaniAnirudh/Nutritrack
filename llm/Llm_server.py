@@ -1181,9 +1181,12 @@ def nutribot_chat():
 
     # Try Ollama first, fall back to rule-based
     reply = None
+    used_ollama = False
     if engine and getattr(engine, 'loaded', False):
         try:
             reply = _nutribot_ollama(message, context)
+            if reply:
+                used_ollama = True
         except Exception as e:
             print(f'  [NutriBot] Ollama error: {e}')
 
@@ -1193,7 +1196,7 @@ def nutribot_chat():
 
     return jsonify({
         'reply':  reply,
-        'engine': type(engine).__name__ if engine and reply != _nutribot_rule_based(message, context) else 'rule_based',
+        'engine': type(engine).__name__ if used_ollama else 'rule_based',
     })
 
 
