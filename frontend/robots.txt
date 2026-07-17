@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://nutritrack-k96f.onrender.com/sitemap.xml
