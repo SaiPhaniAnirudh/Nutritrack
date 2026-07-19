@@ -436,6 +436,21 @@ window.addEventListener('pageshow', (event) => {
 
 supabaseClient.auth.onAuthStateChange(async (event, session) => {
   try {
+    if (event === 'TOKEN_REFRESHED') {
+      // Supabase silently renews the session's access token in the
+      // background (by default, roughly every ~55 minutes, before the
+      // ~1 hour expiry). currentUser.token was previously only ever set
+      // once at login time and never updated here — so after the first
+      // token expired, every authenticated backend call (food logging,
+      // profile updates, log deletion, chat) started failing with a
+      // rejected/expired token, silently, with no indication why, even
+      // though the user was still "logged in" as far as Supabase itself
+      // was concerned. Keep it in sync.
+      if (currentUser && session) {
+        currentUser.token = session.access_token;
+      }
+      return;
+    }
     if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
       _authResolved = true;
 
@@ -1636,6 +1651,33 @@ function searchFoods(query) {
   }).join('');
 }
 
+// Wraps fetch() with the current auth token, and retries ONCE on a 401 by
+// forcing a fresh session refresh first. This is a safety net on top of the
+// TOKEN_REFRESHED listener above: browsers routinely throttle timers in
+// background/inactive tabs, which can delay Supabase's automatic token
+// refresh past the token's actual expiry — so a user who leaves a tab
+// backgrounded for a while and comes back to log food could still hit a
+// stale token even with that listener in place. This catches that case too.
+async function _authFetch(url, options = {}) {
+  options.headers = { ...(options.headers || {}), 'Authorization': `Bearer ${currentUser.token}` };
+  let res = await fetch(url, options);
+  if (res.status === 401) {
+    try {
+      const { data, error } = await supabaseClient.auth.refreshSession();
+      if (!error && data && data.session) {
+        currentUser.token = data.session.access_token;
+        options.headers['Authorization'] = `Bearer ${currentUser.token}`;
+        res = await fetch(url, options);
+      }
+    } catch (e) {
+      // Refresh itself failed (e.g. truly signed out) — fall through with
+      // the original 401 response so the caller's existing error handling
+      // still applies.
+    }
+  }
+  return res;
+}
+
 async function addFoodToLog(food) {
   const backendUrl = window._BACKEND_URL !== undefined ? window._BACKEND_URL : '';
   const payload = {
@@ -1657,12 +1699,9 @@ async function addFoodToLog(food) {
   };
 
   try {
-    const res = await fetch(`${backendUrl}/api/logs`, {
+    const res = await _authFetch(`${backendUrl}/api/logs`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${currentUser.token}`
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
     if (res.ok) {
@@ -1671,6 +1710,7 @@ async function addFoodToLog(food) {
       refreshDashboard();
       showToast(`✓ ${food.name} added to ${currentMealType}`, 'success');
     } else {
+      console.error('addFoodToLog failed:', res.status, await res.text().catch(() => ''));
       showToast('Failed to add food to cloud.', 'error');
     }
   } catch (e) {
@@ -1681,16 +1721,14 @@ async function addFoodToLog(food) {
 async function removeLog(id) {
   const backendUrl = window._BACKEND_URL !== undefined ? window._BACKEND_URL : '';
   try {
-    const res = await fetch(`${backendUrl}/api/logs/${id}`, {
-      method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${currentUser.token}` }
-    });
+    const res = await _authFetch(`${backendUrl}/api/logs/${id}`, { method: 'DELETE' });
     if (res.ok) {
       window._foodLogs = window._foodLogs.filter(l => l.id !== id);
       refreshDashboard();
       renderHistory();
       showToast('Item removed', 'success');
     } else {
+      console.error('removeLog failed:', res.status, await res.text().catch(() => ''));
       showToast('Failed to remove item from cloud.', 'error');
     }
   } catch (e) {
@@ -1824,7 +1862,7 @@ function renderProfile() {
   document.getElementById('streakDays').textContent = streak;
 }
 
-function saveGoals() {
+async function saveGoals() {
   const newGoals = {
     calories: parseInt(document.getElementById('editCalGoal').value) || 2000,
     protein: parseInt(document.getElementById('editProtGoal').value) || 150,
@@ -1842,14 +1880,13 @@ function saveGoals() {
   // Save diet type change
   const dtSel = document.getElementById('editDietType');
   if (dtSel) currentUser.dietType = dtSel.value;
+  refreshDashboard();
+  renderProfile();
   try {
     const backendUrl = window._BACKEND_URL !== undefined ? window._BACKEND_URL : '';
-    fetch(`${backendUrl}/api/auth/update`, {
+    const res = await _authFetch(`${backendUrl}/api/auth/update`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${currentUser.token}`
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         goals: newGoals,
         body_stats: {
@@ -1857,10 +1894,16 @@ function saveGoals() {
         }
       })
     });
-  } catch (e) { console.error('Failed to update cloud profile'); }
-  refreshDashboard();
-  renderProfile();
-  showToast('✓ Goals & diet type saved!', 'success');
+    if (res.ok) {
+      showToast('✓ Goals & diet type saved!', 'success');
+    } else {
+      console.error('saveGoals failed:', res.status, await res.text().catch(() => ''));
+      showToast('⚠️ Saved locally, but failed to sync to cloud.', 'error');
+    }
+  } catch (e) {
+    console.error('Failed to update cloud profile', e);
+    showToast('⚠️ Saved locally, but failed to sync to cloud.', 'error');
+  }
 }
 
 // ─────────────────────────────────────────────────
@@ -2825,13 +2868,13 @@ handleLogout = function () {
 async function fetchLogsFromCloud() {
   const backendUrl = window._BACKEND_URL !== undefined ? window._BACKEND_URL : '';
   try {
-    const res = await fetch(`${backendUrl}/api/logs`, {
-      headers: { 'Authorization': `Bearer ${currentUser.token}` }
-    });
+    const res = await _authFetch(`${backendUrl}/api/logs`, {});
     if (res.ok) {
       window._foodLogs = await res.json();
       refreshDashboard();
       renderHistory();
+    } else {
+      console.error('fetchLogsFromCloud failed:', res.status, await res.text().catch(() => ''));
     }
   } catch (e) {
     console.error("Failed to fetch logs from cloud:", e);
