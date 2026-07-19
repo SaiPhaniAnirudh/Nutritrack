@@ -644,7 +644,7 @@ async function handleFinishOnboarding() {
   try {
     const { error } = await supabaseClient
       .from('users')
-      .upsert(payload, { onConflict: 'email' });
+      .upsert(payload, { onConflict: 'id' });
     if (error) throw error;
 
     document.getElementById('onboardingSection').style.display = 'none';
