@@ -428,6 +428,24 @@ class ViTFoodEngine:
             return label_l
         return label_l
 
+    def _score_crop(self, img):
+        """Run the SigLIP food-check + candidate scoring on one image/crop.
+        Returns (top_score, clip_results) or (0, None) if the crop doesn't
+        even pass the food-vs-not-food check."""
+        food_check_labels = [
+            "a photo of food",
+            "a photo of a person's face",
+            "a photo of a person",
+            "a photo of hands or body parts",
+            "a photo of an empty plate or table",
+            "a photo of an object that is not food"
+        ]
+        food_check = self.pipe_clip(img, candidate_labels=food_check_labels)
+        if food_check[0]['label'] != "a photo of food":
+            return 0.0, None
+        clip_results = self.pipe_clip(img, candidate_labels=_CLIP_CANDIDATES, hypothesis_template="a photo of {}")
+        return clip_results[0]['score'], clip_results
+
     def predict(self, image_b64: str) -> dict:
         t0 = time.time()
         if not self.loaded:
@@ -436,41 +454,48 @@ class ViTFoodEngine:
         raw = base64.b64decode(image_b64.split(',', 1)[1] if ',' in image_b64 else image_b64)
         img = Image.open(io.BytesIO(raw)).convert('RGB')
 
-        # ── SigLIP zero-shot food check ────────────────────────────────────────
+        # ── SigLIP zero-shot food check, with automatic multi-zoom retry ──────
+        # A single full-frame pass is usually enough and stays fast. But if the
+        # dish only fills a small part of the photo (plate on a busy table,
+        # food shot from too far back, etc.), the whole-image classification
+        # can come back low-confidence even though the food itself is easy to
+        # identify once isolated. Rather than always paying for extra passes,
+        # only try progressively tighter center-crops when the full image
+        # scored below ZOOM_RETRY_THRESHOLD, and keep whichever framing (full
+        # image or a given zoom level) produced the highest-confidence match.
+        # Each SigLIP pass is sub-second, so a couple of extra crops on the
+        # minority of low-confidence photos is cheap; the common confident
+        # case never pays this cost at all.
+        MIN_FOOD_SCORE      = 0.002   # below this: not food at all
+        ZOOM_RETRY_THRESHOLD = 0.01    # below this: worth trying a tighter crop
+
         if self.pipe_clip:
-            # Use more explicit non-food categories to catch faces, hands, and objects.
-            food_check_labels = [
-                "a photo of food",
-                "a photo of a person's face",
-                "a photo of a person",
-                "a photo of hands or body parts",
-                "a photo of an empty plate or table",
-                "a photo of an object that is not food"
-            ]
-            food_check = self.pipe_clip(img, candidate_labels=food_check_labels)
-            is_food_label = food_check[0]['label']
-            is_food_score = food_check[0]['score']
-            print(f"  [SigLIP] food check: {is_food_label} ({is_food_score*100:.1f}%)")
-            
-            # Reject if the top match is anything other than food, or if the food confidence is very low.
-            if is_food_label != "a photo of food":
-                return _not_food('SigLIP/siglip-base-patch16-224', 'image_classifier', int((time.time() - t0) * 1000))
+            best_score, best_results, best_label = 0.0, None, 'full frame'
+            top_score, clip_results = self._score_crop(img)
+            best_score, best_results = top_score, clip_results
 
-            # ── SigLIP zero-shot: score ALL candidate foods against image ──────────
-            clip_results = self.pipe_clip(img, candidate_labels=_CLIP_CANDIDATES, hypothesis_template="a photo of {}")
+            if top_score < ZOOM_RETRY_THRESHOLD:
+                w, h = img.size
+                for frac, label in ((0.8, '80% zoom'), (0.6, '60% zoom')):
+                    cw, ch = int(w * frac), int(h * frac)
+                    left, top_px = (w - cw) // 2, (h - ch) // 2
+                    crop = img.crop((left, top_px, left + cw, top_px + ch))
+                    c_score, c_results = self._score_crop(crop)
+                    print(f'  [SigLIP-zoom] {label}: top score {c_score:.5f}')
+                    if c_score > best_score:
+                        best_score, best_results, best_label = c_score, c_results, label
+                    if best_score >= ZOOM_RETRY_THRESHOLD:
+                        break  # good enough, stop zooming further
+
+            top_score, clip_results = best_score, best_results
             elapsed = int((time.time() - t0) * 1000)
-            print(f'  [SigLIP] {elapsed}ms — top5: '
-                  f'{[(r["label"], round(r["score"]*100,1)) for r in clip_results[:5]]}')
 
-            top_score = clip_results[0]['score']
-
-            # Minimum food confidence floor — if even the best food label scores
-            # below this threshold, nothing food-like was meaningfully identified.
-            # SigLIP sigmoid scores are typically >0.005 for a clear food match.
-            MIN_FOOD_SCORE = 0.002
-            if top_score < MIN_FOOD_SCORE:
+            if clip_results is None or top_score < MIN_FOOD_SCORE:
                 print(f'  [SigLIP] top food score {top_score:.5f} below floor {MIN_FOOD_SCORE} → not_food')
                 return _not_food('SigLIP/siglip-base-patch16-224', 'image_classifier', elapsed)
+
+            print(f'  [SigLIP] {elapsed}ms — best framing: {best_label} — top5: '
+                  f'{[(r["label"], round(r["score"]*100,1)) for r in clip_results[:5]]}')
 
             found, seen = [], set()
 

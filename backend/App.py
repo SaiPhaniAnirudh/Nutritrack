@@ -38,6 +38,18 @@ import base64
 import requests
 from datetime import datetime, timezone, timedelta
 
+from dotenv import load_dotenv, find_dotenv
+
+# Load .env BEFORE reading any environment variables below — this used to
+# happen much later in the file (after SUPABASE_URL/SUPABASE_KEY were
+# already read from os.environ), which meant local development via a .env
+# file silently failed with "Supabase not configured" since the file
+# hadn't been loaded yet at the point those variables were read. Production
+# on Render is unaffected either way, since it sets env vars directly on
+# the platform rather than via a .env file.
+load_dotenv(find_dotenv(usecwd=False, raise_error_if_not_found=False) or
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '.env'))
+
 # Windows Console Unicode/Emoji support
 if sys.platform == 'win32':
     try:
@@ -111,12 +123,6 @@ def jwt_required(optional=False, refresh=False):
 
 def get_jwt_identity():
     return getattr(g, 'user_id', None)
-
-from dotenv import load_dotenv, find_dotenv
-
-# Load .env from project root (works whether running from root or backend/ dir)
-load_dotenv(find_dotenv(usecwd=False, raise_error_if_not_found=False) or
-            os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '.env'))
 
 # ══════════════════════════════════════════════════
 #  APP SETUP
