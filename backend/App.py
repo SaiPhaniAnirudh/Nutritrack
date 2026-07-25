@@ -240,7 +240,12 @@ class User(db.Model):
     id         = db.Column(db.String(36), primary_key=True)
     name       = db.Column(db.String(120), nullable=False)
     email      = db.Column(db.String(200), unique=True, nullable=False)
-    password   = db.Column(db.String(200), nullable=True)    # bcrypt hash (nullable for Supabase auth)
+    # NOTE: password column removed — was dropped from the live Supabase
+    # table (unused leftover from a pre-Supabase-Auth prototype), but this
+    # model declaration was never updated to match. That drift caused every
+    # ORM query touching a user row to fail with `UndefinedColumn`, which
+    # broke every authenticated backend call (food logging, profile
+    # updates, everything) — see jwt_required()'s lazy user lookup above.
     created_at = db.Column(db.DateTime(timezone=True),
                            default=lambda: datetime.now(timezone.utc))
 
