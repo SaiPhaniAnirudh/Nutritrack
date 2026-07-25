@@ -278,6 +278,7 @@ class User(db.Model):
     goal_vit_d    = db.Column(db.Integer, default=15)
     goal_iron     = db.Column(db.Integer, default=18)
     goal_folate   = db.Column(db.Integer, default=400)
+    goal_water_ml = db.Column(db.Integer, default=2000)
 
     logs = db.relationship('FoodLog', backref='user', lazy=True,
                            cascade='all, delete-orphan')
@@ -311,6 +312,7 @@ class User(db.Model):
                 'vit_d':    self.goal_vit_d,
                 'iron':     self.goal_iron,
                 'folate':   self.goal_folate,
+                'water_ml': self.goal_water_ml,
             }
         }
 
@@ -364,6 +366,26 @@ class FoodLog(db.Model):
         }
 
 
+class WaterLog(db.Model):
+    __tablename__ = 'water_logs'
+
+    id        = db.Column(db.Integer, primary_key=True)
+    user_id   = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
+    date      = db.Column(db.String(10), nullable=False)   # YYYY-MM-DD
+    amount_ml = db.Column(db.Float, nullable=False)
+    logged_at = db.Column(db.DateTime(timezone=True),
+                          default=lambda: datetime.now(timezone.utc))
+
+    def to_dict(self):
+        return {
+            'id':        self.id,
+            'userId':    self.user_id,
+            'date':      self.date,
+            'amountMl':  self.amount_ml,
+            'logged_at': self.logged_at.isoformat(),
+        }
+
+
 with app.app_context():
     try:
         db.create_all()
@@ -377,6 +399,7 @@ with app.app_context():
             "goal_vit_d FLOAT DEFAULT 20",
             "goal_iron FLOAT DEFAULT 18",
             "goal_folate FLOAT DEFAULT 400",
+            "goal_water_ml INTEGER DEFAULT 2000",
             "dob VARCHAR(20)"
         ]
         for col in columns_to_add:
@@ -549,6 +572,7 @@ def update_profile():
     if 'vit_d' in goals:    user.goal_vit_d    = int(goals['vit_d'])
     if 'iron' in goals:     user.goal_iron     = int(goals['iron'])
     if 'folate' in goals:   user.goal_folate   = int(goals['folate'])
+    if 'water_ml' in goals: user.goal_water_ml = int(goals['water_ml'])
 
     db.session.commit()
     return jsonify(user.to_dict())
@@ -672,6 +696,63 @@ def logs_summary():
             summary[l.date]['meals']  += 1
 
     return jsonify(list(summary.values()))
+
+
+# ══════════════════════════════════════════════════
+#  WATER INTAKE
+# ══════════════════════════════════════════════════
+
+@app.route('/api/water', methods=['GET'])
+@jwt_required()
+def get_water():
+    """Water log entries for a given date (default: today)."""
+    uid  = get_jwt_identity()
+    date = request.args.get('date', datetime.now(timezone.utc).strftime('%Y-%m-%d'))
+    logs = WaterLog.query.filter_by(user_id=uid, date=date).order_by(WaterLog.logged_at).all()
+    total_ml = sum(l.amount_ml for l in logs)
+    return jsonify({'date': date, 'total_ml': total_ml, 'entries': [l.to_dict() for l in logs]})
+
+
+@app.route('/api/water', methods=['POST'])
+@jwt_required()
+def add_water():
+    """Log a water intake entry."""
+    uid  = get_jwt_identity()
+    data = request.get_json() or {}
+    try:
+        amount_ml = float(data.get('amount_ml', 0))
+    except (TypeError, ValueError):
+        return jsonify({'error': 'amount_ml must be a number'}), 400
+    if amount_ml <= 0:
+        return jsonify({'error': 'amount_ml must be positive'}), 400
+
+    date = data.get('date', datetime.now(timezone.utc).strftime('%Y-%m-%d'))
+    try:
+        log = WaterLog(user_id=uid, date=date, amount_ml=amount_ml)
+        db.session.add(log)
+        db.session.commit()
+        return jsonify(log.to_dict()), 201
+    except Exception as e:
+        print(f"⚠️ add_water error: {e}")
+        return jsonify({'error': 'Could not save water log. Please try again.'}), 500
+
+
+@app.route('/api/water/<string:log_id>', methods=['DELETE'])
+@jwt_required()
+def delete_water(log_id):
+    uid = get_jwt_identity()
+    if not log_id.isdigit():
+        return jsonify({'error': 'Log not found'}), 404
+    try:
+        log = WaterLog.query.filter_by(id=int(log_id), user_id=uid).first()
+        if not log:
+            return jsonify({'error': 'Log not found'}), 404
+        db.session.delete(log)
+        db.session.commit()
+        return jsonify({'deleted': True})
+    except Exception as e:
+        print(f"Error deleting water log: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
 
 
 # ══════════════════════════════════════════════════
