@@ -737,6 +737,7 @@ async function loginSuccess(userProfile) {
 
   initApp();
   fetchLogsFromCloud();
+  fetchWaterFromCloud();
 
   // Route to the correct tab based on URL path
   let path = window.location.pathname.replace('/', '');
@@ -1844,6 +1845,16 @@ function renderProfile() {
   const dtSel = document.getElementById('editDietType');
   if (dtSel) dtSel.value = currentUser.dietType || 'nonveg';
 
+  // Restore weight/height edit fields
+  const wEl = document.getElementById('editWeight');
+  const wuEl = document.getElementById('editWeightUnit');
+  const hEl = document.getElementById('editHeight');
+  const huEl = document.getElementById('editHeightUnit');
+  if (wEl && currentUser.weight) wEl.value = currentUser.weight;
+  if (wuEl) wuEl.value = currentUser.weightUnit || 'kg';
+  if (hEl && currentUser.height) hEl.value = currentUser.height;
+  if (huEl) huEl.value = currentUser.heightUnit || 'cm';
+
   const logs = window._foodLogs;
   const days = [...new Set(logs.map(l => l.date))];
   const totals = sumLogs(logs);
@@ -1860,6 +1871,85 @@ function renderProfile() {
     if (logs.some(l => l.date === ds)) streak++; else break;
   }
   document.getElementById('streakDays').textContent = streak;
+
+  _renderAchievements(logs, streak);
+}
+
+function _renderAchievements(logs, streak) {
+  const grid = document.getElementById('achievementsGrid');
+  if (!grid) return;
+
+  const totalMeals = logs.length;
+  const goals = currentUser.goals || {};
+  const proteinGoal = goals.protein || 150;
+
+  // Days (last 7) where protein goal was hit
+  let proteinHitDays = 0;
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    const ds = d.toISOString().split('T')[0];
+    const dayLogs = logs.filter(l => l.date === ds);
+    if (dayLogs.length === 0) continue;
+    const dayProtein = dayLogs.reduce((s, l) => s + (l.pro || 0), 0);
+    if (dayProtein >= proteinGoal) proteinHitDays++;
+  }
+
+  // "Healthy Week": last 7 days all logged, average calories within 15% of
+  // goal, and fiber goal hit on at least 4 of those days — a genuine
+  // adherence signal, not just "logged something every day".
+  const calGoal = goals.calories || 2000;
+  const fiberGoal = goals.fiber || 28;
+  let daysLoggedLast7 = 0, fiberHitDays = 0, totalCalLast7 = 0;
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    const ds = d.toISOString().split('T')[0];
+    const dayLogs = logs.filter(l => l.date === ds);
+    if (dayLogs.length === 0) continue;
+    daysLoggedLast7++;
+    const dayCal = dayLogs.reduce((s, l) => s + (l.cal || 0), 0);
+    const dayFiber = dayLogs.reduce((s, l) => s + (l.fiber || 0), 0);
+    totalCalLast7 += dayCal;
+    if (dayFiber >= fiberGoal) fiberHitDays++;
+  }
+  const avgCalLast7 = daysLoggedLast7 ? totalCalLast7 / daysLoggedLast7 : 0;
+  const calWithinRange = daysLoggedLast7 > 0 && Math.abs(avgCalLast7 - calGoal) <= calGoal * 0.15;
+  const healthyWeekEarned = daysLoggedLast7 === 7 && calWithinRange && fiberHitDays >= 4;
+
+  const badges = [
+    {
+      icon: '🔥', name: '7-Day Streak', desc: 'Logged food 7 days in a row',
+      earned: streak >= 7, progress: streak >= 7 ? null : `${streak}/7 days`
+    },
+    {
+      icon: '🏆', name: '30-Day Streak', desc: 'Logged food 30 days in a row',
+      earned: streak >= 30, progress: streak >= 30 ? null : `${Math.min(streak, 30)}/30 days`
+    },
+    {
+      icon: '🥗', name: 'Healthy Week', desc: 'A full week logged, calories on target, fiber goal hit 4+ days',
+      earned: healthyWeekEarned, progress: healthyWeekEarned ? null : `${daysLoggedLast7}/7 days logged`
+    },
+    {
+      icon: '💪', name: 'Protein Master', desc: 'Hit your protein goal on 5+ of the last 7 days',
+      earned: proteinHitDays >= 5, progress: proteinHitDays >= 5 ? null : `${proteinHitDays}/5 days`
+    },
+    {
+      icon: '📸', name: 'Century Club', desc: 'Logged 100 meals total',
+      earned: totalMeals >= 100, progress: totalMeals >= 100 ? null : `${totalMeals}/100 meals`
+    },
+    {
+      icon: '🌱', name: 'First Steps', desc: 'Logged your very first meal',
+      earned: totalMeals >= 1, progress: totalMeals >= 1 ? null : '0/1 meals'
+    },
+  ];
+
+  grid.innerHTML = badges.map(b => `
+    <div class="achievement-badge ${b.earned ? 'earned' : ''}" title="${b.desc}">
+      <div class="ab-icon">${b.icon}</div>
+      <div class="ab-name">${b.name}</div>
+      <div class="ab-desc">${b.desc}</div>
+      ${b.progress ? `<div class="ab-progress">${b.progress}</div>` : ''}
+    </div>
+  `).join('');
 }
 
 async function saveGoals() {
@@ -1902,6 +1992,48 @@ async function saveGoals() {
     }
   } catch (e) {
     console.error('Failed to update cloud profile', e);
+    showToast('⚠️ Saved locally, but failed to sync to cloud.', 'error');
+  }
+}
+
+async function saveBodyStats() {
+  const weight = parseFloat(document.getElementById('editWeight').value);
+  const weightUnit = document.getElementById('editWeightUnit').value;
+  const height = parseFloat(document.getElementById('editHeight').value);
+  const heightUnit = document.getElementById('editHeightUnit').value;
+
+  if (!weight || weight <= 0 || !height || height <= 0) {
+    return showToast('⚠️ Please enter valid weight and height.', 'error');
+  }
+
+  currentUser.weight = weight;
+  currentUser.weightUnit = weightUnit;
+  currentUser.height = height;
+  currentUser.heightUnit = heightUnit;
+  renderProfile();
+
+  try {
+    const backendUrl = window._BACKEND_URL !== undefined ? window._BACKEND_URL : '';
+    const res = await _authFetch(`${backendUrl}/api/auth/update`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        body_stats: {
+          weight: weight,
+          weight_unit: weightUnit,
+          height: height,
+          height_unit: heightUnit
+        }
+      })
+    });
+    if (res.ok) {
+      showToast('✓ Body stats updated!', 'success');
+    } else {
+      console.error('saveBodyStats failed:', res.status, await res.text().catch(() => ''));
+      showToast('⚠️ Saved locally, but failed to sync to cloud.', 'error');
+    }
+  } catch (e) {
+    console.error('Failed to update body stats', e);
     showToast('⚠️ Saved locally, but failed to sync to cloud.', 'error');
   }
 }
@@ -2878,5 +3010,58 @@ async function fetchLogsFromCloud() {
     }
   } catch (e) {
     console.error("Failed to fetch logs from cloud:", e);
+  }
+}
+
+// ─────────────────────────────────────────────────
+//  WATER INTAKE
+// ─────────────────────────────────────────────────
+async function fetchWaterFromCloud() {
+  const backendUrl = window._BACKEND_URL !== undefined ? window._BACKEND_URL : '';
+  try {
+    const res = await _authFetch(`${backendUrl}/api/water?date=${todayStr()}`, {});
+    if (res.ok) {
+      const data = await res.json();
+      window._waterTotalMl = data.total_ml || 0;
+      _renderWaterWidget();
+    } else {
+      console.error('fetchWaterFromCloud failed:', res.status, await res.text().catch(() => ''));
+    }
+  } catch (e) {
+    console.error('Failed to fetch water from cloud:', e);
+  }
+}
+
+function _renderWaterWidget() {
+  const total = window._waterTotalMl || 0;
+  const goal = (currentUser.goals && currentUser.goals.water_ml) || 2000;
+  const totalEl = document.getElementById('waterTotal');
+  const goalEl = document.getElementById('waterGoalDisplay');
+  const bar = document.getElementById('waterBar');
+  if (totalEl) totalEl.textContent = Math.round(total);
+  if (goalEl) goalEl.textContent = Math.round(goal);
+  if (bar) bar.style.width = Math.min(100, (total / (goal || 1)) * 100) + '%';
+}
+
+async function logWater(amountMl) {
+  // Optimistic update — reflect immediately, reconcile with the server after
+  window._waterTotalMl = (window._waterTotalMl || 0) + amountMl;
+  _renderWaterWidget();
+  showToast(`💧 +${amountMl}ml logged`, 'success');
+
+  const backendUrl = window._BACKEND_URL !== undefined ? window._BACKEND_URL : '';
+  try {
+    const res = await _authFetch(`${backendUrl}/api/water`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amount_ml: amountMl, date: todayStr() })
+    });
+    if (!res.ok) {
+      console.error('logWater failed:', res.status, await res.text().catch(() => ''));
+      showToast('⚠️ Logged locally, but failed to sync to cloud.', 'error');
+    }
+  } catch (e) {
+    console.error('Failed to log water:', e);
+    showToast('⚠️ Logged locally, but failed to sync to cloud.', 'error');
   }
 }

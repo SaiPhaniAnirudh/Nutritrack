@@ -2011,6 +2011,83 @@ body {
   box-shadow: 0 8px 28px rgba(45, 158, 107, 0.45);
 }
 
+.water-quick-btn {
+  padding: 10px 16px;
+  background: #E3F5FD;
+  border: 1.5px solid rgba(79, 195, 247, 0.35);
+  border-radius: var(--radius-md);
+  color: #0288D1;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.water-quick-btn:hover {
+  background: #4FC3F7;
+  color: #fff;
+  transform: translateY(-2px);
+}
+
+.achievements-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 1rem;
+}
+
+.achievement-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 1rem 0.6rem;
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--border-soft);
+  background: var(--smoke);
+  transition: transform 0.2s;
+}
+
+.achievement-badge.earned {
+  background: linear-gradient(160deg, var(--kiwi-light), var(--white));
+  border-color: rgba(45, 158, 107, 0.35);
+}
+
+.achievement-badge:hover {
+  transform: translateY(-3px);
+}
+
+.achievement-badge .ab-icon {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+  filter: grayscale(1) opacity(0.4);
+}
+
+.achievement-badge.earned .ab-icon {
+  filter: none;
+}
+
+.achievement-badge .ab-name {
+  font-weight: 700;
+  font-size: 0.82rem;
+  color: var(--ink);
+  margin-bottom: 2px;
+}
+
+.achievement-badge .ab-desc {
+  font-size: 0.7rem;
+  color: var(--ink-50);
+  line-height: 1.3;
+}
+
+.achievement-badge .ab-progress {
+  margin-top: 6px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--kiwi-deep);
+}
+
 .profile-logout-btn {
   margin-top: 1.5rem;
   padding: 13px;

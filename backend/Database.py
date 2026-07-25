@@ -46,13 +46,14 @@ def cmd_seed():
         existing = User.query.filter_by(email='demo@nutritrack.app').first()
         if existing:
             print("⚠️  Demo user already exists. Skipping seed.")
-            print(f"   Email: demo@nutritrack.app")
+            print(f"   Email: demo@nutritrack.app  |  Password: Demo1234!")
             return
 
         # Create demo user
         user = User(
             name        = 'Demo User',
             email       = 'demo@nutritrack.app',
+            password    = 'dummy_hash',
             dob         = '1999-01-01',
             weight      = 70.0,
             weight_unit = 'kg',

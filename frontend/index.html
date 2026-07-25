@@ -438,7 +438,8 @@
             <span class="diet-widget-tag" id="dietWidgetTag">Set up profile</span>
           </div>
         </button>
-        <div class="user-chip">
+        <div class="user-chip" onclick="showPage('profile', document.querySelector('.nav-btn[onclick*=profile]'))"
+          style="cursor: pointer;" title="Go to profile">
           <div class="user-avatar" id="navAvatar">A</div>
           <span id="navName">User</span>
         </div>
@@ -579,6 +580,30 @@
             <div class="goal-bar-bg">
               <div class="goal-bar-fill" id="folateBar" style="width:0%;background:#7ED321"></div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="glass-card" id="waterCard" style="margin-bottom: 1.5rem;">
+        <div class="card-title">
+          <div class="dot"></div>💧 Water Intake
+        </div>
+        <div style="display:flex; align-items:center; gap:1.5rem; flex-wrap:wrap;">
+          <div style="flex:1; min-width:180px;">
+            <div style="display:flex; align-items:baseline; gap:6px; margin-bottom:6px;">
+              <span style="font-size:1.6rem; font-weight:800; color:var(--ink);" id="waterTotal">0</span>
+              <span style="color:var(--ink-50); font-size:0.9rem;">/ <span id="waterGoalDisplay">2000</span> ml</span>
+            </div>
+            <div class="goal-bar-wrap">
+              <div class="goal-bar-bg">
+                <div class="goal-bar-fill" id="waterBar" style="width:0%;background:#4FC3F7"></div>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button type="button" class="water-quick-btn" onclick="logWater(150)">🥃 +150ml</button>
+            <button type="button" class="water-quick-btn" onclick="logWater(250)">🥤 +250ml</button>
+            <button type="button" class="water-quick-btn" onclick="logWater(500)">🍶 +500ml</button>
           </div>
         </div>
       </div>
@@ -883,6 +908,48 @@
             <button type="button" class="save-goals-btn" onclick="saveGoals()">Save Goals</button>
           </div>
         </div>
+
+        <div class="glass-card">
+          <div class="card-title">
+            <div class="dot"></div>Body Stats
+          </div>
+          <div class="goal-editor">
+            <div class="goal-row">
+              <div>
+                <div class="goal-label">⚖️ Weight</div>
+                <div class="goal-sub">current body weight</div>
+              </div>
+              <div style="display:flex; gap:6px; align-items:center;">
+                <input class="goal-input" type="number" step="0.1" id="editWeight" style="width:90px" value="70">
+                <select class="goal-input" id="editWeightUnit" style="width:70px;font-size:0.82rem;padding:6px 8px">
+                  <option value="kg">kg</option>
+                  <option value="lbs">lbs</option>
+                </select>
+              </div>
+            </div>
+            <div class="goal-row">
+              <div>
+                <div class="goal-label">📏 Height</div>
+                <div class="goal-sub">current height</div>
+              </div>
+              <div style="display:flex; gap:6px; align-items:center;">
+                <input class="goal-input" type="number" step="0.1" id="editHeight" style="width:90px" value="175">
+                <select class="goal-input" id="editHeightUnit" style="width:70px;font-size:0.82rem;padding:6px 8px">
+                  <option value="cm">cm</option>
+                  <option value="ft">ft</option>
+                </select>
+              </div>
+            </div>
+            <button type="button" class="save-goals-btn" onclick="saveBodyStats()">Save Body Stats</button>
+          </div>
+        </div>
+
+        <div class="glass-card" style="grid-column: 1 / -1;">
+          <div class="card-title">
+            <div class="dot"></div>🏅 Achievements
+          </div>
+          <div id="achievementsGrid" class="achievements-grid"></div>
+        </div>
       </div>
     </div>
 
@@ -942,7 +1009,7 @@
     }
   </script>
   <script src="/Foods.js" defer></script>
-  <script src="/App.js?v=19" defer></script>
+  <script src="/App.js?v=20" defer></script>
 
   <!-- PWA Install Prompt Banner -->
   <div id="pwaInstallBanner" style="
