@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <!-- Main SPA entry point — covers Dashboard, Track Food, History, Profile -->
   <url>
-    <loc>https://nutritrack-k96f.onrender.com/</loc>
+    <loc>https://nutritrack-rho-rust.vercel.app/</loc>
+    <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
