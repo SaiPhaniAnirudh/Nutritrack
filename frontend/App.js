@@ -1680,7 +1680,7 @@ async function _authFetch(url, options = {}) {
 }
 
 async function addFoodToLog(food) {
-  const backendUrl = window._BACKEND_URL !== undefined ? window._BACKEND_URL : '';
+  const backendUrl = "https://nutritrack-k96f.onrender.com";
   const payload = {
     date: todayStr(),
     mealType: currentMealType,
@@ -1720,7 +1720,7 @@ async function addFoodToLog(food) {
 }
 
 async function removeLog(id) {
-  const backendUrl = window._BACKEND_URL !== undefined ? window._BACKEND_URL : '';
+  const backendUrl = "https://nutritrack-k96f.onrender.com";
   try {
     const res = await _authFetch(`${backendUrl}/api/logs/${id}`, { method: 'DELETE' });
     if (res.ok) {
@@ -1973,7 +1973,7 @@ async function saveGoals() {
   refreshDashboard();
   renderProfile();
   try {
-    const backendUrl = window._BACKEND_URL !== undefined ? window._BACKEND_URL : '';
+    const backendUrl = "https://nutritrack-k96f.onrender.com";
     const res = await _authFetch(`${backendUrl}/api/auth/update`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -2013,7 +2013,7 @@ async function saveBodyStats() {
   renderProfile();
 
   try {
-    const backendUrl = window._BACKEND_URL !== undefined ? window._BACKEND_URL : '';
+    const backendUrl = "https://nutritrack-k96f.onrender.com";
     const res = await _authFetch(`${backendUrl}/api/auth/update`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -2998,7 +2998,7 @@ handleLogout = function () {
 
 
 async function fetchLogsFromCloud() {
-  const backendUrl = window._BACKEND_URL !== undefined ? window._BACKEND_URL : '';
+  const backendUrl = "https://nutritrack-k96f.onrender.com";
   try {
     const res = await _authFetch(`${backendUrl}/api/logs`, {});
     if (res.ok) {
@@ -3017,7 +3017,7 @@ async function fetchLogsFromCloud() {
 //  WATER INTAKE
 // ─────────────────────────────────────────────────
 async function fetchWaterFromCloud() {
-  const backendUrl = window._BACKEND_URL !== undefined ? window._BACKEND_URL : '';
+  const backendUrl = "https://nutritrack-k96f.onrender.com";
   try {
     const res = await _authFetch(`${backendUrl}/api/water?date=${todayStr()}`, {});
     if (res.ok) {
@@ -3049,7 +3049,7 @@ async function logWater(amountMl) {
   _renderWaterWidget();
   showToast(`💧 +${amountMl}ml logged`, 'success');
 
-  const backendUrl = window._BACKEND_URL !== undefined ? window._BACKEND_URL : '';
+  const backendUrl = "https://nutritrack-k96f.onrender.com";
   try {
     const res = await _authFetch(`${backendUrl}/api/water`, {
       method: 'POST',
