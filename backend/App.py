@@ -219,9 +219,16 @@ _cors_origins = [
     'http://localhost:3000',
     'http://localhost:5500',
     'http://127.0.0.1:5500',
-    'null',            # file:// opened locally
+    'null',
+
+    # Render backend
     'https://nutritrack-k96f.onrender.com',
+
+    # GitHub Pages
     'https://saiphanianirudh.github.io',
+
+    # Vercel Frontend
+    'https://nutritrack-rho-rust.vercel.app',
 ]
 _frontend_url = os.getenv('FRONTEND_URL')
 if _frontend_url:
