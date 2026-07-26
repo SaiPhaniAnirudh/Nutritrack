@@ -1,4 +1,12 @@
+# robots.txt — NutriTrack
+# https://nutritrack-rho-rust.vercel.app/
+
 User-agent: *
 Allow: /
 
-Sitemap: https://nutritrack-k96f.onrender.com/sitemap.xml
+# Block private/internal routes
+Disallow: /api/
+Disallow: /auth/
+
+# Sitemap location
+Sitemap: https://nutritrack-rho-rust.vercel.app/sitemap.xml
