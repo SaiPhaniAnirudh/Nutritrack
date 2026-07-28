@@ -1,0 +1,16 @@
+{
+  "rewrites": [
+    {
+      "source": "/sitemap.xml",
+      "destination": "/frontend/sitemap.xml"
+    },
+    {
+      "source": "/robots.txt",
+      "destination": "/frontend/robots.txt"
+    },
+    {
+      "source": "/((?!sitemap\\.xml|robots\\.txt|manifest\\.json|icons/|frontend/|App\\.js|Style\\.css|Foods\\.js|i18n\\.js).*)",
+      "destination": "/frontend/index.html"
+    }
+  ]
+}
