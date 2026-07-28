@@ -821,7 +821,8 @@ function initApp() {
   loadApiKey();
   refreshDashboard();
   searchFoods('');
-  _updateDietWidget(); // change #11
+  _updateDietWidget();
+  updateLanguageUI();
 
   // Show chatbot button if it exists
   const nbBtn = document.getElementById('nutribotBtn');
@@ -3780,4 +3781,144 @@ async function logWater(amountMl) {
     console.error('Failed to log water:', e);
     showToast('⚠️ Logged locally, but failed to sync to cloud.', 'error');
   }
+}
+
+// ─────────────────────────────────────────────────
+//  DYNAMIC I18N UI UPDATE
+// ─────────────────────────────────────────────────
+function updateLanguageUI() {
+  if (typeof window.t !== 'function') return;
+
+  const navBtns = document.querySelectorAll('.nav-btn');
+  if (navBtns[0]) navBtns[0].textContent = window.t('dashboard');
+  if (navBtns[1]) navBtns[1].textContent = window.t('track_food');
+  if (navBtns[2]) navBtns[2].textContent = window.t('history');
+  if (navBtns[3]) navBtns[3].textContent = window.t('profile');
+
+  const mobLabels = document.querySelectorAll('.mob-nav-label');
+  if (mobLabels[0]) mobLabels[0].textContent = window.t('dashboard');
+  if (mobLabels[1]) mobLabels[1].textContent = window.t('track_food');
+  if (mobLabels[3]) mobLabels[3].textContent = window.t('history');
+  if (mobLabels[4]) mobLabels[4].textContent = window.t('profile');
+
+  const dietLabel = document.querySelector('.diet-widget-label');
+  if (dietLabel) dietLabel.textContent = window.t('plan_diet');
+
+  const logoutBtn = document.querySelector('.logout-link');
+  if (logoutBtn) logoutBtn.textContent = window.t('sign_out');
+}
+
+// ─────────────────────────────────────────────────
+//  VISUAL SOCIAL SHARE CARD GENERATOR
+// ─────────────────────────────────────────────────
+function openShareCardModal() {
+  const modal = document.getElementById('shareCardModal');
+  if (!modal) return;
+  modal.style.display = 'flex';
+
+  const canvas = document.getElementById('shareCardCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+
+  // Canvas background gradient
+  const grad = ctx.createLinearGradient(0, 0, 400, 520);
+  grad.addColorStop(0, '#0f1712');
+  grad.addColorStop(0.5, '#15261d');
+  grad.addColorStop(1, '#0a0f0d');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 400, 520);
+
+  // Border highlight
+  ctx.strokeStyle = 'rgba(62, 207, 142, 0.4)';
+  ctx.lineWidth = 4;
+  ctx.strokeRect(10, 10, 380, 500);
+
+  // Header Brand
+  ctx.fillStyle = '#3ecf8e';
+  ctx.font = 'bold 24px system-ui, sans-serif';
+  ctx.fillText('🥗 NutriTrack', 30, 50);
+
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
+  ctx.font = '12px system-ui, sans-serif';
+  ctx.fillText('AI Food & Nutrition Intelligence', 30, 70);
+
+  // User Greeting
+  const name = (currentUser && currentUser.name) ? currentUser.name.split(' ')[0] : 'User';
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 22px system-ui, sans-serif';
+  ctx.fillText(`${name}'s Daily Summary 🌟`, 30, 115);
+
+  const dateStr = new Date().toLocaleDateString('en-IN', { weekday: 'short', month: 'short', day: 'numeric' });
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.font = '13px system-ui, sans-serif';
+  ctx.fillText(dateStr, 30, 135);
+
+  // Stats Box Background
+  const logs = (window._foodLogs || []).filter(l => l.date === todayStr());
+  const totals = sumLogs(logs);
+  const goalCals = (currentUser && currentUser.goals && currentUser.goals.calories) || 2000;
+  const goalPro = (currentUser && currentUser.goals && currentUser.goals.protein) || 150;
+
+  // Stat Card 1: Calories
+  ctx.fillStyle = 'rgba(245, 166, 35, 0.15)';
+  ctx.beginPath(); ctx.roundRect(30, 160, 165, 90, 12); ctx.fill();
+  ctx.fillStyle = '#F5A623'; ctx.font = '22px system-ui'; ctx.fillText('🔥', 45, 195);
+  ctx.fillStyle = '#ffffff'; ctx.font = 'bold 20px system-ui'; ctx.fillText(`${Math.round(totals.cal)}`, 75, 198);
+  ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.font = '11px system-ui'; ctx.fillText(`/ ${goalCals} kcal`, 75, 215);
+
+  // Stat Card 2: Protein
+  ctx.fillStyle = 'rgba(127, 184, 212, 0.15)';
+  ctx.beginPath(); ctx.roundRect(205, 160, 165, 90, 12); ctx.fill();
+  ctx.fillStyle = '#7fb8d4'; ctx.font = '22px system-ui'; ctx.fillText('💪', 220, 195);
+  ctx.fillStyle = '#ffffff'; ctx.font = 'bold 20px system-ui'; ctx.fillText(`${Math.round(totals.pro)}g`, 250, 198);
+  ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.font = '11px system-ui'; ctx.fillText(`/ ${goalPro}g protein`, 250, 215);
+
+  // Stat Card 3: Water Intake
+  const waterMl = window._waterTotalMl || 0;
+  ctx.fillStyle = 'rgba(74, 144, 226, 0.15)';
+  ctx.beginPath(); ctx.roundRect(30, 265, 165, 90, 12); ctx.fill();
+  ctx.fillStyle = '#4A90E2'; ctx.font = '22px system-ui'; ctx.fillText('💧', 45, 300);
+  ctx.fillStyle = '#ffffff'; ctx.font = 'bold 20px system-ui'; ctx.fillText(`${waterMl}ml`, 75, 303);
+  ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.font = '11px system-ui'; ctx.fillText('Water Logged', 75, 320);
+
+  // Stat Card 4: Workout Burned
+  const workoutBurn = (window._workoutLogs || []).reduce((s, w) => s + (w.calBurned || 0), 0);
+  ctx.fillStyle = 'rgba(62, 207, 142, 0.15)';
+  ctx.beginPath(); ctx.roundRect(205, 265, 165, 90, 12); ctx.fill();
+  ctx.fillStyle = '#3ecf8e'; ctx.font = '22px system-ui'; ctx.fillText('🏃', 220, 300);
+  ctx.fillStyle = '#ffffff'; ctx.font = 'bold 20px system-ui'; ctx.fillText(`${Math.round(workoutBurn)}`, 250, 303);
+  ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.font = '11px system-ui'; ctx.fillText('Active Burn', 250, 320);
+
+  // Meal Highlights Section
+  ctx.fillStyle = 'rgba(255,255,255,0.05)';
+  ctx.beginPath(); ctx.roundRect(30, 370, 340, 95, 12); ctx.fill();
+  ctx.fillStyle = '#3ecf8e'; ctx.font = 'bold 13px system-ui'; ctx.fillText('🍽️ Today\'s Highlights', 45, 395);
+
+  ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.font = '12px system-ui';
+  if (logs.length === 0) {
+    ctx.fillText('No meals logged yet today', 45, 420);
+  } else {
+    logs.slice(0, 2).forEach((l, i) => {
+      ctx.fillText(`• ${l.emoji || '🍽️'} ${l.name.slice(0,24)} - ${Math.round(l.cal)} kcal`, 45, 420 + (i * 20));
+    });
+  }
+
+  // Footer Tagline
+  ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.font = '11px system-ui';
+  ctx.fillText('NutriTrack · Track Smart, Live Healthy 🚀', 95, 490);
+}
+
+function closeShareCardModal() {
+  const modal = document.getElementById('shareCardModal');
+  if (modal) modal.style.display = 'none';
+}
+
+function downloadShareCard() {
+  const canvas = document.getElementById('shareCardCanvas');
+  if (!canvas) return;
+  const link = document.createElement('a');
+  link.download = `nutritrack_progress_${todayStr()}.png`;
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+  showToast('✓ Card image downloaded!', 'success');
 }

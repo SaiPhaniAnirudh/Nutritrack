@@ -433,7 +433,17 @@
         <button type="button" class="nav-btn" onclick="showPage('profile', this)">Profile</button>
       </div>
       <div class="nav-right">
-        <!-- FIX: added type="button" -->
+        <!-- Language Switcher -->
+        <select id="langSelect" onchange="setLanguage(this.value)" style="background:rgba(255,255,255,0.08); color:#fff; border:1px solid rgba(255,255,255,0.15); border-radius:8px; padding:4px 8px; font-size:0.8rem; cursor:pointer;">
+          <option value="en">🌐 EN</option>
+          <option value="hi">🇮🇳 हिंदी</option>
+          <option value="te">🇮🇳 తెలుగు</option>
+          <option value="ta">🇮🇳 தமிழ்</option>
+          <option value="es">🇪🇸 ES</option>
+        </select>
+
+        <button type="button" onclick="openShareCardModal()" class="water-quick-btn" style="font-size:0.78rem; padding:6px 12px; background:linear-gradient(135deg,#F5A623,#F4613A); color:#fff; border:none; border-radius:8px; font-weight:700;">📸 Share</button>
+
         <button type="button" class="diet-widget" id="dietWidget" onclick="openDietModal()">
           <span class="diet-widget-icon">🥗</span>
           <div class="diet-widget-text">
@@ -446,7 +456,6 @@
           <div class="user-avatar" id="navAvatar">A</div>
           <span id="navName">User</span>
         </div>
-        <!-- FIX: added type="button" -->
         <button type="button" class="logout-link" onclick="handleLogout()">Sign out</button>
       </div>
     </nav>
@@ -1096,11 +1105,9 @@
       : '';
 
     // Mobile nav active highlight helper
-    function setMobActive(btn) {
-      document.querySelectorAll('.mob-nav-btn').forEach(b => b.classList.remove('active'));
-      if (btn) btn.classList.add('active');
     }
   </script>
+  <script src="/i18n.js" defer></script>
   <script src="/Foods.js" defer></script>
   <script src="/App.js?v=29" defer></script>
 
@@ -1287,6 +1294,22 @@
       <input type="text" id="nutribotInput" class="nutribot-input" placeholder="Ask your nutritionist…"
         onkeydown="if(event.key==='Enter')sendChatMessage()" maxlength="300">
       <button type="button" class="nutribot-send" onclick="sendChatMessage()" id="nutribotSendBtn">➤</button>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════
+     SHARE PROGRESS CARD MODAL
+  ════════════════════════════════════════ -->
+  <div id="shareCardModal" class="modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); backdrop-filter:blur(8px); z-index:10000; align-items:center; justify-content:center;">
+    <div class="modal-content" style="max-width:440px; width:90%; text-align:center; padding:1.5rem; background:#0f1712; border:1px solid rgba(62,207,142,0.3); border-radius:20px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+        <h3 style="color:#fff; font-size:1.1rem; margin:0;">📸 Share Progress Card</h3>
+        <button type="button" onclick="closeShareCardModal()" style="background:none; border:none; color:var(--mist); font-size:1.2rem; cursor:pointer;">✕</button>
+      </div>
+      <canvas id="shareCardCanvas" width="400" height="520" style="width:100%; max-width:360px; border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,0.5);"></canvas>
+      <div style="margin-top:1.2rem; display:flex; gap:10px; justify-content:center;">
+        <button type="button" onclick="downloadShareCard()" class="save-goals-btn" style="width:auto; padding:10px 20px; font-weight:700; background:linear-gradient(135deg,#3ecf8e,#2d9e6b);">⬇️ Download Card Image</button>
+      </div>
     </div>
   </div>
 
