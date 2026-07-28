@@ -631,6 +631,7 @@
           <input type="number" id="workoutMin" placeholder="30 min" style="width:90px; padding:8px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.15); background:rgba(0,0,0,0.2); color:#fff; font-size:0.82rem;">
           <input type="number" id="workoutBurned" placeholder="Calories" style="width:100px; padding:8px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.15); background:rgba(0,0,0,0.2); color:#fff; font-size:0.82rem;">
           <button type="button" onclick="logWorkoutEntry()" class="save-goals-btn" style="width:auto; padding:8px 16px; margin-top:0; font-size:0.82rem;">+ Log Workout</button>
+          <button type="button" onclick="syncGoogleFit()" class="water-quick-btn" style="font-size:0.82rem; background:rgba(62,207,142,0.15); color:#3ecf8e; border:1px solid rgba(62,207,142,0.3);">⌚ Google Fit</button>
         </div>
         <div id="workoutLogsList" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:0.8rem;"></div>
       </div>
@@ -1106,7 +1107,7 @@
   </script>
   <script src="/i18n.js" defer></script>
   <script src="/Foods.js" defer></script>
-  <script src="/App.js?v=31" defer></script>
+  <script src="/App.js?v=32" defer></script>
 
   <!-- PWA Install Prompt Banner -->
   <div id="pwaInstallBanner" style="
