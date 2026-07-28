@@ -644,6 +644,7 @@
           </div>
           <div class="chart-wrap"><canvas id="macroChart"></canvas></div>
         </div>
+      </div>
 
       <!-- AI Meal Recommendations & Community Challenges Row -->
       <div class="main-grid" style="margin-top:1.4rem">
@@ -662,10 +663,10 @@
           </div>
           <div id="communityChallengesList" style="display:flex; flex-direction:column; gap:8px; margin-top:0.6rem;">
             <div style="font-size:0.8rem; color:var(--mist); opacity:0.7;">Loading community challenges…</div>
-          </div>
         </div>
       </div>
     </div>
+  </div>
 
     <!-- ══════════════════════
        TRACK FOOD
@@ -775,6 +776,9 @@
         </div>
         <div id="mealTemplatesList" style="display:flex; gap:10px; overflow-x:auto; padding-bottom:6px; margin-top:0.6rem;">
           <div style="font-size:0.8rem; color:var(--mist); opacity:0.7;">No saved meal templates yet. Click "+ Save Today's Meal" to create one-tap combos!</div>
+        </div>
+      </div>
+
       <!-- Recipe Builder Card -->
       <div class="glass-card" style="margin-top:1.2rem">
         <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
@@ -1098,7 +1102,7 @@
     }
   </script>
   <script src="/Foods.js" defer></script>
-  <script src="/App.js?v=26" defer></script>
+  <script src="/App.js?v=27" defer></script>
 
   <!-- PWA Install Prompt Banner -->
   <div id="pwaInstallBanner" style="
@@ -1127,7 +1131,6 @@
         font-size:1.2rem;cursor:pointer;padding:0.2rem 0.4rem;
       ">✕</button>
     </div>
-  </div>
 
   <style>
     @keyframes slideUp {
