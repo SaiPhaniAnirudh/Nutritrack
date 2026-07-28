@@ -789,6 +789,17 @@
         </div>
       </div>
 
+      <!-- Custom Recipe Builder Card -->
+      <div class="glass-card" style="margin-top:1.2rem">
+        <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
+          <div><div class="dot"></div>🍳 Custom Recipe Builder</div>
+          <button type="button" onclick="openRecipeBuilderModal()" class="water-quick-btn" style="font-size:0.75rem; padding:4px 10px; background:linear-gradient(135deg,var(--kiwi),var(--kiwi-deep)); color:#fff;">+ Create Custom Recipe</button>
+        </div>
+        <div id="recipesList" style="display:flex; gap:10px; overflow-x:auto; padding-bottom:6px; margin-top:0.6rem;">
+          <div style="font-size:0.8rem; color:var(--mist); opacity:0.7;">No custom recipes built yet. Click "+ Create Custom Recipe" to combine ingredients & auto-calculate per-serving nutrition!</div>
+        </div>
+      </div>
+
       <!-- Recipe Builder Card -->
       <div class="glass-card" style="margin-top:1.2rem">
         <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
@@ -1107,7 +1118,7 @@
   </script>
   <script src="/i18n.js" defer></script>
   <script src="/Foods.js" defer></script>
-  <script src="/App.js?v=32" defer></script>
+  <script src="/App.js?v=33" defer></script>
 
   <!-- PWA Install Prompt Banner -->
   <div id="pwaInstallBanner" style="
@@ -1249,13 +1260,13 @@
      MULTI-MODAL FLOATING ASSISTANT BAR
   ════════════════════════════════════════ -->
   <div id="quickAssistantBar" class="floating-assistant-bar">
-    <button type="button" class="assistant-bar-btn" onclick="openAIScanModal()" title="📸 AI Photo Scan">
+    <button type="button" class="assistant-bar-btn" onclick="showPage('track', document.querySelector('.nav-btn[onclick*=track]')); startScanCamera();" title="📸 AI Photo Scan">
       <span>📸</span>
     </button>
-    <button type="button" class="assistant-bar-btn" onclick="openBarcodeScannerModal()" title="📦 Barcode Scan">
+    <button type="button" class="assistant-bar-btn" onclick="startBarcodeScan()" title="📦 Barcode Scan">
       <span>📦</span>
     </button>
-    <button type="button" class="assistant-bar-btn" onclick="startVoiceLogging()" title="🎙️ Voice Logger">
+    <button type="button" class="assistant-bar-btn" onclick="showPage('track', document.querySelector('.nav-btn[onclick*=track]')); startVoiceLog();" title="🎙️ Voice Logger">
       <span>🎙️</span>
     </button>
     <button type="button" class="assistant-bar-btn nutribot-accent" onclick="toggleChat()" title="🤖 NutriBot AI">
@@ -1316,6 +1327,33 @@
       <canvas id="shareCardCanvas" width="400" height="520" style="width:100%; max-width:360px; border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,0.5);"></canvas>
       <div style="margin-top:1.2rem; display:flex; gap:10px; justify-content:center;">
         <button type="button" onclick="downloadShareCard()" class="save-goals-btn" style="width:auto; padding:10px 20px; font-weight:700; background:linear-gradient(135deg,#3ecf8e,#2d9e6b);">⬇️ Download Card Image</button>
+      </div>
+    </div>
+  <!-- ════════════════════════════════════════
+     CUSTOM RECIPE BUILDER MODAL
+  ════════════════════════════════════════ -->
+  <div id="recipeBuilderModal" class="modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); backdrop-filter:blur(8px); z-index:10000; align-items:center; justify-content:center;">
+    <div class="modal-content" style="max-width:500px; width:90%; text-align:left; padding:1.5rem; background:#0f1712; border:1px solid rgba(62,207,142,0.3); border-radius:20px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+        <h3 style="color:#fff; font-size:1.1rem; margin:0;">🍳 Build Custom Recipe</h3>
+        <button type="button" onclick="closeRecipeBuilderModal()" style="background:none; border:none; color:var(--mist); font-size:1.2rem; cursor:pointer;">✕</button>
+      </div>
+      <div style="display:flex; gap:10px; margin-bottom:1rem;">
+        <input type="text" id="recipeName" placeholder="Recipe Name (e.g. Protein Oats)" style="flex:2; padding:8px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.15); background:rgba(0,0,0,0.3); color:#fff;">
+        <input type="number" id="recipeServings" placeholder="Servings" value="1" min="1" style="width:90px; padding:8px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.15); background:rgba(0,0,0,0.3); color:#fff;">
+      </div>
+      <div style="font-size:0.85rem; font-weight:700; color:#3ecf8e; margin-bottom:0.4rem;">Ingredients Breakdown</div>
+      <div id="recipeIngredientsRows" style="display:flex; flex-direction:column; gap:8px; max-height:180px; overflow-y:auto; margin-bottom:0.8rem;">
+        <div class="recipe-ing-row" style="display:flex; gap:6px;">
+          <input type="text" placeholder="Ingredient (e.g. Rolled Oats)" class="ing-name" style="flex:2; padding:6px 10px; border-radius:6px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.2); color:#fff; font-size:0.8rem;">
+          <input type="number" placeholder="Cal" class="ing-cal" style="width:65px; padding:6px 10px; border-radius:6px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.2); color:#fff; font-size:0.8rem;">
+          <input type="number" placeholder="Pro(g)" class="ing-pro" style="width:65px; padding:6px 10px; border-radius:6px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.2); color:#fff; font-size:0.8rem;">
+        </div>
+      </div>
+      <button type="button" onclick="addRecipeIngredientRow()" class="water-quick-btn" style="font-size:0.75rem; padding:4px 10px; margin-bottom:1rem;">+ Add Ingredient</button>
+      <div style="display:flex; gap:10px; justify-content:flex-end;">
+        <button type="button" onclick="closeRecipeBuilderModal()" class="scan-btn muted" style="width:auto; padding:8px 16px;">Cancel</button>
+        <button type="button" onclick="saveCustomRecipe()" class="save-goals-btn" style="width:auto; padding:8px 16px; margin-top:0;">Save Recipe</button>
       </div>
     </div>
   </div>
