@@ -724,9 +724,13 @@ async function loginSuccess(userProfile) {
   const { data } = await supabaseClient.auth.getSession();
   if (data && data.session) currentUser.token = data.session.access_token;
 
-  document.getElementById('editCarbGoal').value = currentUser.goals.carbs;
-  document.getElementById('editFatGoal').value = currentUser.goals.fat;
-  document.getElementById('editFiberGoal').value = currentUser.goals.fiber;
+  const goals = (currentUser && currentUser.goals) || { calories: 2000, protein: 150, carbs: 275, fat: 78, fiber: 28, sugar: 50, sodium: 2300, chol: 300 };
+  const editCarb = document.getElementById('editCarbGoal');
+  const editFat = document.getElementById('editFatGoal');
+  const editFiber = document.getElementById('editFiberGoal');
+  if (editCarb) editCarb.value = goals.carbs || 275;
+  if (editFat) editFat.value = goals.fat || 78;
+  if (editFiber) editFiber.value = goals.fiber || 28;
 
   const dietTag = document.getElementById('dietWidgetTag');
   if (dietTag) dietTag.textContent = 'View targets';

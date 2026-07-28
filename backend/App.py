@@ -109,9 +109,12 @@ def jwt_required(optional=False, refresh=False):
                     email = res.user.email
                     meta = res.user.user_metadata or {}
                     name = meta.get('full_name', meta.get('name', email.split('@')[0]))
-                    new_user = User(id=g.user_id, email=email, name=name)
                     db.session.add(new_user)
-                    db.session.commit()
+                    try:
+                        db.session.commit()
+                    except Exception as commit_err:
+                        db.session.rollback()
+                        print(f"Lazy user creation notice: {commit_err}")
             except Exception as e:
                 if optional:
                     g.user_id = None
@@ -695,7 +698,7 @@ def _date_range(days):
 
 # Increment this whenever you push a deploy — lets you verify Render is live
 # on the right version by hitting GET /api/health
-BUILD_VERSION = "2026-07-29-batch3-v5"
+BUILD_VERSION = "2026-07-29-audit-v6"
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
@@ -767,10 +770,13 @@ def update_profile():
     if 'vit_d' in goals:    user.goal_vit_d    = int(goals['vit_d'])
     if 'iron' in goals:     user.goal_iron     = int(goals['iron'])
     if 'folate' in goals:   user.goal_folate   = int(goals['folate'])
-    if 'water_ml' in goals: user.goal_water_ml = int(goals['water_ml'])
-
-    db.session.commit()
-    return jsonify(user.to_dict())
+    try:
+        db.session.commit()
+        return jsonify(user.to_dict())
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error saving goals: {e}")
+        return jsonify({'error': 'Failed to save goals', 'details': str(e)}), 500
 
 
 # ══════════════════════════════════════════════════
@@ -829,6 +835,7 @@ def add_log():
         db.session.commit()
         return jsonify(log.to_dict()), 201
     except Exception as e:
+        db.session.rollback()
         print(f"Error adding log: {e}")
         return jsonify({'error': 'Internal server error'}), 500
 
@@ -1197,6 +1204,7 @@ def add_weight():
         db.session.commit()
         return jsonify(log.to_dict()), 201
     except Exception as e:
+        db.session.rollback()
         print(f"⚠️ add_weight error: {e}")
         return jsonify({'error': 'Could not save weight log.'}), 500
 
@@ -1215,6 +1223,7 @@ def delete_weight(log_id):
         db.session.commit()
         return jsonify({'deleted': True})
     except Exception as e:
+        db.session.rollback()
         print(f"Error deleting weight log: {e}")
         return jsonify({'error': 'Internal server error'}), 500
 
@@ -1263,6 +1272,7 @@ def save_meal_template():
         db.session.commit()
         return jsonify(tpl.to_dict()), 201
     except Exception as e:
+        db.session.rollback()
         print(f"⚠️ save_meal_template error: {e}")
         return jsonify({'error': 'Could not save template'}), 500
 
@@ -1464,9 +1474,13 @@ def get_challenges():
             Challenge(title="Hydration Hero", description="Log at least 2000ml water for 5 days this week", metric="water", target_val=5, badge_emoji="💧"),
             Challenge(title="Century Club", description="Log 100 total meals in NutriTrack", metric="logs", target_val=100, badge_emoji="💯"),
         ]
-        for d in defaults:
-            db.session.add(d)
-        db.session.commit()
+        try:
+            for d in defaults:
+                db.session.add(d)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            print(f"Challenge seed error: {e}")
         challenges = Challenge.query.all()
 
     return jsonify([c.to_dict() for c in challenges])
@@ -1480,10 +1494,15 @@ def join_challenge(challenge_id):
     if existing:
         return jsonify(existing.to_dict())
 
-    cp = ChallengeParticipant(challenge_id=challenge_id, user_id=uid, current_val=0, completed=False)
-    db.session.add(cp)
-    db.session.commit()
-    return jsonify(cp.to_dict()), 201
+    try:
+        cp = ChallengeParticipant(challenge_id=challenge_id, user_id=uid, current_val=0, completed=False)
+        db.session.add(cp)
+        db.session.commit()
+        return jsonify(cp.to_dict()), 201
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error joining challenge: {e}")
+        return jsonify({'error': 'Could not join challenge'}), 500
 
 
 @app.route('/api/challenges/leaderboard/<int:challenge_id>', methods=['GET'])
