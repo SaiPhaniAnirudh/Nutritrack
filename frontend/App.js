@@ -746,6 +746,9 @@ async function loginSuccess(userProfile) {
   fetchWeightFromCloud();
   fetchMealTemplatesFromCloud();
   loadPopularFoodsFromCloud();
+  fetchAIMealRecommendations();
+  fetchWeeklyInsights();
+  fetchCommunityChallenges();
 
   // Route to the correct tab based on URL path
   let path = window.location.pathname.replace('/', '');
@@ -2099,6 +2102,155 @@ async function logMealTemplate(tplId) {
   }
   hideLoader();
   showToast(`✓ Logged template: ${tpl.name}!`, 'success');
+}
+
+// ─────────────────────────────────────────────────
+//  AI MEAL RECOMMENDATIONS
+// ─────────────────────────────────────────────────
+async function fetchAIMealRecommendations() {
+  const container = document.getElementById('aiRecommendationsList');
+  if (!container) return;
+  const backendUrl = "https://nutritrack-k96f.onrender.com";
+
+  const todayLogs = (window._foodLogs || []).filter(l => l.date === todayStr());
+  const todayTotals = sumLogs(todayLogs);
+  const goalCal = currentUser?.goals?.calories || 2000;
+  const goalPro = currentUser?.goals?.protein || 150;
+
+  const remCal = Math.max(0, goalCal - todayTotals.cal);
+  const remPro = Math.max(0, goalPro - todayTotals.pro);
+
+  try {
+    const res = await _authFetch(`${backendUrl}/api/ai/recommend`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        rem_cal: remCal,
+        rem_pro: remPro,
+        diet_type: currentUser?.dietType || 'nonveg'
+      })
+    });
+    if (res.ok) {
+      const items = await res.json();
+      if (!items || !items.length) {
+        container.innerHTML = `<div style="font-size:0.8rem; color:var(--mist);">You are right on track! No additional meal recommendations needed right now.</div>`;
+        return;
+      }
+      container.innerHTML = items.map(item => `
+        <div style="padding:8px 12px; background:rgba(255,255,255,0.05); border-radius:10px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick='addFoodToLog(${JSON.stringify(item).replace(/'/g, "&#39;")})'>
+          <div>
+            <div style="font-weight:600; font-size:0.85rem;">${item.emoji} ${item.name}</div>
+            <div style="font-size:0.72rem; color:var(--mist);">${item.reason}</div>
+          </div>
+          <button type="button" class="water-quick-btn" style="font-size:0.75rem; padding:3px 8px;">+ Log</button>
+        </div>
+      `).join('');
+    }
+  } catch (e) {
+    console.error('fetchAIMealRecommendations error', e);
+  }
+}
+
+// ─────────────────────────────────────────────────
+//  WEEKLY INSIGHTS
+// ─────────────────────────────────────────────────
+async function fetchWeeklyInsights() {
+  const container = document.getElementById('weeklyInsightsCard');
+  if (!container) return;
+  const backendUrl = "https://nutritrack-k96f.onrender.com";
+  try {
+    const res = await _authFetch(`${backendUrl}/api/analytics/weekly-insights`);
+    if (res.ok) {
+      const data = await res.json();
+      container.innerHTML = `
+        <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:8px;">
+          <div style="background:rgba(62,207,142,0.1); padding:8px 14px; border-radius:10px; flex:1; min-width:120px;">
+            <div style="font-size:0.7rem; color:var(--mist);">Weekly Adherence</div>
+            <div style="font-size:1.2rem; font-weight:800; color:var(--kiwi);">${data.adherenceScore}%</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.05); padding:8px 14px; border-radius:10px; flex:1; min-width:120px;">
+            <div style="font-size:0.7rem; color:var(--mist);">Avg Daily Calories</div>
+            <div style="font-size:1.2rem; font-weight:800; color:#fff;">${Math.round(data.avgCalories)} / ${data.goalCalories} kcal</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.05); padding:8px 14px; border-radius:10px; flex:1; min-width:120px;">
+            <div style="font-size:0.7rem; color:var(--mist);">Avg Daily Protein</div>
+            <div style="font-size:1.2rem; font-weight:800; color:#fff;">${Math.round(data.avgProtein)} / ${data.goalProtein}g</div>
+          </div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:4px;">
+          ${(data.insights || []).map(i => `<div style="font-size:0.82rem; color:rgba(255,255,255,0.85);">${i}</div>`).join('')}
+        </div>
+      `;
+    }
+  } catch (e) {
+    console.error('fetchWeeklyInsights error', e);
+  }
+}
+
+// ─────────────────────────────────────────────────
+//  COMMUNITY CHALLENGES
+// ─────────────────────────────────────────────────
+async function fetchCommunityChallenges() {
+  const container = document.getElementById('communityChallengesList');
+  if (!container) return;
+  const backendUrl = "https://nutritrack-k96f.onrender.com";
+  try {
+    const res = await fetch(`${backendUrl}/api/challenges`);
+    if (res.ok) {
+      const items = await res.json();
+      container.innerHTML = items.map(c => `
+        <div style="padding:10px 14px; background:rgba(255,255,255,0.05); border-radius:10px; display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <div style="font-weight:700; font-size:0.85rem; color:#fff;">${c.badgeEmoji} ${c.title}</div>
+            <div style="font-size:0.72rem; color:var(--mist); margin-top:2px;">${c.description}</div>
+          </div>
+          <button type="button" class="water-quick-btn" onclick="joinChallenge(${c.id})" style="font-size:0.75rem; padding:4px 10px;">Join Challenge</button>
+        </div>
+      `).join('');
+    }
+  } catch (e) {
+    console.error('fetchCommunityChallenges error', e);
+  }
+}
+
+async function joinChallenge(id) {
+  const backendUrl = "https://nutritrack-k96f.onrender.com";
+  try {
+    const res = await _authFetch(`${backendUrl}/api/challenges/join/${id}`, { method: 'POST' });
+    if (res.ok) {
+      showToast('✓ Joined Challenge!', 'success');
+    }
+  } catch (e) {
+    showToast('Failed to join challenge', 'error');
+  }
+}
+
+// ─────────────────────────────────────────────────
+//  EXPORT LOGS CSV
+// ─────────────────────────────────────────────────
+async function exportLogsCSV() {
+  showLoader('Preparing CSV export…');
+  const backendUrl = "https://nutritrack-k96f.onrender.com";
+  try {
+    const res = await _authFetch(`${backendUrl}/api/logs/export`);
+    hideLoader();
+    if (res.ok) {
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `nutritrack_logs_${todayStr()}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      showToast('✓ CSV Downloaded!', 'success');
+    } else {
+      showToast('Export failed', 'error');
+    }
+  } catch (e) {
+    hideLoader();
+    showToast('Export error', 'error');
+  }
 }
 
 // ─────────────────────────────────────────────────

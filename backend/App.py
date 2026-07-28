@@ -455,6 +455,56 @@ class MealTemplate(db.Model):
         }
 
 
+class Challenge(db.Model):
+    __tablename__ = 'challenges'
+
+    id            = db.Column(db.Integer, primary_key=True)
+    title         = db.Column(db.String(200), nullable=False)
+    description   = db.Column(db.String(500))
+    metric        = db.Column(db.String(50), default='streak')  # streak, protein, water, logs
+    target_val    = db.Column(db.Float, default=7)
+    duration_days = db.Column(db.Integer, default=7)
+    badge_emoji   = db.Column(db.String(10), default='🏆')
+    created_at    = db.Column(db.DateTime(timezone=True),
+                              default=lambda: datetime.now(timezone.utc))
+
+    def to_dict(self):
+        return {
+            'id':            self.id,
+            'title':         self.title,
+            'description':   self.description,
+            'metric':        self.metric,
+            'targetVal':     self.target_val,
+            'durationDays':  self.duration_days,
+            'badgeEmoji':    self.badge_emoji,
+            'created_at':    self.created_at.isoformat(),
+        }
+
+
+class ChallengeParticipant(db.Model):
+    __tablename__ = 'challenge_participants'
+
+    id           = db.Column(db.Integer, primary_key=True)
+    challenge_id = db.Column(db.Integer, db.ForeignKey('challenges.id'), nullable=False)
+    user_id      = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
+    current_val  = db.Column(db.Float, default=0)
+    completed    = db.Column(db.Boolean, default=False)
+    joined_at    = db.Column(db.DateTime(timezone=True),
+                             default=lambda: datetime.now(timezone.utc))
+
+    def to_dict(self):
+        user = db.session.get(User, self.user_id)
+        return {
+            'id':          self.id,
+            'challengeId': self.challenge_id,
+            'userId':      self.user_id,
+            'userName':    user.name if user else 'User',
+            'currentVal':  self.current_val,
+            'completed':   self.completed,
+            'joined_at':   self.joined_at.isoformat(),
+        }
+
+
 with app.app_context():
     try:
         db.create_all()
@@ -581,7 +631,7 @@ def _date_range(days):
 
 # Increment this whenever you push a deploy — lets you verify Render is live
 # on the right version by hitting GET /api/health
-BUILD_VERSION = "2026-07-29-tier1-v2"
+BUILD_VERSION = "2026-07-29-batch2-v3"
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
@@ -1225,6 +1275,184 @@ def parse_voice_log():
             })
 
     return jsonify({'transcript': text_transcript, 'items': found_items})
+
+
+
+# ══════════════════════════════════════════════════
+#  AI MEAL RECOMMENDATIONS
+# ══════════════════════════════════════════════════
+
+@app.route('/api/ai/recommend', methods=['POST'])
+@jwt_required(optional=True)
+def recommend_meals():
+    """
+    Recommends meals based on current user goals, remaining calories/macros, and diet type.
+    Queries Supabase base_foods for best matching food options.
+    """
+    data = request.get_json() or {}
+    rem_cal = float(data.get('rem_cal', 500))
+    rem_pro = float(data.get('rem_pro', 30))
+    diet_type = (data.get('diet_type') or 'nonveg').lower()
+
+    if not supabase:
+        return jsonify([])
+
+    try:
+        # Fetch base foods matching diet / macro profile
+        res = supabase.table('base_foods').select('*').limit(150).execute()
+        rows = res.data or []
+
+        recommendations = []
+        for r in rows:
+            cal = float(r.get('calories') or 0)
+            pro = float(r.get('protein') or 0)
+            
+            # Filter foods that fit roughly into remaining calories & offer good protein
+            if 50 <= cal <= (rem_cal + 150) and pro >= (rem_pro * 0.2):
+                recommendations.append({
+                    'id': f"rec_{r.get('id')}",
+                    'name': (r.get('name') or '').title(),
+                    'emoji': '🥗',
+                    'cal': round(cal, 1),
+                    'pro': round(pro, 1),
+                    'carb': round(float(r.get('carbs') or 0), 1),
+                    'fat': round(float(r.get('fat') or 0), 1),
+                    'reason': f"Fits remaining budget ({round(cal)} kcal, {round(pro)}g protein)"
+                })
+
+        recommendations.sort(key=lambda x: x['pro'], reverse=True)
+        return jsonify(recommendations[:10])
+
+    except Exception as e:
+        print(f"⚠️ recommend_meals error: {e}")
+        return jsonify([])
+
+
+# ══════════════════════════════════════════════════
+#  WEEKLY NUTRITION INSIGHTS
+# ══════════════════════════════════════════════════
+
+@app.route('/api/analytics/weekly-insights', methods=['GET'])
+@jwt_required()
+def weekly_insights():
+    """Calculates 7-day nutrition insights, trend scores, and actionable feedback."""
+    uid = get_jwt_identity()
+    user = db.session.get(User, uid)
+
+    dates = _date_range(7)
+    logs = FoodLog.query.filter(FoodLog.user_id == uid, FoodLog.date.in_(dates)).all()
+
+    goal_cal = user.goal_calories if user else 2000
+    goal_pro = user.goal_protein if user else 150
+
+    daily_totals = {d: {'cal': 0, 'pro': 0, 'fiber': 0} for d in dates}
+    for l in logs:
+        if l.date in daily_totals:
+            daily_totals[l.date]['cal'] += l.cal
+            daily_totals[l.date]['pro'] += l.pro
+            daily_totals[l.date]['fiber'] += (l.fiber or 0)
+
+    logged_days = [d for d, t in daily_totals.items() if t['cal'] > 0]
+    num_logged = len(logged_days)
+
+    avg_cal = round(sum(t['cal'] for t in daily_totals.values()) / max(num_logged, 1), 1)
+    avg_pro = round(sum(t['pro'] for t in daily_totals.values()) / max(num_logged, 1), 1)
+
+    adherence_score = min(100, round((num_logged / 7.0) * 100))
+
+    insights = []
+    if avg_pro >= goal_pro * 0.9:
+        insights.append("💪 Excellent protein intake this week!")
+    else:
+        insights.append(f"💡 Try adding more high-protein snacks to reach your daily {goal_pro}g goal.")
+
+    if abs(avg_cal - goal_cal) <= 200:
+        insights.append("🔥 Spot on calorie target consistency.")
+    elif avg_cal > goal_cal + 200:
+        insights.append(f"⚠️ Averaging {round(avg_cal - goal_cal)} kcal above daily target.")
+    else:
+        insights.append(f"📉 Averaging {round(goal_cal - avg_cal)} kcal below target.")
+
+    return jsonify({
+        'periodDays': 7,
+        'daysLogged': num_logged,
+        'adherenceScore': adherence_score,
+        'avgCalories': avg_cal,
+        'avgProtein': avg_pro,
+        'goalCalories': goal_cal,
+        'goalProtein': goal_pro,
+        'insights': insights
+    })
+
+
+# ══════════════════════════════════════════════════
+#  SOCIAL & COMMUNITY CHALLENGES
+# ══════════════════════════════════════════════════
+
+@app.route('/api/challenges', methods=['GET'])
+def get_challenges():
+    """List available public community challenges."""
+    challenges = Challenge.query.all()
+    if not challenges:
+        # Seed default public challenges if empty
+        defaults = [
+            Challenge(title="7-Day Protein Streak", description="Hit your daily protein target for 7 consecutive days", metric="protein", target_val=7, badge_emoji="💪"),
+            Challenge(title="Hydration Hero", description="Log at least 2000ml water for 5 days this week", metric="water", target_val=5, badge_emoji="💧"),
+            Challenge(title="Century Club", description="Log 100 total meals in NutriTrack", metric="logs", target_val=100, badge_emoji="💯"),
+        ]
+        for d in defaults:
+            db.session.add(d)
+        db.session.commit()
+        challenges = Challenge.query.all()
+
+    return jsonify([c.to_dict() for c in challenges])
+
+
+@app.route('/api/challenges/join/<int:challenge_id>', methods=['POST'])
+@jwt_required()
+def join_challenge(challenge_id):
+    uid = get_jwt_identity()
+    existing = ChallengeParticipant.query.filter_by(challenge_id=challenge_id, user_id=uid).first()
+    if existing:
+        return jsonify(existing.to_dict())
+
+    cp = ChallengeParticipant(challenge_id=challenge_id, user_id=uid, current_val=0, completed=False)
+    db.session.add(cp)
+    db.session.commit()
+    return jsonify(cp.to_dict()), 201
+
+
+@app.route('/api/challenges/leaderboard/<int:challenge_id>', methods=['GET'])
+def challenge_leaderboard(challenge_id):
+    participants = ChallengeParticipant.query.filter_by(challenge_id=challenge_id).order_by(ChallengeParticipant.current_val.desc()).limit(20).all()
+    return jsonify([p.to_dict() for p in participants])
+
+
+# ══════════════════════════════════════════════════
+#  EXPORT FOOD LOG DATA (CSV)
+# ══════════════════════════════════════════════════
+
+@app.route('/api/logs/export', methods=['GET'])
+@jwt_required()
+def export_logs_csv():
+    """Download food logs as a CSV spreadsheet."""
+    uid = get_jwt_identity()
+    logs = FoodLog.query.filter_by(user_id=uid).order_by(FoodLog.date.desc(), FoodLog.id.desc()).all()
+
+    import io
+    import csv
+    from flask import Response
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Date', 'Meal', 'Food Name', 'Calories (kcal)', 'Protein (g)', 'Carbs (g)', 'Fat (g)', 'Fiber (g)', 'Sugar (g)', 'Sodium (mg)', 'Cholesterol (mg)'])
+
+    for l in logs:
+        writer.writerow([l.date, l.meal_type, l.name, l.cal, l.pro, l.carb, l.fat, l.fiber or 0, l.sugar or 0, l.sodium or 0, l.chol or 0])
+
+    response = Response(output.getvalue(), mimetype='text/csv')
+    response.headers['Content-Disposition'] = 'attachment; filename=nutritrack_logs.csv'
+    return response
 
 
 # ══════════════════════════════════════════════════
