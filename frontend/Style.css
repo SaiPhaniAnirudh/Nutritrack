@@ -3656,6 +3656,74 @@ body {
   background: var(--kiwi-light);
 }
 
+/* ═══════════════════════════════════════════════════════
+   MULTI-MODAL FLOATING ASSISTANT BAR
+═══════════════════════════════════════════════════════ */
+.floating-assistant-bar {
+  position: fixed;
+  bottom: 85px;
+  right: 20px;
+  z-index: 1200;
+  background: rgba(15, 23, 18, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(62, 207, 142, 0.3);
+  border-radius: 50px;
+  padding: 6px 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(62, 207, 142, 0.15);
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.assistant-bar-btn {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.assistant-bar-btn:hover {
+  background: rgba(62, 207, 142, 0.25);
+  border-color: #3ecf8e;
+  transform: translateY(-2px) scale(1.08);
+  box-shadow: 0 6px 16px rgba(62, 207, 142, 0.3);
+}
+
+.assistant-bar-btn.nutribot-accent {
+  background: linear-gradient(135deg, #3ecf8e, #2d9e6b);
+  border: none;
+  box-shadow: 0 4px 14px rgba(45, 158, 107, 0.4);
+}
+
+.assistant-bar-btn.nutribot-accent:hover {
+  transform: translateY(-2px) scale(1.1);
+  box-shadow: 0 8px 22px rgba(45, 158, 107, 0.6);
+}
+
+@media (max-width: 480px) {
+  .floating-assistant-bar {
+    bottom: 74px;
+    right: 12px;
+    padding: 4px 8px;
+    gap: 6px;
+  }
+  .assistant-bar-btn {
+    width: 38px;
+    height: 38px;
+    font-size: 1.1rem;
+  }
+}
+
 /* ══════════════════════════════════════════════════════
    NUTRIBOT FLOATING CHAT PANEL
 ═══════════════════════════════════════════════════════ */

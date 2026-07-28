@@ -1106,7 +1106,7 @@
   </script>
   <script src="/i18n.js" defer></script>
   <script src="/Foods.js" defer></script>
-  <script src="/App.js?v=29" defer></script>
+  <script src="/App.js?v=31" defer></script>
 
   <!-- PWA Install Prompt Banner -->
   <div id="pwaInstallBanner" style="
@@ -1244,14 +1244,22 @@
   </script>
 
   <!-- ════════════════════════════════════════
-     NUTRIBOT — AI NUTRITIONIST CHAT PANEL
+     MULTI-MODAL FLOATING ASSISTANT BAR
   ════════════════════════════════════════ -->
-
-  <!-- Floating chat button -->
-  <button type="button" id="nutribotBtn" class="nutribot-fab" onclick="toggleChat()" title="Chat with NutriBot">
-    <span class="nutribot-fab-icon">🤖</span>
-    <span class="nutribot-fab-label">NutriBot</span>
-  </button>
+  <div id="quickAssistantBar" class="floating-assistant-bar">
+    <button type="button" class="assistant-bar-btn" onclick="openAIScanModal()" title="📸 AI Photo Scan">
+      <span>📸</span>
+    </button>
+    <button type="button" class="assistant-bar-btn" onclick="openBarcodeScannerModal()" title="📦 Barcode Scan">
+      <span>📦</span>
+    </button>
+    <button type="button" class="assistant-bar-btn" onclick="startVoiceLogging()" title="🎙️ Voice Logger">
+      <span>🎙️</span>
+    </button>
+    <button type="button" class="assistant-bar-btn nutribot-accent" onclick="toggleChat()" title="🤖 NutriBot AI">
+      <span>🤖</span>
+    </button>
+  </div>
 
   <!-- Chat panel -->
   <div id="nutribotPanel" class="nutribot-panel" style="display:none;">

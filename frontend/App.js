@@ -824,9 +824,8 @@ function initApp() {
   _updateDietWidget();
   updateLanguageUI();
 
-  // Show chatbot button if it exists
-  const nbBtn = document.getElementById('nutribotBtn');
-  if (nbBtn) nbBtn.style.display = 'flex';
+  const qBar = document.getElementById('quickAssistantBar');
+  if (qBar) qBar.style.display = 'flex';
 }
 
 // ─────────────────────────────────────────────────
@@ -939,6 +938,9 @@ function refreshDashboard() {
   const logs = window._foodLogs.filter(l => l.date === today);
   const totals = sumLogs(logs);
   const goals = currentUser.goals || { calories: 2000, protein: 150, carbs: 275, fat: 78, fiber: 28, sugar: 50, sodium: 2300, chol: 300 };
+
+  const workoutBurn = (window._workoutLogs || []).reduce((s, w) => s + (w.calBurned || 0), 0);
+  const netCals = Math.max(0, totals.cal - workoutBurn);
 
   [['dashCals', 'calBar', totals.cal, goals.calories, false],
   ['dashProtein', 'protBar', totals.pro, goals.protein, false],
@@ -3344,17 +3346,17 @@ let _chatTyping = false;
 function toggleChat() {
   _chatOpen = !_chatOpen;
   const panel = document.getElementById('nutribotPanel');
-  const fabBtn = document.getElementById('nutribotBtn');
-  if (!panel || !fabBtn) return;
+  const bar = document.getElementById('quickAssistantBar');
+  if (!panel) return;
 
   if (_chatOpen) {
     panel.style.display = 'flex';
-    fabBtn.style.display = 'none';
+    if (bar) bar.style.display = 'none';
     if (_chatHistory.length === 0) _initChat();
     setTimeout(() => _scrollChatBottom(), 50);
   } else {
     panel.style.display = 'none';
-    fabBtn.style.display = 'flex';
+    if (bar) bar.style.display = 'flex';
   }
 }
 
@@ -3689,22 +3691,25 @@ function _localNutribotFallback(message, context) {
   }
   return `I'm your AI nutritionist, **${name}**! Ask me about:\n- "Am I on track today?"\n- "What should I eat for dinner?"\n- "Show my macro breakdown"\n- "How to lose weight?"\n- "Best vegetarian protein sources"\n- "Pre-workout nutrition"\n- "Does sleep affect weight?"\n\nJust type your question!`;
 }
-// Show NutriBot button when user is logged in
+// Show Floating Assistant Bar when user is logged in
 const _origLoginSuccess = loginSuccess;
 loginSuccess = function (user) {
   _origLoginSuccess(user);
+  const bar = document.getElementById('quickAssistantBar');
+  if (bar) bar.style.display = 'flex';
   const btn = document.getElementById('nutribotBtn');
-  if (btn) btn.style.display = 'flex';
-  // Reset chat on login
+  if (btn) btn.style.display = 'none';
   _chatHistory = [];
   _chatOpen = false;
   const panel = document.getElementById('nutribotPanel');
   if (panel) panel.style.display = 'none';
 };
 
-// Hide NutriBot button when user logs out
+// Hide Floating Assistant Bar when user logs out
 const _origHandleLogout = handleLogout;
 handleLogout = function () {
+  const bar = document.getElementById('quickAssistantBar');
+  if (bar) bar.style.display = 'none';
   const btn = document.getElementById('nutribotBtn');
   if (btn) btn.style.display = 'none';
   const panel = document.getElementById('nutribotPanel');
