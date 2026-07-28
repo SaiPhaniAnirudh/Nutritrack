@@ -32,3 +32,13 @@ node_modules/
 # Build artifacts
 dist/
 build/
+
+# USDA data fetch cache (large raw API responses, regeneratable)
+scripts/.usda_cache/
+
+# One-off debug / migration scripts (already ran; kept locally if needed)
+scratch/
+
+# Architecture diagrams (dev docs, not app code)
+architecture.mmd
+architecture_flowchart.png
