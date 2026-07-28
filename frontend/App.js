@@ -993,8 +993,9 @@ function refreshDashboard() {
 }
 
 function renderMacroChart(p, c, f, fiber, sugar, sodium, chol, cal) {
-  const ctx2 = document.getElementById('macroChart').getContext('2d');
-  if (typeof Chart === 'undefined') return;
+  const chartCanvas = document.getElementById('macroChart');
+  if (!chartCanvas || typeof Chart === 'undefined') return;
+  const ctx2 = chartCanvas.getContext('2d');
   if (macroChart) macroChart.destroy();
 
   const sodiumG = +(sodium / 10).toFixed(1);
@@ -2454,7 +2455,9 @@ function renderHistory() {
   const last30 = getLast30Days();
   const monthData = last30.map(d => sumLogs(logs.filter(l => l.date === d)).cal);
 
-  const wCtx = document.getElementById('weekChart').getContext('2d');
+  const chartCanvas = document.getElementById('weekChart');
+  if (!chartCanvas || typeof Chart === 'undefined') return;
+  const wCtx = chartCanvas.getContext('2d');
   if (weekChart) weekChart.destroy();
   weekChart = new Chart(wCtx, {
     type: 'bar',
