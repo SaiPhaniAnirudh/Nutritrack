@@ -833,25 +833,46 @@ const PAGE_NAMES = {
 };
 
 function showPage(id, btn, pushState = true) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.mob-nav-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('page-' + id).classList.add('active');
-  if (btn) btn.classList.add('active');
+  try {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.mob-nav-btn').forEach(b => b.classList.remove('active'));
 
-  // Keep mobile bottom nav in sync
-  const mobBtn = document.getElementById('mobBtn-' + id);
-  if (mobBtn) mobBtn.classList.add('active');
+    const pageEl = document.getElementById('page-' + id);
+    if (pageEl) pageEl.classList.add('active');
+    if (btn) btn.classList.add('active');
 
-  if (id === 'dashboard') refreshDashboard();
-  if (id === 'track') { autoSelectMeal(); searchFoods(document.getElementById('foodSearch').value || ''); }
-  if (id === 'history') renderHistory();
-  if (id === 'profile') renderProfile();
+    // Keep mobile bottom nav in sync
+    const mobBtn = document.getElementById('mobBtn-' + id);
+    if (mobBtn) mobBtn.classList.add('active');
 
-  if (pushState && typeof pushState !== 'object') {
-    if (window.location.pathname !== '/' + id) {
-      window.history.pushState({ page: id }, '', '/' + id);
+    if (id === 'dashboard') {
+      try { refreshDashboard(); } catch (e) { console.error('refreshDashboard error', e); }
     }
+    if (id === 'track') {
+      try { autoSelectMeal(); } catch (e) {}
+      try {
+        const searchInput = document.getElementById('foodSearch');
+        searchFoods(searchInput ? searchInput.value : '');
+      } catch (e) { console.error('searchFoods error', e); }
+      try { renderMealTemplates(); } catch (e) {}
+    }
+    if (id === 'history') {
+      try { renderHistory(); } catch (e) { console.error('renderHistory error', e); }
+      try { fetchWeeklyInsights(); } catch (e) {}
+    }
+    if (id === 'profile') {
+      try { renderProfile(); } catch (e) { console.error('renderProfile error', e); }
+      try { fetchWeightFromCloud(); } catch (e) {}
+    }
+
+    if (pushState && typeof pushState !== 'object') {
+      if (window.location.pathname !== '/' + id) {
+        window.history.pushState({ page: id }, '', '/' + id);
+      }
+    }
+  } catch (err) {
+    console.error('showPage error:', err);
   }
 }
 
@@ -1331,9 +1352,18 @@ async function scanWithAI() {
       <div style="font-size:0.72rem;opacity:0.4;margin-top:0.3rem">Free AI server — may take 1-2 min ⏳</div>
     </div>`;
   const imageToSend = await _compressImage(scanImageB64, 150000);
-  showScanStatus('🧠 Analysing with AI… (free server, please wait up to 2 min)', 'info');
+  showScanStatus('🧠 Contacting AI server…', 'info');
+
+  let scanSec = 0;
+  const statusInterval = setInterval(() => {
+    scanSec += 3;
+    if (scanSec === 6) showScanStatus('⚡ Free AI model waking up (takes 15-30s on first scan)…', 'info');
+    if (scanSec === 21) showScanStatus('✨ Analysing food photo… almost ready!', 'info');
+  }, 3000);
+
   try {
     const result = await _callLLMAPI(imageToSend, signal);
+    clearInterval(statusInterval);
     if (result.description === 'not_food' || result.not_food === true || !result.items || result.items.length === 0) {
       hideScanStatus(); setScanning(false); showNonFoodModal();
       document.getElementById('scanResult').innerHTML = `
@@ -1350,6 +1380,7 @@ async function scanWithAI() {
     _renderScanResult(result);
     hideScanStatus(); setScanning(false);
   } catch (e) {
+    clearInterval(statusInterval);
     setScanning(false);
     if (e.name === 'AbortError') return;  // user pressed Clear — silently stop, don't overwrite UI
     const isServerErr = e.message && e.message.startsWith('SERVER_ERROR:');
