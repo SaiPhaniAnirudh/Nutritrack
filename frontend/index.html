@@ -676,13 +676,20 @@
             <!-- FIX: added type="button" to all scan buttons -->
             <button type="button" class="scan-btn green" onclick="startScanCamera()">📷 Camera</button>
             <button type="button" class="scan-btn orange" onclick="pickScanPhoto()">🖼️ Choose Photo</button>
+            <button type="button" class="scan-btn blue" onclick="startBarcodeScan()">📦 Barcode</button>
+            <button type="button" class="scan-btn purple" onclick="startVoiceLog()">🎙️ Voice Log</button>
+          </div>
+          <div id="voiceStatusRow" style="display:none; padding:0.6rem; background:rgba(62,207,142,0.1); border-radius:10px; margin-top:0.6rem; text-align:center; font-size:0.85rem; color:var(--kiwi);">
+            <span class="voice-pulse">🔴</span> <span id="voiceStatusText">Listening… Speak your meal!</span>
+            <button type="button" onclick="stopVoiceLog()" style="margin-left:0.6rem; background:rgba(255,255,255,0.15); border:none; color:#fff; border-radius:6px; padding:2px 8px; cursor:pointer; font-size:0.75rem;">Done</button>
           </div>
           <div class="scan-btn-row" id="scanCamRow" style="display:none">
             <button type="button" class="scan-btn gold" onclick="takeScanPhoto()">📸 Take Photo</button>
             <button type="button" class="scan-btn muted" onclick="stopScanCamera()">✕ Stop</button>
           </div>
           <div class="scan-btn-row" id="scanReadyRow" style="display:none">
-            <button type="button" class="scan-btn gold" id="scanNowBtn" onclick="scanWithAI()">✨ Scan with AI</button>
+            <button type="button" class="scan-btn gold" id="scanNowBtn" onclick="scanWithAI('food')">✨ Scan Food</button>
+            <button type="button" class="scan-btn purple" id="scanMenuBtn" onclick="scanWithAI('menu')">📋 Scan Menu</button>
             <button type="button" class="scan-btn muted" onclick="clearScan()">✕ Clear</button>
           </div>
 
@@ -723,6 +730,17 @@
         </div>
         <div class="cat-filter-row" id="catFilters" style="margin-bottom:0.8rem"></div>
         <div class="food-results food-results-wide" id="foodResults"></div>
+      </div>
+
+      <!-- Meal Templates Card -->
+      <div class="glass-card" style="margin-top:1.2rem">
+        <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
+          <div><div class="dot"></div>🍱 Saved Meal Templates</div>
+          <button type="button" onclick="openSaveTemplateModal()" class="water-quick-btn" style="font-size:0.75rem; padding:4px 10px;">+ Save Today's Meal</button>
+        </div>
+        <div id="mealTemplatesList" style="display:flex; gap:10px; overflow-x:auto; padding-bottom:6px; margin-top:0.6rem;">
+          <div style="font-size:0.8rem; color:var(--mist); opacity:0.7;">No saved meal templates yet. Click "+ Save Today's Meal" to create one-tap combos!</div>
+        </div>
       </div>
     </div>
 
@@ -947,6 +965,18 @@
           </div>
         </div>
 
+        <!-- Body Weight Progress Tracker Card -->
+        <div class="glass-card" style="grid-column: 1 / -1;">
+          <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
+            <div><div class="dot"></div>📈 Body Weight Progress</div>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <input type="number" step="0.1" id="quickWeightInput" placeholder="70.5" style="width:80px; padding:4px 8px; border-radius:6px; border:1px solid rgba(255,255,255,0.15); background:rgba(0,0,0,0.2); color:#fff; font-size:0.8rem;">
+              <button type="button" onclick="logWeightEntry()" class="water-quick-btn" style="font-size:0.75rem; padding:4px 10px;">+ Log Weight</button>
+            </div>
+          </div>
+          <div class="chart-wrap" style="height:220px; margin-top:0.8rem;"><canvas id="weightChart"></canvas></div>
+        </div>
+
         <div class="glass-card" style="grid-column: 1 / -1;">
           <div class="card-title">
             <div class="dot"></div>🏅 Achievements
@@ -1012,7 +1042,7 @@
     }
   </script>
   <script src="/Foods.js" defer></script>
-  <script src="/App.js?v=21" defer></script>
+  <script src="/App.js?v=22" defer></script>
 
   <!-- PWA Install Prompt Banner -->
   <div id="pwaInstallBanner" style="

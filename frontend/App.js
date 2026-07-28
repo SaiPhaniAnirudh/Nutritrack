@@ -35,10 +35,15 @@ function hideLoader() {
 // ─────────────────────────────────────────────────
 let currentUser = null;
 window._foodLogs = [];
+window._weightLogs = [];
+window._mealTemplates = [];
+window._dbPopularFoods = [];
 let currentMealType = 'breakfast';
 let currentCat = 'all';
 let macroChart = null;
 let weekChart = null;
+let weightChart = null;
+let _voiceRecognition = null;
 
 // ─────────────────────────────────────────────────
 //  TOAST
@@ -738,6 +743,9 @@ async function loginSuccess(userProfile) {
   initApp();
   fetchLogsFromCloud();
   fetchWaterFromCloud();
+  fetchWeightFromCloud();
+  fetchMealTemplatesFromCloud();
+  loadPopularFoodsFromCloud();
 
   // Route to the correct tab based on URL path
   let path = window.location.pathname.replace('/', '');
@@ -1784,6 +1792,313 @@ async function removeLog(id) {
   } catch (e) {
     showToast('Network error removing item.', 'error');
   }
+}
+
+// ─────────────────────────────────────────────────
+//  CLOUD FETCH HELPERS
+// ─────────────────────────────────────────────────
+async function fetchLogsFromCloud() {
+  const backendUrl = "https://nutritrack-k96f.onrender.com";
+  try {
+    const res = await _authFetch(`${backendUrl}/api/logs`);
+    if (res.ok) {
+      window._foodLogs = await res.json();
+      refreshDashboard();
+      renderHistory();
+    }
+  } catch (e) {
+    console.error('fetchLogsFromCloud error', e);
+  }
+}
+
+async function fetchWaterFromCloud() {
+  const backendUrl = "https://nutritrack-k96f.onrender.com";
+  try {
+    const res = await _authFetch(`${backendUrl}/api/water`);
+    if (res.ok) {
+      const data = await res.json();
+      const waterTotal = document.getElementById('waterTotal');
+      if (waterTotal) waterTotal.textContent = data.total_ml || 0;
+      const bar = document.getElementById('waterBar');
+      const goal = currentUser?.goals?.water_ml || 2000;
+      if (bar) bar.style.width = Math.min(100, Math.round(((data.total_ml || 0) / goal) * 100)) + '%';
+    }
+  } catch (e) {
+    console.error('fetchWaterFromCloud error', e);
+  }
+}
+
+async function logWater(ml) {
+  const backendUrl = "https://nutritrack-k96f.onrender.com";
+  try {
+    const res = await _authFetch(`${backendUrl}/api/water`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amount_ml: ml })
+    });
+    if (res.ok) {
+      showToast(`+${ml}ml water logged!`, 'success');
+      fetchWaterFromCloud();
+    }
+  } catch (e) {
+    showToast('Failed to log water', 'error');
+  }
+}
+
+async function loadPopularFoodsFromCloud() {
+  const backendUrl = "https://nutritrack-k96f.onrender.com";
+  try {
+    const res = await fetch(`${backendUrl}/api/foods/popular`);
+    if (res.ok) {
+      window._dbPopularFoods = await res.json();
+      if (document.getElementById('foodSearch')?.value === '') {
+        searchFoods('');
+      }
+    }
+  } catch (e) {
+    console.error('loadPopularFoods error', e);
+  }
+}
+
+// ─────────────────────────────────────────────────
+//  BARCODE SCANNER
+// ─────────────────────────────────────────────────
+async function startBarcodeScan() {
+  let barcode = prompt('Scan or enter product barcode number:');
+  if (!barcode) return;
+  barcode = barcode.trim();
+  showLoader('Looking up barcode…');
+  const backendUrl = "https://nutritrack-k96f.onrender.com";
+  try {
+    const res = await fetch(`${backendUrl}/api/foods/barcode/${encodeURIComponent(barcode)}`);
+    hideLoader();
+    if (res.ok) {
+      const data = await res.json();
+      if (data.found && data.item) {
+        await addFoodToLog(data.item);
+      } else {
+        showToast('Product not found for barcode', 'error');
+      }
+    } else {
+      showToast('Product not found', 'error');
+    }
+  } catch (e) {
+    hideLoader();
+    showToast('Barcode lookup failed', 'error');
+  }
+}
+
+// ─────────────────────────────────────────────────
+//  VOICE FOOD LOGGING
+// ─────────────────────────────────────────────────
+function startVoiceLog() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    const spoken = prompt('Speech recognition not supported in this browser. Type your meal:');
+    if (spoken) parseVoiceText(spoken);
+    return;
+  }
+  const row = document.getElementById('voiceStatusRow');
+  const txt = document.getElementById('voiceStatusText');
+  if (row) row.style.display = 'block';
+  if (txt) txt.textContent = 'Listening… Speak your meal now!';
+
+  _voiceRecognition = new SpeechRecognition();
+  _voiceRecognition.continuous = false;
+  _voiceRecognition.interimResults = false;
+  _voiceRecognition.lang = 'en-US';
+
+  _voiceRecognition.onresult = (event) => {
+    const transcript = event.results[0][0].transcript;
+    if (txt) txt.textContent = `Processing: "${transcript}"…`;
+    parseVoiceText(transcript);
+  };
+  _voiceRecognition.onerror = (err) => {
+    if (row) row.style.display = 'none';
+    showToast('Voice error: ' + err.error, 'error');
+  };
+  _voiceRecognition.onend = () => {
+    if (row) row.style.display = 'none';
+  };
+  _voiceRecognition.start();
+}
+
+function stopVoiceLog() {
+  if (_voiceRecognition) _voiceRecognition.stop();
+  const row = document.getElementById('voiceStatusRow');
+  if (row) row.style.display = 'none';
+}
+
+async function parseVoiceText(transcript) {
+  showLoader('Parsing spoken meal…');
+  const backendUrl = "https://nutritrack-k96f.onrender.com";
+  try {
+    const res = await _authFetch(`${backendUrl}/api/ai/parse-voice`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ transcript })
+    });
+    hideLoader();
+    if (res.ok) {
+      const data = await res.json();
+      if (data.items && data.items.length > 0) {
+        for (const item of data.items) {
+          await addFoodToLog(item);
+        }
+        showToast(`✓ Logged ${data.items.length} items from voice!`, 'success');
+      } else {
+        showToast('Could not extract foods from spoken text.', 'error');
+      }
+    }
+  } catch (e) {
+    hideLoader();
+    showToast('Failed to parse voice meal.', 'error');
+  }
+}
+
+// ─────────────────────────────────────────────────
+//  BODY WEIGHT TRACKER
+// ─────────────────────────────────────────────────
+async function fetchWeightFromCloud() {
+  const backendUrl = "https://nutritrack-k96f.onrender.com";
+  try {
+    const res = await _authFetch(`${backendUrl}/api/weight?days=30`);
+    if (res.ok) {
+      window._weightLogs = await res.json();
+      renderWeightChart();
+    }
+  } catch (e) {
+    console.error('fetchWeightFromCloud error', e);
+  }
+}
+
+async function logWeightEntry() {
+  const input = document.getElementById('quickWeightInput');
+  const val = parseFloat(input?.value || 0);
+  if (!val || val <= 0 || val > 300) return showToast('⚠️ Enter a valid weight (e.g. 70.5)', 'error');
+  
+  const backendUrl = "https://nutritrack-k96f.onrender.com";
+  try {
+    const res = await _authFetch(`${backendUrl}/api/weight`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ weight_kg: val })
+    });
+    if (res.ok) {
+      showToast('✓ Weight entry saved!', 'success');
+      if (input) input.value = '';
+      if (currentUser) currentUser.weight = val;
+      renderProfile();
+      fetchWeightFromCloud();
+    }
+  } catch (e) {
+    showToast('Failed to save weight', 'error');
+  }
+}
+
+function renderWeightChart() {
+  const ctx = document.getElementById('weightChart')?.getContext('2d');
+  if (!ctx) return;
+  const logs = window._weightLogs || [];
+  if (weightChart) weightChart.destroy();
+
+  const labels = logs.map(l => {
+    const parts = l.date.split('-');
+    return parts.length === 3 ? `${parts[2]}/${parts[1]}` : l.date;
+  });
+  const data = logs.map(l => l.weight_kg);
+
+  weightChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels.length ? labels : ['Today'],
+      datasets: [{
+        label: 'Weight (kg)',
+        data: data.length ? data : [currentUser?.weight || 70],
+        borderColor: '#3ecf8e',
+        backgroundColor: 'rgba(62,207,142,0.1)',
+        fill: true,
+        tension: 0.3,
+        pointRadius: 4,
+        pointBackgroundColor: '#3ecf8e'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.5)', font: { size: 10 } } },
+        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.5)', font: { size: 10 } } }
+      }
+    }
+  });
+}
+
+// ─────────────────────────────────────────────────
+//  MEAL TEMPLATES
+// ─────────────────────────────────────────────────
+async function fetchMealTemplatesFromCloud() {
+  const backendUrl = "https://nutritrack-k96f.onrender.com";
+  try {
+    const res = await _authFetch(`${backendUrl}/api/meals/templates`);
+    if (res.ok) {
+      window._mealTemplates = await res.json();
+      renderMealTemplates();
+    }
+  } catch (e) {
+    console.error('fetchMealTemplatesFromCloud error', e);
+  }
+}
+
+function renderMealTemplates() {
+  const list = document.getElementById('mealTemplatesList');
+  if (!list) return;
+  const templates = window._mealTemplates || [];
+  if (!templates.length) {
+    list.innerHTML = `<div style="font-size:0.8rem; color:var(--mist); opacity:0.7;">No saved meal templates yet. Click "+ Save Today's Meal" to create one-tap combos!</div>`;
+    return;
+  }
+  list.innerHTML = templates.map(t => `
+    <div class="tpl-card" onclick="logMealTemplate(${t.id})">
+      <div class="tpl-title">🍱 ${t.name}</div>
+      <div class="tpl-sub">${(t.items || []).length} items · ${Math.round(t.total_cal || 0)} kcal · P:${Math.round(t.total_pro || 0)}g</div>
+    </div>
+  `).join('');
+}
+
+async function openSaveTemplateModal() {
+  const todayLogs = (window._foodLogs || []).filter(l => l.date === todayStr());
+  if (!todayLogs.length) return showToast('⚠️ Log some food today first to save as a template!', 'error');
+
+  const tplName = prompt('Enter a name for this meal template (e.g. "My Standard Breakfast"):');
+  if (!tplName) return;
+
+  const backendUrl = "https://nutritrack-k96f.onrender.com";
+  try {
+    const res = await _authFetch(`${backendUrl}/api/meals/templates`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: tplName.trim(), items: todayLogs })
+    });
+    if (res.ok) {
+      showToast('✓ Template saved!', 'success');
+      fetchMealTemplatesFromCloud();
+    }
+  } catch (e) {
+    showToast('Failed to save template', 'error');
+  }
+}
+
+async function logMealTemplate(tplId) {
+  const tpl = (window._mealTemplates || []).find(t => t.id === tplId);
+  if (!tpl || !tpl.items) return;
+
+  showLoader(`Logging ${tpl.name}…`);
+  for (const item of tpl.items) {
+    await addFoodToLog(item);
+  }
+  hideLoader();
+  showToast(`✓ Logged template: ${tpl.name}!`, 'success');
 }
 
 // ─────────────────────────────────────────────────

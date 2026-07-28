@@ -379,6 +379,7 @@ class FoodLog(db.Model):
         }
 
 
+
 class WaterLog(db.Model):
     __tablename__ = 'water_logs'
 
@@ -399,49 +400,93 @@ class WaterLog(db.Model):
         }
 
 
+class WeightLog(db.Model):
+    __tablename__ = 'weight_logs'
+
+    id        = db.Column(db.Integer, primary_key=True)
+    user_id   = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
+    date      = db.Column(db.String(10), nullable=False)   # YYYY-MM-DD
+    weight_kg = db.Column(db.Float, nullable=False)        # always stored in kg
+    note      = db.Column(db.String(200))
+    logged_at = db.Column(db.DateTime(timezone=True),
+                          default=lambda: datetime.now(timezone.utc))
+
+    def to_dict(self):
+        return {
+            'id':        self.id,
+            'userId':    self.user_id,
+            'date':      self.date,
+            'weight_kg': self.weight_kg,
+            'note':      self.note,
+            'logged_at': self.logged_at.isoformat(),
+        }
+
+
+class MealTemplate(db.Model):
+    __tablename__ = 'meal_templates'
+
+    id         = db.Column(db.Integer, primary_key=True)
+    user_id    = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
+    name       = db.Column(db.String(200), nullable=False)   # e.g. "My Usual Breakfast"
+    items_json = db.Column(db.Text, nullable=False)          # JSON array of food items
+    # Cached totals for quick display
+    total_cal  = db.Column(db.Float, default=0)
+    total_pro  = db.Column(db.Float, default=0)
+    total_carb = db.Column(db.Float, default=0)
+    total_fat  = db.Column(db.Float, default=0)
+    created_at = db.Column(db.DateTime(timezone=True),
+                           default=lambda: datetime.now(timezone.utc))
+
+    def to_dict(self):
+        try:
+            items = json.loads(self.items_json)
+        except Exception:
+            items = []
+        return {
+            'id':         self.id,
+            'userId':     self.user_id,
+            'name':       self.name,
+            'items':      items,
+            'total_cal':  self.total_cal,
+            'total_pro':  self.total_pro,
+            'total_carb': self.total_carb,
+            'total_fat':  self.total_fat,
+            'created_at': self.created_at.isoformat(),
+        }
+
+
 with app.app_context():
     try:
         db.create_all()
         # Migration for missing columns in production
-        from sqlalchemy import text
         columns_to_add = [
-            "diet_type VARCHAR(20)",
-            "goal_sugar FLOAT DEFAULT 50",
-            "goal_sodium FLOAT DEFAULT 2300",
-            "goal_chol FLOAT DEFAULT 300",
-            "goal_vit_d FLOAT DEFAULT 20",
-            "goal_iron FLOAT DEFAULT 18",
-            "goal_folate FLOAT DEFAULT 400",
-            "goal_water_ml INTEGER DEFAULT 2000",
-            "dob VARCHAR(20)"
+            ("users", "diet_type VARCHAR(20)"),
+            ("users", "goal_sugar FLOAT DEFAULT 50"),
+            ("users", "goal_sodium FLOAT DEFAULT 2300"),
+            ("users", "goal_chol FLOAT DEFAULT 300"),
+            ("users", "goal_vit_d FLOAT DEFAULT 20"),
+            ("users", "goal_iron FLOAT DEFAULT 18"),
+            ("users", "goal_folate FLOAT DEFAULT 400"),
+            ("users", "goal_water_ml INTEGER DEFAULT 2000"),
+            ("users", "dob VARCHAR(20)"),
+            ("food_logs", "fiber FLOAT DEFAULT 0"),
+            ("food_logs", "sugar FLOAT DEFAULT 0"),
+            ("food_logs", "sodium FLOAT DEFAULT 0"),
+            ("food_logs", "chol FLOAT DEFAULT 0"),
+            ("food_logs", "vit_d FLOAT DEFAULT 0"),
+            ("food_logs", "iron FLOAT DEFAULT 0"),
+            ("food_logs", "folate FLOAT DEFAULT 0"),
         ]
-        for col in columns_to_add:
+        for table, col in columns_to_add:
             try:
-                db.session.execute(text(f"ALTER TABLE users ADD COLUMN {col};"))
+                db.session.execute(text(f"ALTER TABLE {table} ADD COLUMN {col};"))
                 db.session.commit()
             except Exception:
                 db.session.rollback()
-        
-        food_log_columns = [
-            "fiber FLOAT DEFAULT 0",
-            "sugar FLOAT DEFAULT 0",
-            "sodium FLOAT DEFAULT 0",
-            "chol FLOAT DEFAULT 0",
-            "vit_d FLOAT DEFAULT 0",
-            "iron FLOAT DEFAULT 0",
-            "folate FLOAT DEFAULT 0"
-        ]
-        for col in food_log_columns:
-            try:
-                db.session.execute(text(f"ALTER TABLE food_logs ADD COLUMN {col};"))
-                db.session.commit()
-            except Exception:
-                db.session.rollback()
-                
+
         print("✅ Database tables initialized.")
     except Exception as e:
         print(f"⚠️ Warning: Could not initialize database tables: {e}")
-
 
 
 # ══════════════════════════════════════════════════
@@ -536,7 +581,7 @@ def _date_range(days):
 
 # Increment this whenever you push a deploy — lets you verify Render is live
 # on the right version by hitting GET /api/health
-BUILD_VERSION = "2026-07-29-v1"
+BUILD_VERSION = "2026-07-29-tier1-v2"
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
@@ -801,15 +846,136 @@ def search_foods():
             }
 
         return jsonify([normalize(r) for r in rows])
-
     except Exception as e:
         print(f"⚠️ food search error: {e}")
         return jsonify([])
 
 
+@app.route('/api/foods/popular', methods=['GET'])
+def popular_foods():
+    """Returns top 80 popular base foods from Supabase for browsing."""
+    if not supabase:
+        return jsonify([])
+    try:
+        res = supabase.table('base_foods').select('*').limit(80).execute()
+        rows = res.data or []
+
+        def normalize(row):
+            return {
+                'id':     f"db_{row.get('id', '')}",
+                'name':   (row.get('name') or '').title(),
+                'emoji':  '🍽️',
+                'cal':    round(float(row.get('calories') or 0), 1),
+                'pro':    round(float(row.get('protein')  or 0), 1),
+                'carb':   round(float(row.get('carbs')    or 0), 1),
+                'fat':    round(float(row.get('fat')      or 0), 1),
+                'fiber':  round(float(row.get('fiber')    or 0), 1),
+                'sugar':  round(float(row.get('sugar')    or 0), 1),
+                'sodium': round(float(row.get('sodium')   or 0), 1),
+                'chol':   round(float(row.get('chol')     or 0), 1),
+                'vit_d':  0.0,
+                'iron':   0.0,
+                'folate': 0.0,
+                'cat':    (row.get('category') or 'other').lower(),
+                'source': 'db',
+            }
+        return jsonify([normalize(r) for r in rows])
+    except Exception as e:
+        print(f"⚠️ popular foods error: {e}")
+        return jsonify([])
+
+
+@app.route('/api/foods/lookup', methods=['GET'])
+def lookup_food():
+    """Best single match by name from Supabase base_foods for photo scan / voice enrichment."""
+    name = (request.args.get('name') or '').strip()
+    if not name or not supabase:
+        return jsonify({'found': False})
+
+    matched = _find_closest_food(name)
+    if matched:
+        return jsonify({
+            'found': True,
+            'item': {
+                'id':     f"db_{matched.get('id', '')}",
+                'name':   (matched.get('name') or '').title(),
+                'emoji':  '🍽️',
+                'cal':    round(float(matched.get('calories') or 0), 1),
+                'pro':    round(float(matched.get('protein')  or 0), 1),
+                'carb':   round(float(matched.get('carbs')    or 0), 1),
+                'fat':    round(float(matched.get('fat')      or 0), 1),
+                'fiber':  round(float(matched.get('fiber')    or 0), 1),
+                'sugar':  round(float(matched.get('sugar')    or 0), 1),
+                'sodium': round(float(matched.get('sodium')   or 0), 1),
+                'chol':   round(float(matched.get('chol')     or 0), 1),
+                'vit_d':  0.0,
+                'iron':   0.0,
+                'folate': 0.0,
+                'source': 'db',
+            }
+        })
+    return jsonify({'found': False})
+
+
+@app.route('/api/foods/barcode/<string:barcode>', methods=['GET'])
+def barcode_food(barcode):
+    """Fetch product nutrition from Open Food Facts API by barcode."""
+    barcode = barcode.strip()
+    if not barcode:
+        return jsonify({'found': False, 'error': 'Barcode required'}), 400
+
+    try:
+        url = f"https://world.openfoodfacts.org/api/v0/product/{barcode}.json"
+        res = requests.get(url, timeout=6, headers={'User-Agent': 'NutriTrack - WebApp - Version 2.0'})
+        if res.status_code != 200:
+            return jsonify({'found': False, 'error': 'Product lookup failed'}), 404
+
+        data = res.json()
+        if data.get('status') != 1 or 'product' not in data:
+            return jsonify({'found': False, 'error': 'Product not found'}), 404
+
+        product = data['product']
+        nutriments = product.get('nutriments', {})
+
+        name = product.get('product_name') or product.get('product_name_en') or f"Product #{barcode}"
+        
+        # Open Food Facts nutrient values per 100g or per serving
+        cal = float(nutriments.get('energy-kcal_100g') or nutriments.get('energy-kcal_serving') or 0)
+        pro = float(nutriments.get('proteins_100g') or nutriments.get('proteins_serving') or 0)
+        carb = float(nutriments.get('carbohydrates_100g') or nutriments.get('carbohydrates_serving') or 0)
+        fat = float(nutriments.get('fat_100g') or nutriments.get('fat_serving') or 0)
+        fiber = float(nutriments.get('fiber_100g') or nutriments.get('fiber_serving') or 0)
+        sugar = float(nutriments.get('sugars_100g') or nutriments.get('sugars_serving') or 0)
+        sodium = float(nutriments.get('sodium_100g') or nutriments.get('sodium_serving') or 0) * 1000  # g to mg
+
+        item = {
+            'id': f"barcode_{barcode}",
+            'name': name.title(),
+            'emoji': '📦',
+            'cal': round(cal, 1),
+            'pro': round(pro, 1),
+            'carb': round(carb, 1),
+            'fat': round(fat, 1),
+            'fiber': round(fiber, 1),
+            'sugar': round(sugar, 1),
+            'sodium': round(sodium, 1),
+            'chol': 0.0,
+            'vit_d': 0.0,
+            'iron': 0.0,
+            'folate': 0.0,
+            'cat': 'packaged',
+            'source': 'barcode',
+        }
+        return jsonify({'found': True, 'item': item})
+    except Exception as e:
+        print(f"⚠️ Barcode lookup error: {e}")
+        return jsonify({'found': False, 'error': str(e)}), 500
+
+
 # ══════════════════════════════════════════════════
 #  WATER INTAKE
 # ══════════════════════════════════════════════════
+
 
 
 @app.route('/api/water', methods=['GET'])
@@ -866,8 +1032,205 @@ def delete_water(log_id):
 
 
 # ══════════════════════════════════════════════════
+#  BODY WEIGHT LOGS
+# ══════════════════════════════════════════════════
+
+@app.route('/api/weight', methods=['GET'])
+@jwt_required()
+def get_weight():
+    """Get user's weight log history (past 30 days default)."""
+    uid  = get_jwt_identity()
+    days = request.args.get('days', 30, type=int)
+    logs = WeightLog.query.filter_by(user_id=uid).order_by(WeightLog.date.asc()).all()
+    if days and len(logs) > days:
+        logs = logs[-days:]
+    return jsonify([l.to_dict() for l in logs])
+
+
+@app.route('/api/weight', methods=['POST'])
+@jwt_required()
+def add_weight():
+    """Log a daily weight entry."""
+    uid  = get_jwt_identity()
+    data = request.get_json() or {}
+    try:
+        weight_kg = float(data.get('weight_kg', 0))
+    except (TypeError, ValueError):
+        return jsonify({'error': 'weight_kg must be a number'}), 400
+    if weight_kg <= 0 or weight_kg > 300:
+        return jsonify({'error': 'weight_kg invalid'}), 400
+
+    date = data.get('date', datetime.now(timezone.utc).strftime('%Y-%m-%d'))
+    note = (data.get('note') or '').strip()
+
+    try:
+        # Update user's latest weight in profile too
+        user = db.session.get(User, uid)
+        if user:
+            user.weight = weight_kg
+            user.weight_unit = 'kg'
+
+        # Check if entry exists for today, update if so
+        existing = WeightLog.query.filter_by(user_id=uid, date=date).first()
+        if existing:
+            existing.weight_kg = weight_kg
+            existing.note = note
+            log = existing
+        else:
+            log = WeightLog(user_id=uid, date=date, weight_kg=weight_kg, note=note)
+            db.session.add(log)
+
+        db.session.commit()
+        return jsonify(log.to_dict()), 201
+    except Exception as e:
+        print(f"⚠️ add_weight error: {e}")
+        return jsonify({'error': 'Could not save weight log.'}), 500
+
+
+@app.route('/api/weight/<string:log_id>', methods=['DELETE'])
+@jwt_required()
+def delete_weight(log_id):
+    uid = get_jwt_identity()
+    if not log_id.isdigit():
+        return jsonify({'error': 'Log not found'}), 404
+    try:
+        log = WeightLog.query.filter_by(id=int(log_id), user_id=uid).first()
+        if not log:
+            return jsonify({'error': 'Log not found'}), 404
+        db.session.delete(log)
+        db.session.commit()
+        return jsonify({'deleted': True})
+    except Exception as e:
+        print(f"Error deleting weight log: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+
+# ══════════════════════════════════════════════════
+#  MEAL TEMPLATES
+# ══════════════════════════════════════════════════
+
+@app.route('/api/meals/templates', methods=['GET'])
+@jwt_required()
+def get_meal_templates():
+    """List saved meal templates for the logged in user."""
+    uid = get_jwt_identity()
+    templates = MealTemplate.query.filter_by(user_id=uid).order_by(MealTemplate.created_at.desc()).all()
+    return jsonify([t.to_dict() for t in templates])
+
+
+@app.route('/api/meals/templates', methods=['POST'])
+@jwt_required()
+def save_meal_template():
+    """Save a list of food items as a named template (e.g. 'My Usual Breakfast')."""
+    uid  = get_jwt_identity()
+    data = request.get_json() or {}
+    name = (data.get('name') or '').strip()
+    items = data.get('items', [])
+
+    if not name or not items or not isinstance(items, list):
+        return jsonify({'error': 'Template name and items required'}), 400
+
+    tot_cal  = sum(float(i.get('cal', 0)) for i in items)
+    tot_pro  = sum(float(i.get('pro', 0)) for i in items)
+    tot_carb = sum(float(i.get('carb', 0)) for i in items)
+    tot_fat  = sum(float(i.get('fat', 0)) for i in items)
+
+    try:
+        tpl = MealTemplate(
+            user_id=uid,
+            name=name,
+            items_json=json.dumps(items),
+            total_cal=round(tot_cal, 1),
+            total_pro=round(tot_pro, 1),
+            total_carb=round(tot_carb, 1),
+            total_fat=round(tot_fat, 1)
+        )
+        db.session.add(tpl)
+        db.session.commit()
+        return jsonify(tpl.to_dict()), 201
+    except Exception as e:
+        print(f"⚠️ save_meal_template error: {e}")
+        return jsonify({'error': 'Could not save template'}), 500
+
+
+@app.route('/api/meals/templates/<string:template_id>', methods=['DELETE'])
+@jwt_required()
+def delete_meal_template(template_id):
+    uid = get_jwt_identity()
+    if not template_id.isdigit():
+        return jsonify({'error': 'Template not found'}), 404
+    try:
+        tpl = MealTemplate.query.filter_by(id=int(template_id), user_id=uid).first()
+        if not tpl:
+            return jsonify({'error': 'Template not found'}), 404
+        db.session.delete(tpl)
+        db.session.commit()
+        return jsonify({'deleted': True})
+    except Exception as e:
+        print(f"Error deleting template: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+
+# ══════════════════════════════════════════════════
+#  VOICE FOOD LOG PARSER
+# ══════════════════════════════════════════════════
+
+@app.route('/api/ai/parse-voice', methods=['POST'])
+@jwt_required(optional=True)
+def parse_voice_log():
+    """
+    Takes spoken text (e.g. "I had 2 boiled eggs and a cup of chai"),
+    extracts food names and quantities, and looks up each item in Supabase base_foods.
+    """
+    data = request.get_json() or {}
+    text_transcript = (data.get('transcript') or '').strip()
+    if not text_transcript:
+        return jsonify({'items': []})
+
+    # Basic regex / rule extraction for common voice patterns
+    # e.g., "2 eggs", "one apple", "bowl of dal"
+    # We enrich each recognized item by looking up in Supabase
+    import re
+    # Splitting by " and ", ",", " with ", " plus "
+    parts = re.split(r'\b(?:and|with|plus|,|\.)\b', text_transcript.lower())
+    found_items = []
+
+    for part in parts:
+        part = part.strip()
+        if not part or len(part) < 2:
+            continue
+        # Remove common preamble phrases
+        clean = re.sub(r'^(i had|i ate|logged|had|ate|one|a|an|two|2|three|3|some)\s+', '', part).strip()
+        if not clean:
+            clean = part
+
+        matched = _find_closest_food(clean)
+        if matched:
+            found_items.append({
+                'id': f"db_{matched.get('id', '')}",
+                'name': (matched.get('name') or clean).title(),
+                'emoji': '🍽️',
+                'cal': round(float(matched.get('calories') or 0), 1),
+                'pro': round(float(matched.get('protein') or 0), 1),
+                'carb': round(float(matched.get('carbs') or 0), 1),
+                'fat': round(float(matched.get('fat') or 0), 1),
+                'fiber': round(float(matched.get('fiber') or 0), 1),
+                'sugar': round(float(matched.get('sugar') or 0), 1),
+                'sodium': round(float(matched.get('sodium') or 0), 1),
+                'chol': round(float(matched.get('chol') or 0), 1),
+                'vit_d': 0.0,
+                'iron': 0.0,
+                'folate': 0.0,
+                'source': 'db',
+            })
+
+    return jsonify({'transcript': text_transcript, 'items': found_items})
+
+
+# ══════════════════════════════════════════════════
 #  AI FOOD ANALYSIS
 # ══════════════════════════════════════════════════
+
 
 @app.route('/api/ai/analyze', methods=['POST'])
 @limiter.limit('10 per minute')  # AI scans are expensive — rate-limit

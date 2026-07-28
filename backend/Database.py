@@ -23,7 +23,7 @@ from datetime import datetime, timezone, timedelta
 from dotenv import load_dotenv
 load_dotenv()
 
-from App import app, db, User, FoodLog
+from App import app, db, User, FoodLog, WaterLog, WeightLog, MealTemplate
 
 
 # ══════════════════════════════════════════════════
@@ -35,7 +35,7 @@ def cmd_init():
     with app.app_context():
         db.create_all()
         print("✅ Database tables created.")
-        print("   Tables: users, food_logs")
+        print("   Tables: users, food_logs, water_logs, weight_logs, meal_templates")
         print("   Location: nutritrack.db (SQLite)")
 
 
