@@ -5,38 +5,38 @@
    Palette: White/cream base, vivid fruit accents
 ═══════════════════════════════════════════════════ */
 :root {
-  --kiwi: #2D9E6B;
-  --kiwi-deep: #1A6644;
-  --kiwi-light: #E8F7F0;
+  --kiwi: #3ECF8E;
+  --kiwi-deep: #2D9E6B;
+  --kiwi-light: rgba(62, 207, 142, 0.15);
   --citrus: #F5A623;
-  --citrus-deep: #B87200;
-  --citrus-light: #FFF6E5;
-  --berry: #C94B8A;
-  --berry-deep: #8E2060;
-  --berry-light: #FDE8F3;
+  --citrus-deep: #D48806;
+  --citrus-light: rgba(245, 166, 35, 0.15);
+  --berry: #E05698;
+  --berry-deep: #B83B76;
+  --berry-light: rgba(224, 86, 152, 0.15);
   --coral: #F4613A;
-  --coral-light: #FEF0EC;
-  --grape: #7C5CBF;
-  --grape-light: #F0ECFA;
+  --coral-light: rgba(244, 97, 58, 0.15);
+  --grape: #9B72CF;
+  --grape-light: rgba(155, 114, 207, 0.15);
   --mango: #FF8C42;
-  --ink: #12110F;
-  --ink-80: rgba(18, 17, 15, 0.8);
-  --ink-50: rgba(18, 17, 15, 0.5);
-  --ink-30: rgba(18, 17, 15, 0.3);
-  --ink-10: rgba(18, 17, 15, 0.07);
-  --smoke: #F5F4F1;
-  --parchment: #FAFAF8;
-  --white: #FFFFFF;
-  --border: rgba(18, 17, 15, 0.1);
-  --border-soft: rgba(18, 17, 15, 0.06);
-  --fiber-color: #2D9E6B;
+  --ink: #FFFFFF;
+  --ink-80: rgba(255, 255, 255, 0.85);
+  --ink-50: rgba(255, 255, 255, 0.55);
+  --ink-30: rgba(255, 255, 255, 0.35);
+  --ink-10: rgba(255, 255, 255, 0.1);
+  --smoke: #0F1712;
+  --parchment: #0A0F0D;
+  --white: rgba(255, 255, 255, 0.05);
+  --border: rgba(255, 255, 255, 0.12);
+  --border-soft: rgba(255, 255, 255, 0.07);
+  --fiber-color: #3ECF8E;
   --sugar-color: #F4613A;
-  --sodium-color: #7C5CBF;
+  --sodium-color: #9B72CF;
   --chol-color: #F5A623;
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.07), 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.09), 0 2px 6px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.11), 0 4px 12px rgba(0, 0, 0, 0.07);
-  --shadow-xl: 0 24px 60px rgba(0, 0, 0, 0.13), 0 8px 20px rgba(0, 0, 0, 0.09);
+  --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.5);
+  --shadow-xl: 0 24px 64px rgba(0, 0, 0, 0.6);
   --radius-sm: 10px;
   --radius-md: 16px;
   --radius-lg: 22px;
@@ -51,7 +51,7 @@
 
 body {
   font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  background: linear-gradient(135deg, #f0faf5 0%, #e8f4fd 50%, #f5f0ff 100%);
+  background: linear-gradient(135deg, #0a0f0d 0%, #0f1712 50%, #080c0a 100%);
   color: var(--ink);
   min-height: 100vh;
   overflow-x: hidden;
