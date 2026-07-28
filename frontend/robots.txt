@@ -1,12 +1,13 @@
-# robots.txt — NutriTrack
-# https://nutritrack-rho-rust.vercel.app/
+# robots.txt — NutriTrack AI Health Platform
+# https://nutritrack-rho-rust.vercel.app/ & https://saiphanianirudh.github.io/Nutritrack/
 
 User-agent: *
 Allow: /
 
-# Block private/internal routes
+# Block private API endpoints & internal authentication
 Disallow: /api/
 Disallow: /auth/
 
-# Sitemap location
+# Sitemap location for Google Search Console
 Sitemap: https://nutritrack-rho-rust.vercel.app/sitemap.xml
+Sitemap: https://saiphanianirudh.github.io/Nutritrack/sitemap.xml

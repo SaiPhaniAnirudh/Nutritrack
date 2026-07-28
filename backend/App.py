@@ -58,7 +58,7 @@ if sys.platform == 'win32':
     except Exception:
         pass
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_compress import Compress
 from flask_cors import CORS
 
@@ -1948,6 +1948,18 @@ def health():
         'service': 'NutriTrack API',
         'db':      'connected'
     })
+
+
+@app.route('/robots.txt')
+def serve_robots():
+    frontend_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'frontend')
+    return send_from_directory(frontend_dir, 'robots.txt')
+
+
+@app.route('/sitemap.xml')
+def serve_sitemap():
+    frontend_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'frontend')
+    return send_from_directory(frontend_dir, 'sitemap.xml')
 
 
 # ══════════════════════════════════════════════════
