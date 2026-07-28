@@ -1609,12 +1609,37 @@ const FOOD_DESCRIPTIONS = {
   african: 'African cuisine',
 };
 
+// Debounced backend search state
+let _searchDebounceTimer = null;
+let _lastSearchQuery = '';
+
+function _buildFoodCard(f) {
+  const isDb = f.source === 'db';
+  const desc = isDb
+    ? '<span style="font-size:0.68rem;opacity:0.5;letter-spacing:0.03em">📦 From Database</span>'
+    : (f.desc || FOOD_DESCRIPTIONS[f.cat] || '');
+  return `
+    <div class="food-result-card" onclick='addFoodToLog(${JSON.stringify(f).replace(/'/g, "&#39;")})'>
+      <div class="emoji">${f.emoji}</div>
+      <div class="name">${f.name}</div>
+      ${desc ? `<div class="desc">${desc}</div>` : ''}
+      <div class="cals">${f.cal} kcal</div>
+      <div class="macros">P:${f.pro}g · C:${f.carb}g · F:${f.fat}g · Fiber:${f.fiber}g</div>
+      <div class="macros" style="color:rgba(184,201,186,0.8); margin-top:2px;">
+        ☀️ Vit D: ${f.vit_d || 0}mcg · 🥩 Iron: ${f.iron || 0}mg · 🥬 Folate: ${f.folate || 0}mcg
+      </div>
+      <div class="macros" style="color:rgba(184,201,186,0.5)">Sugar:${f.sugar}g · Salt:${f.sodium}mg</div>
+    </div>`;
+}
+
 function searchFoods(query) {
   const q = query.toLowerCase().trim();
   let searchQ = q;
   for (const [alias, replacement] of Object.entries(SEARCH_ALIASES)) {
     if (q.includes(alias)) { searchQ = q.replace(alias, replacement); break; }
   }
+
+  // ── 1. Instant local results ──────────────────────────────────────────
   let results = FOODS;
   if (currentCat !== 'all') results = results.filter(f => f.cat === currentCat);
   if (q) results = results.filter(f =>
@@ -1625,32 +1650,56 @@ function searchFoods(query) {
   else if (currentCat === 'all') results = results.slice(0, 32);
 
   const countEl = document.getElementById('searchCount');
-  countEl.textContent = q || currentCat !== 'all'
-    ? `${results.length} result${results.length !== 1 ? 's' : ''} found`
-    : `Showing ${results.length} of ${FOODS.length} foods`;
-
   const container = document.getElementById('foodResults');
-  if (results.length === 0) {
-    const safeQ = String(q).replace(/[&<>'"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[c]));
-    container.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:2rem;color:var(--ink-50)">No foods found for "<strong>${safeQ}</strong>"</div>`;
+
+  const renderCombined = (localItems, dbItems = []) => {
+    const localNames = new Set(localItems.map(f => f.name.toLowerCase()));
+    const freshDb = dbItems.filter(f => !localNames.has(f.name.toLowerCase()));
+    const combined = [...localItems, ...freshDb];
+
+    countEl.textContent = q || currentCat !== 'all'
+      ? `${combined.length} result${combined.length !== 1 ? 's' : ''} found${freshDb.length ? ` · ${freshDb.length} from database` : ''}`
+      : `Showing ${combined.length} of ${FOODS.length}+ foods`;
+
+    if (combined.length === 0) {
+      const safeQ = String(q).replace(/[&<>'"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[c]));
+      container.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:2rem;color:var(--ink-50)">No foods found for "<strong>${safeQ}</strong>"</div>`;
+      return;
+    }
+    container.innerHTML = combined.map(_buildFoodCard).join('');
+  };
+
+  // Show local results immediately
+  if (results.length === 0 && !q) {
+    container.innerHTML = '';
+    countEl.textContent = '';
     return;
   }
-  container.innerHTML = results.map(f => {
-    const desc = f.desc || FOOD_DESCRIPTIONS[f.cat] || ''; // change #2
-    return `
-    <div class="food-result-card" onclick='addFoodToLog(${JSON.stringify(f).replace(/'/g, "&#39;")})'>
-      <div class="emoji">${f.emoji}</div>
-      <div class="name">${f.name}</div>
-      ${desc ? `<div class="desc">${desc}</div>` : ''}
-      <div class="cals">${f.cal} kcal</div>
-      <div class="macros">P:${f.pro}g · C:${f.carb}g · F:${f.fat}g · Fiber:${f.fiber}g</div>
-      <div class="macros" style="color:rgba(184,201,186,0.8); margin-top:2px;">
-        ☀️ Vit D: ${f.vit_d || 0}mcg · 🥩 Iron: ${f.iron || 0}mg · 🥬 Folate: ${f.folate || 0}mcg
-      </div>
-      <div class="macros" style="color:rgba(184,201,186,0.5)">Sugar:${f.sugar}g · Salt:${f.sodium}mg</div><!-- change #13 -->
-    </div>`;
-  }).join('');
+  renderCombined(results);
+
+  // ── 2. Debounced backend supplement (400ms after typing stops) ─────────
+  clearTimeout(_searchDebounceTimer);
+  if (q.length < 2) return;
+  _lastSearchQuery = q;
+  _searchDebounceTimer = setTimeout(async () => {
+    if (_lastSearchQuery !== q) return;
+    try {
+      const backendUrl = "https://nutritrack-k96f.onrender.com";
+      const resp = await fetch(`${backendUrl}/api/foods/search?q=${encodeURIComponent(q)}&limit=20`);
+      if (!resp.ok || _lastSearchQuery !== q) return;
+      const dbFoods = await resp.json();
+      if (_lastSearchQuery !== q) return;
+      renderCombined(results, dbFoods);
+    } catch (_) {
+      // Silently ignore — local results already shown
+    }
+  }, 400);
 }
+
+// ── Legacy card template (not used by searchFoods — kept for reference only) ──
+// function _legacyFoodCard_unused(f) { ... }
+
+
 
 // Wraps fetch() with the current auth token, and retries ONCE on a 401 by
 // forcing a fresh session refresh first. This is a safety net on top of the

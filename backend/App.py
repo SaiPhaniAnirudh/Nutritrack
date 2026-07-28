@@ -734,9 +734,83 @@ def logs_summary():
     return jsonify(list(summary.values()))
 
 
+
+
+# ══════════════════════════════════════════════════
+#  FOOD SEARCH (Supabase base_foods — 12,986+ entries)
+# ══════════════════════════════════════════════════
+
+@app.route('/api/foods/search', methods=['GET'])
+def search_foods():
+    """
+    Search the full base_foods table in Supabase (no JWT needed — public read).
+    GET /api/foods/search?q=<query>&limit=20
+    Returns items normalized to the same shape as the frontend FOODS array
+    so the client can merge them without any transformation.
+    """
+    if not supabase:
+        return jsonify([])
+
+    q = (request.args.get('q') or '').strip()
+    limit = min(int(request.args.get('limit', 20)), 50)
+
+    if len(q) < 2:
+        return jsonify([])
+
+    try:
+        # Try substring match on name
+        res = supabase.table('base_foods') \
+                      .select('*') \
+                      .ilike('name', f'%{q}%') \
+                      .limit(limit) \
+                      .execute()
+        rows = res.data or []
+
+        # Fallback: try each word individually (handles "dal fry" → "dal")
+        if not rows:
+            words = [w for w in q.split() if len(w) >= 3]
+            for word in words:
+                res = supabase.table('base_foods') \
+                              .select('*') \
+                              .ilike('name', f'%{word}%') \
+                              .limit(limit) \
+                              .execute()
+                rows = res.data or []
+                if rows:
+                    break
+
+        # Normalize to the FOODS shape the frontend expects
+        def normalize(row):
+            return {
+                'id':     f"db_{row.get('id', '')}",
+                'name':   (row.get('name') or '').title(),
+                'emoji':  '🍽️',                         # base_foods has no emoji
+                'cal':    round(float(row.get('calories') or 0), 1),
+                'pro':    round(float(row.get('protein')  or 0), 1),
+                'carb':   round(float(row.get('carbs')    or 0), 1),
+                'fat':    round(float(row.get('fat')      or 0), 1),
+                'fiber':  round(float(row.get('fiber')    or 0), 1),
+                'sugar':  round(float(row.get('sugar')    or 0), 1),
+                'sodium': round(float(row.get('sodium')   or 0), 1),
+                'chol':   round(float(row.get('chol')     or 0), 1),
+                'vit_d':  0.0,
+                'iron':   0.0,
+                'folate': 0.0,
+                'cat':    'other',
+                'source': 'db',  # flag so frontend can label these "From Database"
+            }
+
+        return jsonify([normalize(r) for r in rows])
+
+    except Exception as e:
+        print(f"⚠️ food search error: {e}")
+        return jsonify([])
+
+
 # ══════════════════════════════════════════════════
 #  WATER INTAKE
 # ══════════════════════════════════════════════════
+
 
 @app.route('/api/water', methods=['GET'])
 @jwt_required()
