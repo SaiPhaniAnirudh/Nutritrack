@@ -695,7 +695,7 @@ def _date_range(days):
 
 # Increment this whenever you push a deploy — lets you verify Render is live
 # on the right version by hitting GET /api/health
-BUILD_VERSION = "2026-07-29-batch3-v4"
+BUILD_VERSION = "2026-07-29-batch3-v5"
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
@@ -1661,14 +1661,14 @@ def delete_recipe(recipe_id):
 @jwt_required(optional=True)
 def ai_chat():
     """
-    Context-aware AI chatbot assistant.
-    Injects user's profile goals, today's logged macros, remaining calories,
-    and diet preference into prompt for intelligent personal nutrition advice.
+    NutriBot — Context-Aware AI Nutritionist Chatbot.
+    Fetches the user's profile, daily goals, today's logs, and remaining macros
+    to provide intelligent nutrition advice.
     """
     data = request.get_json() or {}
     message = (data.get('message') or '').strip()
     if not message:
-        return jsonify({'response': 'Please enter a message.'})
+        return jsonify({'response': 'Please enter a message.', 'reply': 'Please enter a message.'})
 
     uid = get_jwt_identity()
     user = db.session.get(User, uid) if uid else None
@@ -1683,10 +1683,26 @@ def ai_chat():
     goal_pro = user.goal_protein if user else 150
     diet_type = user.diet_type if user else 'nonveg'
 
-    rem_cal = Math.max(0, goal_cals - today_cals) if 'Math' in globals() else max(0, goal_cals - today_cals)
-    rem_pro = max(0, goal_pro - today_pro)
+    rem_cal = max(0.0, float(goal_cals - today_cals))
+    rem_pro = max(0.0, float(goal_pro - today_pro))
 
     sys_context = f"User Profile: Diet Goal={user.diet_goal if user else 'maintain'}, Diet Type={diet_type}. Today's Progress: Logged {round(today_cals)} kcal / {goal_cals} kcal, Protein {round(today_pro)}g / {goal_pro}g. Remaining: {round(rem_cal)} kcal, {round(rem_pro)}g protein."
+
+    # Try LLM server first if available
+    llm_url = os.getenv('LLM_SERVER_URL', 'http://localhost:5002')
+    try:
+        resp = requests.post(
+            f'{llm_url}/api/ai/chat',
+            json={'message': message, 'context': sys_context},
+            timeout=8
+        )
+        if resp.status_code == 200:
+            res_data = resp.json()
+            reply = res_data.get('reply') or res_data.get('response') or ''
+            if reply:
+                return jsonify({'response': reply, 'reply': reply, 'context': sys_context})
+    except Exception:
+        pass
 
     # Direct intelligent response generator using context + DB knowledge
     matched = _find_closest_food(message)
@@ -1696,7 +1712,7 @@ def ai_chat():
 
     reply = f"Based on your profile ({sys_context}):\n\nTo answer '{message}': You currently have {round(rem_cal)} kcal and {round(rem_pro)}g protein left for today.{food_tip}\n\nKeep hitting your goals!"
 
-    return jsonify({'response': reply, 'context': sys_context})
+    return jsonify({'response': reply, 'reply': reply, 'context': sys_context})
 
 
 # ══════════════════════════════════════════════════
@@ -1871,84 +1887,6 @@ def ai_analyze_stream():
         }), 503
     except requests.exceptions.Timeout:
         return jsonify({'error': 'LLM server timed out'}), 504
-
-
-# ══════════════════════════════════════════════════
-#  AI NUTRITIONIST CHATBOT
-# ══════════════════════════════════════════════════
-
-@app.route('/api/ai/chat', methods=['POST'])
-@limiter.limit('20 per minute')
-@jwt_required()
-def ai_chat():
-    """
-    NutriBot — AI Nutritionist Chatbot.
-    Fetches the user's last 7 days of food logs + their goals,
-    bundles them as context, and forwards to the LLM server.
-    """
-    uid  = get_jwt_identity()
-    user = db.session.get(User, uid)
-    if not user:
-        return jsonify({'error': 'User not found'}), 404
-
-    data    = request.get_json() or {}
-    message = (data.get('message') or '').strip()
-    if not message:
-        return jsonify({'error': 'Message is required'}), 400
-
-    # Fetch last 7 days of logs for context
-    dates = [(datetime.now(timezone.utc).date() - timedelta(days=i)).isoformat() for i in range(7)]
-    logs  = FoodLog.query.filter(
-        FoodLog.user_id == uid,
-        FoodLog.date.in_(dates)
-    ).order_by(FoodLog.date.desc(), FoodLog.logged_at.desc()).all()
-
-    # Build a compact log summary
-    log_summary = []
-    for l in logs[:30]:  # cap at 30 entries to stay within context
-        log_summary.append({
-            'date':      l.date,
-            'meal':      l.meal_type,
-            'food':      l.name,
-            'cal':       round(l.cal),
-            'protein_g': round(l.pro, 1),
-            'carbs_g':   round(l.carb, 1),
-            'fat_g':     round(l.fat, 1),
-        })
-
-    context = {
-        'user_name':  (user.name.split()[0] if user.name and user.name.strip() else 'there'),
-        'goals': {
-            'calories': user.goal_calories,
-            'protein':  user.goal_protein,
-            'carbs':    user.goal_carbs,
-            'fat':      user.goal_fat,
-            'fiber':    user.goal_fiber,
-        },
-        'recent_logs': log_summary,
-    }
-
-    llm_url = os.getenv('LLM_SERVER_URL', 'http://localhost:5002')
-    try:
-        resp = requests.post(
-            f'{llm_url}/api/ai/chat',
-            json={'message': message, 'context': context},
-            timeout=90
-        )
-        if resp.status_code == 200:
-            return jsonify(resp.json())
-        return jsonify({'error': 'AI server returned an error', 'reply': 'Sorry, I had trouble thinking. Please try again!'}), 502
-    except requests.exceptions.ConnectionError:
-        # Graceful fallback if LLM server is offline
-        return jsonify({
-            'reply': "I'm currently offline. Make sure the LLM server is running (`python llm/Llm_server.py`) to chat with me!",
-            'offline': True
-        })
-    except requests.exceptions.Timeout:
-        return jsonify({
-            'reply': "I'm taking too long to think! The AI is busy. Please try again in a moment.",
-            'timeout': True
-        })
 
 
 # ══════════════════════════════════════════════════
