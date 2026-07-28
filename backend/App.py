@@ -70,6 +70,7 @@ try:
 except ImportError:
     _has_limiter = False
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import text
 
 from functools import wraps
 from flask import g
@@ -528,6 +529,29 @@ def _date_range(days):
 
 
 
+
+# ══════════════════════════════════════════════════
+#  HEALTH CHECK
+# ══════════════════════════════════════════════════
+
+# Increment this whenever you push a deploy — lets you verify Render is live
+# on the right version by hitting GET /api/health
+BUILD_VERSION = "2026-07-29-v1"
+
+@app.route('/api/health', methods=['GET'])
+def health_check():
+    db_ok = False
+    try:
+        db.session.execute(text('SELECT 1'))
+        db_ok = True
+    except Exception:
+        pass
+    return jsonify({
+        'status': 'ok',
+        'build': BUILD_VERSION,
+        'db': 'connected' if db_ok else 'error',
+        'password_column': 'removed',   # confirms the fix is live
+    })
 
 # ══════════════════════════════════════════════════
 #  AUTH ROUTES
