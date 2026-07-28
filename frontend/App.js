@@ -3344,12 +3344,12 @@ function toggleChat() {
   _chatOpen = !_chatOpen;
   const panel = document.getElementById('nutribotPanel');
   const fabBtn = document.getElementById('nutribotBtn');
+  if (!panel || !fabBtn) return;
 
   if (_chatOpen) {
     panel.style.display = 'flex';
     fabBtn.style.display = 'none';
     if (_chatHistory.length === 0) _initChat();
-    // scroll to bottom
     setTimeout(() => _scrollChatBottom(), 50);
   } else {
     panel.style.display = 'none';

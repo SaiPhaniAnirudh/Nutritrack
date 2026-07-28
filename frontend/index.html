@@ -1102,7 +1102,7 @@
     }
   </script>
   <script src="/Foods.js" defer></script>
-  <script src="/App.js?v=28" defer></script>
+  <script src="/App.js?v=29" defer></script>
 
   <!-- PWA Install Prompt Banner -->
   <div id="pwaInstallBanner" style="
@@ -1219,8 +1219,10 @@
 
       if (dismissBtn) {
         dismissBtn.addEventListener('click', () => {
-          // Just hide for this session/load (shows again on reload)
           if (banner) banner.style.display = 'none';
+          if (profileInstallCard && _deferredPrompt) {
+            profileInstallCard.style.display = 'block';
+          }
         });
       }
     });
