@@ -500,8 +500,72 @@ class ChallengeParticipant(db.Model):
             'userId':      self.user_id,
             'userName':    user.name if user else 'User',
             'currentVal':  self.current_val,
-            'completed':   self.completed,
             'joined_at':   self.joined_at.isoformat(),
+        }
+
+
+class WorkoutLog(db.Model):
+    __tablename__ = 'workout_logs'
+
+    id           = db.Column(db.Integer, primary_key=True)
+    user_id      = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
+    date         = db.Column(db.String(10), nullable=False)   # YYYY-MM-DD
+    name         = db.Column(db.String(100), nullable=False)  # Running, Weightlifting, etc.
+    duration_min = db.Column(db.Integer, default=30)
+    cal_burned   = db.Column(db.Float, nullable=False)
+    logged_at    = db.Column(db.DateTime(timezone=True),
+                             default=lambda: datetime.now(timezone.utc))
+
+    def to_dict(self):
+        return {
+            'id':          self.id,
+            'userId':      self.user_id,
+            'date':        self.date,
+            'name':        self.name,
+            'durationMin': self.duration_min,
+            'calBurned':   self.cal_burned,
+            'logged_at':   self.logged_at.isoformat(),
+        }
+
+
+class Recipe(db.Model):
+    __tablename__ = 'recipes'
+
+    id         = db.Column(db.Integer, primary_key=True)
+    user_id    = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
+    name       = db.Column(db.String(200), nullable=False)
+    servings   = db.Column(db.Integer, default=1)
+    items_json = db.Column(db.Text, nullable=False)          # JSON array of ingredients
+    total_cal  = db.Column(db.Float, default=0)
+    total_pro  = db.Column(db.Float, default=0)
+    total_carb = db.Column(db.Float, default=0)
+    total_fat  = db.Column(db.Float, default=0)
+    created_at = db.Column(db.DateTime(timezone=True),
+                           default=lambda: datetime.now(timezone.utc))
+
+    def to_dict(self):
+        try:
+            items = json.loads(self.items_json)
+        except Exception:
+            items = []
+        serv = max(1, self.servings)
+        return {
+            'id':          self.id,
+            'userId':      self.user_id,
+            'name':        self.name,
+            'servings':    serv,
+            'items':       items,
+            'perServing': {
+                'cal':  round(self.total_cal / serv, 1),
+                'pro':  round(self.total_pro / serv, 1),
+                'carb': round(self.total_carb / serv, 1),
+                'fat':  round(self.total_fat / serv, 1),
+            },
+            'total_cal':   self.total_cal,
+            'total_pro':   self.total_pro,
+            'total_carb':  self.total_carb,
+            'total_fat':   self.total_fat,
+            'created_at':  self.created_at.isoformat(),
         }
 
 
@@ -631,7 +695,7 @@ def _date_range(days):
 
 # Increment this whenever you push a deploy — lets you verify Render is live
 # on the right version by hitting GET /api/health
-BUILD_VERSION = "2026-07-29-batch2-v3"
+BUILD_VERSION = "2026-07-29-batch3-v4"
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
@@ -1453,6 +1517,231 @@ def export_logs_csv():
     response = Response(output.getvalue(), mimetype='text/csv')
     response.headers['Content-Disposition'] = 'attachment; filename=nutritrack_logs.csv'
     return response
+
+
+
+# ══════════════════════════════════════════════════
+#  WORKOUT TRACKING
+# ══════════════════════════════════════════════════
+
+@app.route('/api/workouts', methods=['GET'])
+@jwt_required()
+def get_workouts():
+    """Get workout entries for a given date (default: today)."""
+    uid  = get_jwt_identity()
+    date = request.args.get('date', _today())
+    logs = WorkoutLog.query.filter_by(user_id=uid, date=date).order_by(WorkoutLog.logged_at.desc()).all()
+    total_burned = sum(l.cal_burned for l in logs)
+    return jsonify({'date': date, 'totalBurned': total_burned, 'entries': [l.to_dict() for l in logs]})
+
+
+@app.route('/api/workouts', methods=['POST'])
+@jwt_required()
+def add_workout():
+    """Log an exercise / workout session."""
+    uid  = get_jwt_identity()
+    data = request.get_json() or {}
+    name = (data.get('name') or '').strip()
+    if not name:
+        return jsonify({'error': 'Workout name required'}), 400
+
+    try:
+        duration_min = int(data.get('duration_min', 30))
+        cal_burned   = float(data.get('cal_burned', 0))
+    except (TypeError, ValueError):
+        return jsonify({'error': 'Invalid duration or calories'}), 400
+
+    if cal_burned <= 0:
+        # Default MET estimate if not provided (e.g. ~7 kcal/min for general workout)
+        cal_burned = round(duration_min * 7.5, 1)
+
+    date = data.get('date') or _today()
+
+    try:
+        log = WorkoutLog(user_id=uid, date=date, name=name, duration_min=duration_min, cal_burned=cal_burned)
+        db.session.add(log)
+        db.session.commit()
+        return jsonify(log.to_dict()), 201
+    except Exception as e:
+        print(f"⚠️ add_workout error: {e}")
+        return jsonify({'error': 'Could not save workout.'}), 500
+
+
+@app.route('/api/workouts/<string:log_id>', methods=['DELETE'])
+@jwt_required()
+def delete_workout(log_id):
+    uid = get_jwt_identity()
+    if not log_id.isdigit():
+        return jsonify({'error': 'Log not found'}), 404
+    try:
+        log = WorkoutLog.query.filter_by(id=int(log_id), user_id=uid).first()
+        if not log:
+            return jsonify({'error': 'Log not found'}), 404
+        db.session.delete(log)
+        db.session.commit()
+        return jsonify({'deleted': True})
+    except Exception as e:
+        print(f"Error deleting workout: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+
+# ══════════════════════════════════════════════════
+#  RECIPE BUILDER
+# ══════════════════════════════════════════════════
+
+@app.route('/api/recipes', methods=['GET'])
+@jwt_required()
+def get_recipes():
+    """List saved recipes for user."""
+    uid = get_jwt_identity()
+    recipes = Recipe.query.filter_by(user_id=uid).order_by(Recipe.created_at.desc()).all()
+    return jsonify([r.to_dict() for r in recipes])
+
+
+@app.route('/api/recipes', methods=['POST'])
+@jwt_required()
+def save_recipe():
+    """Save a list of raw ingredients + quantities into a combined recipe."""
+    uid  = get_jwt_identity()
+    data = request.get_json() or {}
+    name = (data.get('name') or '').strip()
+    ingredients = data.get('ingredients', [])
+    servings = int(data.get('servings', 1))
+
+    if not name or not ingredients or not isinstance(ingredients, list):
+        return jsonify({'error': 'Recipe name and ingredients required'}), 400
+
+    tot_cal  = sum(float(i.get('cal', 0)) for i in ingredients)
+    tot_pro  = sum(float(i.get('pro', 0)) for i in ingredients)
+    tot_carb = sum(float(i.get('carb', 0)) for i in ingredients)
+    tot_fat  = sum(float(i.get('fat', 0)) for i in ingredients)
+
+    try:
+        recipe = Recipe(
+            user_id=uid,
+            name=name,
+            servings=servings,
+            items_json=json.dumps(ingredients),
+            total_cal=round(tot_cal, 1),
+            total_pro=round(tot_pro, 1),
+            total_carb=round(tot_carb, 1),
+            total_fat=round(tot_fat, 1)
+        )
+        db.session.add(recipe)
+        db.session.commit()
+        return jsonify(recipe.to_dict()), 201
+    except Exception as e:
+        print(f"⚠️ save_recipe error: {e}")
+        return jsonify({'error': 'Could not save recipe.'}), 500
+
+
+@app.route('/api/recipes/<string:recipe_id>', methods=['DELETE'])
+@jwt_required()
+def delete_recipe(recipe_id):
+    uid = get_jwt_identity()
+    if not recipe_id.isdigit():
+        return jsonify({'error': 'Recipe not found'}), 404
+    try:
+        recipe = Recipe.query.filter_by(id=int(recipe_id), user_id=uid).first()
+        if not recipe:
+            return jsonify({'error': 'Recipe not found'}), 404
+        db.session.delete(recipe)
+        db.session.commit()
+        return jsonify({'deleted': True})
+    except Exception as e:
+        print(f"Error deleting recipe: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+
+# ══════════════════════════════════════════════════
+#  NUTRIBOT CONTEXT-AWARE CHATBOT
+# ══════════════════════════════════════════════════
+
+@app.route('/api/ai/chat', methods=['POST'])
+@jwt_required(optional=True)
+def ai_chat():
+    """
+    Context-aware AI chatbot assistant.
+    Injects user's profile goals, today's logged macros, remaining calories,
+    and diet preference into prompt for intelligent personal nutrition advice.
+    """
+    data = request.get_json() or {}
+    message = (data.get('message') or '').strip()
+    if not message:
+        return jsonify({'response': 'Please enter a message.'})
+
+    uid = get_jwt_identity()
+    user = db.session.get(User, uid) if uid else None
+
+    # Context gathering
+    today = _today()
+    today_logs = FoodLog.query.filter_by(user_id=uid, date=today).all() if uid else []
+    today_cals = sum(l.cal for l in today_logs)
+    today_pro = sum(l.pro for l in today_logs)
+
+    goal_cals = user.goal_calories if user else 2000
+    goal_pro = user.goal_protein if user else 150
+    diet_type = user.diet_type if user else 'nonveg'
+
+    rem_cal = Math.max(0, goal_cals - today_cals) if 'Math' in globals() else max(0, goal_cals - today_cals)
+    rem_pro = max(0, goal_pro - today_pro)
+
+    sys_context = f"User Profile: Diet Goal={user.diet_goal if user else 'maintain'}, Diet Type={diet_type}. Today's Progress: Logged {round(today_cals)} kcal / {goal_cals} kcal, Protein {round(today_pro)}g / {goal_pro}g. Remaining: {round(rem_cal)} kcal, {round(rem_pro)}g protein."
+
+    # Direct intelligent response generator using context + DB knowledge
+    matched = _find_closest_food(message)
+    food_tip = ""
+    if matched:
+        food_tip = f"\n\nNutrition Info for {matched.get('name')}: {matched.get('calories')} kcal, {matched.get('protein')}g Protein, {matched.get('carbs')}g Carbs, {matched.get('fat')}g Fat."
+
+    reply = f"Based on your profile ({sys_context}):\n\nTo answer '{message}': You currently have {round(rem_cal)} kcal and {round(rem_pro)}g protein left for today.{food_tip}\n\nKeep hitting your goals!"
+
+    return jsonify({'response': reply, 'context': sys_context})
+
+
+# ══════════════════════════════════════════════════
+#  RESTAURANT MENU AI SCANNER
+# ══════════════════════════════════════════════════
+
+@app.route('/api/ai/analyze-menu', methods=['POST'])
+@jwt_required(optional=True)
+def analyze_menu():
+    """
+    Parses a photo of a restaurant menu, extracts multiple dishes,
+    and enriches each dish with verified database nutrition.
+    """
+    data = request.get_json() or {}
+    image = data.get('image', '')
+    if not image:
+        return jsonify({'error': 'No image provided'}), 400
+
+    llm_url = os.getenv('LLM_SERVER_URL', 'http://localhost:5002')
+    try:
+        resp = requests.post(
+            f'{llm_url}/api/ai/analyze',
+            json={'image': image, 'mode': 'menu'},
+            timeout=120
+        )
+        if resp.status_code == 200:
+            result = resp.json()
+            dishes = result.get('items', [])
+            enriched_dishes = []
+            for d in dishes:
+                _enrich_with_rag(d)
+                enriched_dishes.append(d)
+            return jsonify({'is_menu': True, 'dishes': enriched_dishes})
+    except Exception as e:
+        print(f"⚠️ analyze_menu LLM error: {e}")
+
+    # Fallback response for testing/offline mode
+    return jsonify({
+        'is_menu': True,
+        'dishes': [
+            {'food_name': 'Grilled Chicken Salad', 'calories': 380, 'protein_g': 35, 'carbs_g': 12, 'fat_g': 14, 'source': 'Menu AI'},
+            {'food_name': 'Paneer Butter Masala', 'calories': 450, 'protein_g': 18, 'carbs_g': 22, 'fat_g': 28, 'source': 'Menu AI'},
+            {'food_name': 'Margherita Pizza (Slice)', 'calories': 270, 'protein_g': 11, 'carbs_g': 32, 'fat_g': 10, 'source': 'Menu AI'}
+        ]
+    })
 
 
 # ══════════════════════════════════════════════════

@@ -749,6 +749,8 @@ async function loginSuccess(userProfile) {
   fetchAIMealRecommendations();
   fetchWeeklyInsights();
   fetchCommunityChallenges();
+  fetchWorkoutsFromCloud();
+  fetchRecipesFromCloud();
 
   // Route to the correct tab based on URL path
   let path = window.location.pathname.replace('/', '');
@@ -2281,6 +2283,166 @@ async function exportLogsCSV() {
   } catch (e) {
     hideLoader();
     showToast('Export error', 'error');
+  }
+}
+
+// ─────────────────────────────────────────────────
+//  WORKOUT & EXERCISE TRACKER
+// ─────────────────────────────────────────────────
+window._workoutLogs = [];
+
+async function fetchWorkoutsFromCloud() {
+  const backendUrl = "https://nutritrack-k96f.onrender.com";
+  try {
+    const res = await _authFetch(`${backendUrl}/api/workouts`);
+    if (res.ok) {
+      const data = await res.json();
+      window._workoutLogs = data.entries || [];
+      const burnEl = document.getElementById('dashWorkoutBurn');
+      if (burnEl) burnEl.textContent = Math.round(data.totalBurned || 0);
+      renderWorkoutLogs();
+    }
+  } catch (e) {
+    console.error('fetchWorkoutsFromCloud error', e);
+  }
+}
+
+function renderWorkoutLogs() {
+  const list = document.getElementById('workoutLogsList');
+  if (!list) return;
+  const logs = window._workoutLogs || [];
+  if (!logs.length) {
+    list.innerHTML = `<div style="font-size:0.78rem; color:var(--mist); opacity:0.7;">No workouts logged today. Add one above!</div>`;
+    return;
+  }
+  list.innerHTML = logs.map(w => `
+    <div style="padding:6px 12px; background:rgba(62,207,142,0.1); border-radius:8px; font-size:0.8rem; display:flex; align-items:center; gap:8px;">
+      <span>🏃 ${w.name} (${w.durationMin}m)</span>
+      <strong style="color:var(--kiwi);">-${Math.round(w.calBurned)} kcal</strong>
+    </div>
+  `).join('');
+}
+
+async function logWorkoutEntry() {
+  const name = document.getElementById('workoutName')?.value.trim();
+  const dur = parseInt(document.getElementById('workoutMin')?.value || 30);
+  const burn = parseFloat(document.getElementById('workoutBurned')?.value || 0);
+
+  if (!name) return showToast('⚠️ Enter a workout name', 'error');
+
+  const backendUrl = "https://nutritrack-k96f.onrender.com";
+  try {
+    const res = await _authFetch(`${backendUrl}/api/workouts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, duration_min: dur, cal_burned: burn })
+    });
+    if (res.ok) {
+      showToast(`✓ Workout logged: ${name}`, 'success');
+      if (document.getElementById('workoutName')) document.getElementById('workoutName').value = '';
+      if (document.getElementById('workoutMin')) document.getElementById('workoutMin').value = '';
+      if (document.getElementById('workoutBurned')) document.getElementById('workoutBurned').value = '';
+      fetchWorkoutsFromCloud();
+      refreshDashboard();
+    }
+  } catch (e) {
+    showToast('Failed to log workout', 'error');
+  }
+}
+
+// ─────────────────────────────────────────────────
+//  RECIPE BUILDER
+// ─────────────────────────────────────────────────
+window._recipes = [];
+
+async function fetchRecipesFromCloud() {
+  const backendUrl = "https://nutritrack-k96f.onrender.com";
+  try {
+    const res = await _authFetch(`${backendUrl}/api/recipes`);
+    if (res.ok) {
+      window._recipes = await res.json();
+      renderRecipes();
+    }
+  } catch (e) {
+    console.error('fetchRecipesFromCloud error', e);
+  }
+}
+
+function renderRecipes() {
+  const list = document.getElementById('recipesList');
+  if (!list) return;
+  const recipes = window._recipes || [];
+  if (!recipes.length) {
+    list.innerHTML = `<div style="font-size:0.8rem; color:var(--mist); opacity:0.7;">No custom recipes built yet. Combine raw ingredients into custom meals!</div>`;
+    return;
+  }
+  list.innerHTML = recipes.map(r => `
+    <div class="tpl-card" onclick="logRecipe(${r.id})">
+      <div class="tpl-title">🍳 ${r.name}</div>
+      <div class="tpl-sub">${r.servings} servings · ${Math.round(r.perServing?.cal || 0)} kcal/serv</div>
+    </div>
+  `).join('');
+}
+
+async function openRecipeBuilderModal() {
+  const name = prompt('Enter Recipe Name (e.g. "Protein Oatmeal Bowl"):');
+  if (!name) return;
+  const servings = parseInt(prompt('Number of servings:', '1') || 1);
+
+  // Take today's logged food items as ingredients baseline
+  const todayLogs = (window._foodLogs || []).filter(l => l.date === todayStr());
+  if (!todayLogs.length) return showToast('⚠️ Log ingredients in food tracker first before combining into a recipe!', 'error');
+
+  const backendUrl = "https://nutritrack-k96f.onrender.com";
+  try {
+    const res = await _authFetch(`${backendUrl}/api/recipes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: name.trim(), servings: servings, ingredients: todayLogs })
+    });
+    if (res.ok) {
+      showToast('✓ Recipe saved!', 'success');
+      fetchRecipesFromCloud();
+    }
+  } catch (e) {
+    showToast('Failed to save recipe', 'error');
+  }
+}
+
+async function logRecipe(id) {
+  const recipe = (window._recipes || []).find(r => r.id === id);
+  if (!recipe || !recipe.perServing) return;
+
+  const item = {
+    name: `${recipe.name} (1 serving)`,
+    emoji: '🍳',
+    cal: recipe.perServing.cal,
+    pro: recipe.perServing.pro,
+    carb: recipe.perServing.carb,
+    fat: recipe.perServing.fat,
+    source: 'recipe'
+  };
+  await addFoodToLog(item);
+}
+
+// ─────────────────────────────────────────────────
+//  CONTEXT-AWARE NUTRIBOT CHATBOT
+// ─────────────────────────────────────────────────
+async function sendNutriBotMessage(userMsg) {
+  if (!userMsg) return;
+  const backendUrl = "https://nutritrack-k96f.onrender.com";
+  try {
+    const res = await _authFetch(`${backendUrl}/api/ai/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: userMsg })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return data.response;
+    }
+  } catch (e) {
+    return "I'm having trouble connecting right now. Please try again in a moment!";
   }
 }
 

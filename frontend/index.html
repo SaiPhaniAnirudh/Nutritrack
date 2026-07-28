@@ -611,6 +611,21 @@
         </div>
       </div>
 
+      <!-- WORKOUT & EXERCISE CARD -->
+      <div class="glass-card" style="margin-bottom:1.4rem">
+        <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
+          <div><div class="dot"></div>🏋️ Workout & Activity Tracker</div>
+          <div style="font-size:0.85rem; font-weight:700; color:var(--kiwi);">Burned Today: <span id="dashWorkoutBurn">0</span> kcal</div>
+        </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:0.8rem; align-items:center;">
+          <input type="text" id="workoutName" placeholder="e.g. Running, Weightlifting" style="flex:2; min-width:140px; padding:8px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.15); background:rgba(0,0,0,0.2); color:#fff; font-size:0.82rem;">
+          <input type="number" id="workoutMin" placeholder="30 min" style="width:90px; padding:8px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.15); background:rgba(0,0,0,0.2); color:#fff; font-size:0.82rem;">
+          <input type="number" id="workoutBurned" placeholder="Calories" style="width:100px; padding:8px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.15); background:rgba(0,0,0,0.2); color:#fff; font-size:0.82rem;">
+          <button type="button" onclick="logWorkoutEntry()" class="save-goals-btn" style="width:auto; padding:8px 16px; margin-top:0; font-size:0.82rem;">+ Log Workout</button>
+        </div>
+        <div id="workoutLogsList" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:0.8rem;"></div>
+      </div>
+
       <div class="main-grid">
         <div class="glass-card">
           <div class="card-title">
@@ -759,6 +774,14 @@
         </div>
         <div id="mealTemplatesList" style="display:flex; gap:10px; overflow-x:auto; padding-bottom:6px; margin-top:0.6rem;">
           <div style="font-size:0.8rem; color:var(--mist); opacity:0.7;">No saved meal templates yet. Click "+ Save Today's Meal" to create one-tap combos!</div>
+      <!-- Recipe Builder Card -->
+      <div class="glass-card" style="margin-top:1.2rem">
+        <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
+          <div><div class="dot"></div>🍳 Custom Recipe Builder</div>
+          <button type="button" onclick="openRecipeBuilderModal()" class="water-quick-btn" style="font-size:0.75rem; padding:4px 10px;">+ Create Recipe</button>
+        </div>
+        <div id="recipesList" style="display:flex; gap:10px; overflow-x:auto; padding-bottom:6px; margin-top:0.6rem;">
+          <div style="font-size:0.8rem; color:var(--mist); opacity:0.7;">No custom recipes built yet. Combine raw ingredients into custom meals!</div>
         </div>
       </div>
     </div>
@@ -1074,7 +1097,7 @@
     }
   </script>
   <script src="/Foods.js" defer></script>
-  <script src="/App.js?v=24" defer></script>
+  <script src="/App.js?v=25" defer></script>
 
   <!-- PWA Install Prompt Banner -->
   <div id="pwaInstallBanner" style="
