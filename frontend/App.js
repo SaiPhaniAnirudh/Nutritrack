@@ -1684,113 +1684,116 @@ function _buildFoodCard(f) {
     </div>`;
 }
 
-function searchFoods(query = '') {
+let _foodPage = 0;
+let _currentDbFoods = [];
+let _totalDbCount = 15085;
+
+async function searchFoods(query = '', page = 0) {
   const q = (query || '').toLowerCase().trim();
-  let searchQ = q;
-  for (const [alias, replacement] of Object.entries(SEARCH_ALIASES)) {
-    if (q.includes(alias)) { searchQ = q.replace(alias, replacement); break; }
-  }
-
-  // ── 1. Instant local results ──────────────────────────────────────────
-  let results = FOODS;
-  if (currentCat !== 'all') results = results.filter(f => f.cat === currentCat);
-  if (q) results = results.filter(f =>
-    f.name.toLowerCase().includes(q) ||
-    f.name.toLowerCase().includes(searchQ) ||
-    q.split(' ').every(word => word.length > 2 && f.name.toLowerCase().includes(word))
-  );
-  else if (currentCat === 'all') results = results.slice(0, 32);
-
   const countEl = document.getElementById('searchCount');
   const container = document.getElementById('foodResults');
 
-  const renderCombined = (localItems, dbItems = [], totalDbCount = 15085) => {
-    const localNames = new Set(localItems.map(f => f.name.toLowerCase()));
-    const freshDb = dbItems.filter(f => !localNames.has(f.name.toLowerCase()));
-    const combined = [...localItems, ...freshDb];
+  if (page === 0) {
+    _foodPage = 0;
+    _currentDbFoods = [];
+  }
 
-    if (countEl) {
-      if (q || currentCat !== 'all') {
-        const catLabel = currentCat !== 'all' ? ` · ${currentCat.toUpperCase()} category` : '';
-        countEl.textContent = `${combined.length} results found${freshDb.length ? ` (${freshDb.length} from Supabase DB)` : ''}${catLabel}`;
-      } else {
-        countEl.textContent = `Showing ${combined.length} of ${totalDbCount}+ foods in Supabase database`;
+  _lastSearchQuery = `${currentCat}:${q}`;
+
+  // 1. Initial local items match
+  let localMatches = FOODS;
+  if (currentCat !== 'all') localMatches = localMatches.filter(f => f.cat === currentCat);
+  if (q) localMatches = localMatches.filter(f => f.name.toLowerCase().includes(q));
+  else if (currentCat === 'all') localMatches = localMatches.slice(0, 15);
+
+  try {
+    let dbFetched = [];
+    if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+      let qBuilder = supabaseClient.from('base_foods').select('*', { count: 'exact' });
+
+      if (currentCat !== 'all') {
+        const catMap = {
+          'veg': 'veg', 'veggies': 'veg', 'fruit': 'fruit', 'fruits': 'fruit',
+          'protein': 'protein', 'grain': 'grain', 'grains': 'grain', 'dairy': 'dairy',
+          'snack': 'snack', 'snacks': 'snack', 'legume': 'legume', 'legumes': 'legume',
+          'drink': 'drink', 'drinks': 'drink', 'fastfood': 'fastfood', 'fast food': 'fastfood',
+          'indian': 'indian'
+        };
+        const dbCat = catMap[currentCat] || currentCat;
+        qBuilder = qBuilder.eq('category', dbCat);
+      }
+      if (q) {
+        qBuilder = qBuilder.ilike('name', `%${q}%`);
+      }
+
+      const fromIndex = page * 60;
+      const toIndex = fromIndex + 59;
+      const { data, count, error } = await qBuilder.order('name', { ascending: true }).range(fromIndex, toIndex);
+
+      if (!error && data) {
+        if (count !== null && count !== undefined) _totalDbCount = count;
+        dbFetched = data.map(item => ({
+          id: `db_${item.id}`,
+          name: item.name || '',
+          cat: item.category || 'other',
+          emoji: item.emoji || '🥗',
+          cal: Math.round(floatVal(item.calories)),
+          pro: floatVal(item.protein),
+          carb: floatVal(item.carbs),
+          fat: floatVal(item.fat),
+          fiber: floatVal(item.fiber),
+          sugar: floatVal(item.sugar),
+          sodium: floatVal(item.sodium),
+          chol: floatVal(item.chol),
+          vit_d: floatVal(item.vit_d),
+          iron: floatVal(item.iron),
+          folate: floatVal(item.folate),
+          source: 'db'
+        }));
       }
     }
 
-    if (combined.length === 0) {
+    if (page === 0) {
+      const dbNames = new Set(dbFetched.map(f => f.name.toLowerCase()));
+      const uniqueLocal = localMatches.filter(f => !dbNames.has(f.name.toLowerCase()));
+      _currentDbFoods = [...uniqueLocal, ...dbFetched];
+    } else {
+      _currentDbFoods = [..._currentDbFoods, ...dbFetched];
+    }
+
+    if (_lastSearchQuery !== `${currentCat}:${q}`) return;
+
+    if (countEl) {
+      const catText = currentCat !== 'all' ? ` in ${currentCat.toUpperCase()} category` : '';
+      countEl.textContent = `Showing ${_currentDbFoods.length} of ${_totalDbCount}+ foods${catText} in Supabase Database`;
+    }
+
+    if (!_currentDbFoods.length) {
       const safeQ = String(q).replace(/[&<>'"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[c]));
       if (container) container.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:2rem;color:var(--ink-50)">No foods found for "<strong>${safeQ || currentCat}</strong>"</div>`;
       return;
     }
-    if (container) container.innerHTML = combined.map(_buildFoodCard).join('');
-  };
 
-  // Render local results immediately
-  renderCombined(results);
-
-  // ── 2. Query Supabase base_foods (15,085 items) by Category & Search ─────────
-  clearTimeout(_searchDebounceTimer);
-  _lastSearchQuery = `${currentCat}:${q}`;
-  _searchDebounceTimer = setTimeout(async () => {
-    try {
-      let dbFoods = [];
-      let dbTotalCount = 15085;
-      if (typeof supabaseClient !== 'undefined' && supabaseClient) {
-        let qBuilder = supabaseClient.from('base_foods').select('*', { count: 'exact' });
-
-        if (currentCat !== 'all') {
-          const catMap = {
-            'veg': 'veg', 'veggies': 'veg', 'fruit': 'fruit', 'fruits': 'fruit',
-            'protein': 'protein', 'grain': 'grain', 'grains': 'grain', 'dairy': 'dairy',
-            'snack': 'snack', 'snacks': 'snack', 'legume': 'legume', 'legumes': 'legume',
-            'drink': 'drink', 'drinks': 'drink', 'fastfood': 'fastfood', 'fast food': 'fastfood',
-            'indian': 'indian'
-          };
-          const dbCat = catMap[currentCat] || currentCat;
-          qBuilder = qBuilder.eq('category', dbCat);
-        }
-        if (q) {
-          qBuilder = qBuilder.ilike('name', `%${q}%`);
-        }
-
-        const { data, count, error } = await qBuilder.order('name', { ascending: true }).limit(60);
-        if (!error && data && data.length > 0) {
-          if (count) dbTotalCount = count;
-          dbFoods = data.map(item => ({
-            id: `db_${item.id}`,
-            name: item.name || '',
-            cat: item.category || 'other',
-            emoji: item.emoji || '🥗',
-            cal: Math.round(floatVal(item.calories)),
-            pro: floatVal(item.protein),
-            carb: floatVal(item.carbs),
-            fat: floatVal(item.fat),
-            fiber: floatVal(item.fiber),
-            sugar: floatVal(item.sugar),
-            sodium: floatVal(item.sodium),
-            chol: floatVal(item.chol),
-            vit_d: floatVal(item.vit_d),
-            iron: floatVal(item.iron),
-            folate: floatVal(item.folate),
-            source: 'db'
-          }));
-        }
-      }
-      if (!dbFoods.length && q.length >= 2) {
-        const resp = await _authFetch(`/api/foods/search?q=${encodeURIComponent(q)}&limit=40`);
-        if (resp && resp.ok) {
-          const raw = await resp.json();
-          dbFoods = raw.map(item => ({ ...item, source: 'db' }));
-        }
-      }
-      if (_lastSearchQuery === `${currentCat}:${q}`) {
-        renderCombined(results, dbFoods, dbTotalCount);
-      }
-    } catch (err) {
-      console.warn('Supabase base_foods query error:', err);
+    let cardsHtml = _currentDbFoods.map(_buildFoodCard).join('');
+    if (_currentDbFoods.length < _totalDbCount) {
+      cardsHtml += `
+        <div style="grid-column:1/-1; text-align:center; padding:1.5rem; margin-top:1rem;">
+          <button type="button" onclick="loadMoreFoods()" class="water-quick-btn" style="padding:12px 28px; font-weight:700; font-size:0.92rem; background:linear-gradient(135deg,#3ecf8e,#22c55e); color:#0a0f0d; border:none; border-radius:12px; cursor:pointer; box-shadow:0 4px 14px rgba(62,207,142,0.3);">
+            ⬇️ Load More Foods (+60)
+          </button>
+        </div>`;
     }
-  }, 250);
+    if (container) container.innerHTML = cardsHtml;
+  } catch (err) {
+    console.warn('searchFoods error:', err);
+  }
+}
+
+function loadMoreFoods() {
+  const fInput = document.getElementById('foodSearch');
+  const q = fInput ? fInput.value : '';
+  _foodPage += 1;
+  searchFoods(q, _foodPage);
 }
 
 // ─────────────────────────────────────────────────
