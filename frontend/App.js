@@ -34,7 +34,12 @@ function hideLoader() {
 //  APP STATE
 // ─────────────────────────────────────────────────
 let currentUser = null;
-window._foodLogs = [];
+try {
+  const cachedLogs = localStorage.getItem('nutritrack_food_logs');
+  window._foodLogs = cachedLogs ? JSON.parse(cachedLogs) : [];
+} catch (e) {
+  window._foodLogs = [];
+}
 window._weightLogs = [];
 window._mealTemplates = [];
 window._dbPopularFoods = [];
@@ -923,12 +928,22 @@ window.addEventListener('popstate', (event) => {
 // ─────────────────────────────────────────────────
 //  HELPERS
 // ─────────────────────────────────────────────────
-function todayStr() { return new Date().toISOString().split('T')[0]; }
+function todayStr() {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
 
 function getLast30Days() {
   return Array.from({ length: 30 }, (_, i) => {
-    const d = new Date(); d.setDate(d.getDate() - (29 - i));
-    return d.toISOString().split('T')[0];
+    const d = new Date();
+    d.setDate(d.getDate() - (29 - i));
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   });
 }
 
@@ -1939,7 +1954,7 @@ async function _authFetch(url, options = {}) {
 async function addFoodToLog(food) {
   const payload = {
     date: todayStr(),
-    mealType: currentMealType,
+    mealType: currentMealType || 'breakfast',
     name: food.name,
     emoji: food.emoji || '🍽️',
     cal: floatVal(food.cal),
@@ -1955,13 +1970,18 @@ async function addFoodToLog(food) {
     folate: floatVal(food.folate)
   };
 
-  // 1. Optimistically add to local food log so dashboard & totals update instantly
+  // 1. Optimistically add to local food log & localStorage so items NEVER disappear
   const localId = 'log_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
   const logEntry = { id: localId, ...payload };
   if (!window._foodLogs) window._foodLogs = [];
   window._foodLogs.unshift(logEntry);
+  try {
+    localStorage.setItem('nutritrack_food_logs', JSON.stringify(window._foodLogs));
+  } catch (e) { }
+
   refreshDashboard();
-  showToast(`✓ ${food.name} added to ${currentMealType}`, 'success');
+  renderHistory();
+  showToast(`✓ ${food.name} added to ${payload.mealType}`, 'success');
 
   // 2. Save directly to Supabase food_logs cloud table
   try {
@@ -1993,6 +2013,9 @@ async function addFoodToLog(food) {
           .select();
         if (!sbErr && inserted && inserted.length > 0) {
           logEntry.id = inserted[0].id || localId;
+          try {
+            localStorage.setItem('nutritrack_food_logs', JSON.stringify(window._foodLogs));
+          } catch (e) { }
         }
       }
     }
@@ -2009,7 +2032,12 @@ async function addFoodToLog(food) {
     });
     if (res && res.ok) {
       const savedLog = await res.json();
-      if (savedLog && savedLog.id) logEntry.id = savedLog.id;
+      if (savedLog && savedLog.id) {
+        logEntry.id = savedLog.id;
+        try {
+          localStorage.setItem('nutritrack_food_logs', JSON.stringify(window._foodLogs));
+        } catch (e) { }
+      }
     }
   } catch (e) {
     console.warn('Backend food log sync notice:', e);
@@ -2017,8 +2045,12 @@ async function addFoodToLog(food) {
 }
 
 async function removeLog(id) {
-  // Optimistically remove from local food logs
+  // Optimistically remove from local food logs & localStorage
   window._foodLogs = (window._foodLogs || []).filter(l => String(l.id) !== String(id));
+  try {
+    localStorage.setItem('nutritrack_food_logs', JSON.stringify(window._foodLogs));
+  } catch (e) { }
+
   refreshDashboard();
   renderHistory();
   showToast('Item removed', 'success');
@@ -2090,11 +2122,24 @@ async function fetchLogsFromCloud() {
     console.warn('Backend fetch logs notice:', e);
   }
 
-  if (cloudLogs.length > 0) {
-    window._foodLogs = cloudLogs;
-    refreshDashboard();
-    renderHistory();
-  }
+  // Safely merge cloud logs without wiping out local optimistic logs
+  const mergeMap = new Map();
+  (window._foodLogs || []).forEach(l => {
+    const key = String(l.id || (l.name + '_' + l.date + '_' + l.mealType));
+    mergeMap.set(key, l);
+  });
+  cloudLogs.forEach(l => {
+    const key = String(l.id || (l.name + '_' + l.date + '_' + (l.mealType || l.meal_type)));
+    mergeMap.set(key, l);
+  });
+
+  window._foodLogs = Array.from(mergeMap.values());
+  try {
+    localStorage.setItem('nutritrack_food_logs', JSON.stringify(window._foodLogs));
+  } catch (e) { }
+
+  refreshDashboard();
+  renderHistory();
 }
 
 async function fetchWaterFromCloud() {
