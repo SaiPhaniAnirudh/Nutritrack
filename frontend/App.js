@@ -1722,25 +1722,43 @@ function _buildFoodCard(f) {
   window._foodCardMap[safeId] = f;
 
   const safeName = String(f.name).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+  const mealLabel = (currentMealType || 'meal').toUpperCase();
 
   return `
-    <div class="food-result-card" onclick="addFoodById('${safeId}')" style="cursor:pointer;">
-      <div class="emoji">${f.emoji || '🍽️'}</div>
-      <div class="name">${safeName}</div>
-      ${desc ? `<div class="desc">${desc}</div>` : ''}
-      <div class="cals">${f.cal} kcal</div>
-      <div class="macros">P:${f.pro}g · C:${f.carb}g · F:${f.fat}g · Fiber:${f.fiber}g</div>
-      <div class="macros" style="color:rgba(184,201,186,0.8); margin-top:2px;">
-        ☀️ Vit D: ${f.vit_d || 0}mcg · 🥩 Iron: ${f.iron || 0}mg · 🥬 Folate: ${f.folate || 0}mcg
+    <div class="food-result-card" onclick="addFoodById('${safeId}', this)" style="cursor:pointer; display:flex; flex-direction:column; justify-space-between;">
+      <div>
+        <div class="emoji">${f.emoji || '🍽️'}</div>
+        <div class="name">${safeName}</div>
+        ${desc ? `<div class="desc">${desc}</div>` : ''}
+        <div class="cals">${f.cal} kcal</div>
+        <div class="macros">P:${f.pro}g · C:${f.carb}g · F:${f.fat}g · Fiber:${f.fiber}g</div>
+        <div class="macros" style="color:rgba(184,201,186,0.8); margin-top:2px;">
+          ☀️ Vit D: ${f.vit_d || 0}mcg · 🥩 Iron: ${f.iron || 0}mg · 🥬 Folate: ${f.folate || 0}mcg
+        </div>
+        <div class="macros" style="color:rgba(184,201,186,0.5)">Sugar:${f.sugar}g · Salt:${f.sodium}mg</div>
       </div>
-      <div class="macros" style="color:rgba(184,201,186,0.5)">Sugar:${f.sugar}g · Salt:${f.sodium}mg</div>
+      <button type="button" class="scan-add-btn" style="margin-top:0.75rem; padding:0.45rem 0.8rem; font-size:0.75rem; font-weight:700; width:100%; border-radius:8px; background:linear-gradient(135deg,#3ecf8e,#22c55e); color:#0a0f0d; border:none; cursor:pointer;" onclick="event.stopPropagation(); addFoodById('${safeId}', this)">
+        + Add to ${mealLabel}
+      </button>
     </div>`;
 }
 
-function addFoodById(safeId) {
+function addFoodById(safeId, targetEl) {
   const food = window._foodCardMap && window._foodCardMap[safeId];
   if (food) {
     addFoodToLog(food);
+    const btn = targetEl && (targetEl.tagName === 'BUTTON' ? targetEl : targetEl.querySelector('button'));
+    if (btn) {
+      const origText = btn.textContent;
+      btn.textContent = '✓ Added!';
+      btn.style.background = 'linear-gradient(135deg,#22c55e,#15803d)';
+      btn.style.color = '#ffffff';
+      setTimeout(() => {
+        btn.textContent = origText;
+        btn.style.background = 'linear-gradient(135deg,#3ecf8e,#22c55e)';
+        btn.style.color = '#0a0f0d';
+      }, 1250);
+    }
   } else {
     console.warn('Food item not found in card map:', safeId);
   }
