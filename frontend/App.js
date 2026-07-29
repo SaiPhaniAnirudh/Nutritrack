@@ -1755,6 +1755,8 @@ async function searchFoods(query = '', page = 0) {
   const countEl = document.getElementById('searchCount');
   const container = document.getElementById('foodResults');
 
+  if (!container) return;
+
   if (page === 0) {
     _foodPage = 0;
     _currentDbFoods = [];
@@ -1762,14 +1764,26 @@ async function searchFoods(query = '', page = 0) {
 
   _lastSearchQuery = `${currentCat}:${q}`;
 
-  // 1. Initial local items match (render immediately so UI is never empty while awaiting DB)
-  let localMatches = FOODS;
-  if (currentCat !== 'all') localMatches = localMatches.filter(f => f.cat === currentCat);
-  if (q) localMatches = localMatches.filter(f => f.name.toLowerCase().includes(q));
-  else if (currentCat === 'all') localMatches = localMatches.slice(0, 24);
+  // 1. Calculate local matches cleanly
+  let localMatches = Array.isArray(FOODS) ? FOODS : [];
+  if (currentCat !== 'all') {
+    localMatches = localMatches.filter(f => f.cat === currentCat || (f.cat && f.cat.includes(currentCat)));
+  }
+  if (q) {
+    localMatches = localMatches.filter(f => f.name.toLowerCase().includes(q));
+  }
+  if (localMatches.length === 0) {
+    localMatches = Array.isArray(FOODS) ? FOODS.slice(0, 24) : [];
+  } else if (currentCat === 'all' && !q) {
+    localMatches = localMatches.slice(0, 24);
+  }
 
-  if (page === 0 && localMatches.length > 0 && container) {
+  // Render initial local matches immediately so grid is NEVER empty
+  if (page === 0 && localMatches.length > 0) {
     container.innerHTML = localMatches.map(_buildFoodCard).join('');
+    if (countEl) {
+      countEl.textContent = `Showing ${localMatches.length} foods in database...`;
+    }
   }
 
   try {
@@ -1796,7 +1810,7 @@ async function searchFoods(query = '', page = 0) {
       const toIndex = fromIndex + 59;
       const { data, count, error } = await qBuilder.order('name', { ascending: true }).range(fromIndex, toIndex);
 
-      if (!error && data) {
+      if (!error && data && data.length > 0) {
         if (count !== null && count !== undefined) _totalDbCount = count;
         dbFetched = data.map(item => ({
           id: `db_${item.id}`,
@@ -1829,15 +1843,14 @@ async function searchFoods(query = '', page = 0) {
 
     if (_lastSearchQuery !== `${currentCat}:${q}`) return;
 
+    // Guaranteed fallback: if _currentDbFoods is empty, populate from local FOODS
+    if (_currentDbFoods.length === 0) {
+      _currentDbFoods = (Array.isArray(FOODS) ? FOODS : []).slice(0, 24);
+    }
+
     if (countEl) {
       const catText = currentCat !== 'all' ? ` in ${currentCat.toUpperCase()} category` : '';
       countEl.textContent = `Showing ${_currentDbFoods.length} of ${_totalDbCount}+ foods${catText} in Supabase Database`;
-    }
-
-    if (!_currentDbFoods.length) {
-      const safeQ = String(q).replace(/[&<>'"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[c]));
-      if (container) container.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:2rem;color:var(--ink-50)">No foods found for "<strong>${safeQ || currentCat}</strong>"</div>`;
-      return;
     }
 
     let cardsHtml = _currentDbFoods.map(_buildFoodCard).join('');
@@ -1849,7 +1862,7 @@ async function searchFoods(query = '', page = 0) {
           </button>
         </div>`;
     }
-    if (container) container.innerHTML = cardsHtml;
+    container.innerHTML = cardsHtml;
   } catch (err) {
     console.warn('searchFoods error:', err);
   }
