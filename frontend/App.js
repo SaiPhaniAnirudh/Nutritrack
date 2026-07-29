@@ -1506,7 +1506,26 @@ function _renderScanResult(r) {
     const mT = (f.pro * 4) + (f.carb * 4) + (f.fat * 9) || 1;
     const ipW = Math.round((f.pro * 4 / mT) * 100), icW = Math.round((f.carb * 4 / mT) * 100), ifW = 100 - ipW - icW;
     const iCC = f.conf >= 85 ? 'rgba(100,180,110,0.8)' : f.conf >= 65 ? 'rgba(212,168,83,0.8)' : 'rgba(196,132,90,0.8)';
-    const foodJson = JSON.stringify({ name: f.name, emoji: '🍽️', cal: f.cal, pro: f.pro, carb: f.carb, fat: f.fat, fiber: f.fiber, sugar: f.sugar, sodium: f.sod, chol: f.chol, vit_d: f.vit_d, iron: f.iron, folate: f.folate }).replace(/'/g, "&#39;");
+    
+    const itemFoodObj = {
+      name: f.name,
+      emoji: '🍽️',
+      cal: f.cal,
+      pro: f.pro,
+      carb: f.carb,
+      fat: f.fat,
+      fiber: f.fiber,
+      sugar: f.sugar,
+      sodium: f.sod,
+      chol: f.chol,
+      vit_d: f.vit_d,
+      iron: f.iron,
+      folate: f.folate
+    };
+    const itemSafeId = 'scan_' + String(f.name).replace(/[^a-zA-Z0-9_]/g, '_') + '_' + Math.random().toString(36).substr(2, 4);
+    if (!window._foodCardMap) window._foodCardMap = {};
+    window._foodCardMap[itemSafeId] = itemFoodObj;
+
     return `
     <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:0.9rem;margin-bottom:0.7rem;">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0.4rem;">
