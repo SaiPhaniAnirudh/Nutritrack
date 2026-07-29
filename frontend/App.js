@@ -2601,63 +2601,9 @@ async function logWorkoutEntry() {
 }
 
 // ─────────────────────────────────────────────────
-//  RECIPE BUILDER
 // ─────────────────────────────────────────────────
-window._recipes = [];
-
-async function fetchRecipesFromCloud() {
-  const backendUrl = "https://nutritrack-k96f.onrender.com";
-  try {
-    const res = await _authFetch(`${backendUrl}/api/recipes`);
-    if (res.ok) {
-      window._recipes = await res.json();
-      renderRecipes();
-    }
-  } catch (e) {
-    console.error('fetchRecipesFromCloud error', e);
-  }
-}
-
-function renderRecipes() {
-  const list = document.getElementById('recipesList');
-  if (!list) return;
-  const recipes = window._recipes || [];
-  if (!recipes.length) {
-    list.innerHTML = `<div style="font-size:0.8rem; color:var(--mist); opacity:0.7;">No custom recipes built yet. Combine raw ingredients into custom meals!</div>`;
-    return;
-  }
-  list.innerHTML = recipes.map(r => `
-    <div class="tpl-card" onclick="logRecipe(${r.id})">
-      <div class="tpl-title">🍳 ${r.name}</div>
-      <div class="tpl-sub">${r.servings} servings · ${Math.round(r.perServing?.cal || 0)} kcal/serv</div>
-    </div>
-  `).join('');
-}
-
-async function openRecipeBuilderModal() {
-  const name = prompt('Enter Recipe Name (e.g. "Protein Oatmeal Bowl"):');
-  if (!name) return;
-  const servings = parseInt(prompt('Number of servings:', '1') || 1);
-
-  // Take today's logged food items as ingredients baseline
-  const todayLogs = (window._foodLogs || []).filter(l => l.date === todayStr());
-  if (!todayLogs.length) return showToast('⚠️ Log ingredients in food tracker first before combining into a recipe!', 'error');
-
-  const backendUrl = "https://nutritrack-k96f.onrender.com";
-  try {
-    const res = await _authFetch(`${backendUrl}/api/recipes`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: name.trim(), servings: servings, ingredients: todayLogs })
-    });
-    if (res.ok) {
-      showToast('✓ Recipe saved!', 'success');
-      fetchRecipesFromCloud();
-    }
-  } catch (e) {
-    showToast('Failed to save recipe', 'error');
-  }
-}
+//  RECIPE BUILDER MANAGEMENT
+// ─────────────────────────────────────────────────
 
 async function logRecipe(id) {
   const recipe = (window._recipes || []).find(r => r.id === id);
@@ -4142,7 +4088,16 @@ function updateLanguageUI() {
 // ─────────────────────────────────────────────────
 //  VISUAL SOCIAL SHARE CARD GENERATOR
 // ─────────────────────────────────────────────────
+function closeAllModals() {
+  const modals = ['recipeBuilderModal', 'shareCardModal', 'saveTemplateModal', 'dietModal', 'nonFoodModal'];
+  modals.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+}
+
 function openShareCardModal() {
+  closeAllModals();
   const modal = document.getElementById('shareCardModal');
   if (!modal) return;
   modal.style.display = 'flex';
@@ -4380,6 +4335,7 @@ async function syncGoogleFit() {
 //  CUSTOM RECIPE BUILDER
 // ─────────────────────────────────────────────────
 function openRecipeBuilderModal() {
+  closeAllModals();
   const m = document.getElementById('recipeBuilderModal');
   if (m) m.style.display = 'flex';
 }
@@ -4487,4 +4443,65 @@ async function addRecipeToLog(recipeId) {
     emoji: '🍳'
   };
   await addFoodToLog(foodItem);
+}
+
+// ─────────────────────────────────────────────────
+//  EXPLICIT GLOBAL WINDOW EVENT HANDLER EXPORTS
+// ─────────────────────────────────────────────────
+if (typeof window !== 'undefined') {
+  window.addFoodById = typeof addFoodById !== 'undefined' ? addFoodById : window.addFoodById;
+  window.addFoodToLog = typeof addFoodToLog !== 'undefined' ? addFoodToLog : window.addFoodToLog;
+  window.addRecipeIngredientRow = typeof addRecipeIngredientRow !== 'undefined' ? addRecipeIngredientRow : window.addRecipeIngredientRow;
+  window.addRecipeToLog = typeof addRecipeToLog !== 'undefined' ? addRecipeToLog : window.addRecipeToLog;
+  window.clearScan = typeof clearScan !== 'undefined' ? clearScan : window.clearScan;
+  window.closeDietModal = typeof closeDietModal !== 'undefined' ? closeDietModal : window.closeDietModal;
+  window.closeNonFoodModal = typeof closeNonFoodModal !== 'undefined' ? closeNonFoodModal : window.closeNonFoodModal;
+  window.closeRecipeBuilderModal = typeof closeRecipeBuilderModal !== 'undefined' ? closeRecipeBuilderModal : window.closeRecipeBuilderModal;
+  window.closeShareCardModal = typeof closeShareCardModal !== 'undefined' ? closeShareCardModal : window.closeShareCardModal;
+  window.downloadShareCard = typeof downloadShareCard !== 'undefined' ? downloadShareCard : window.downloadShareCard;
+  window.dpOverlayClick = typeof dpOverlayClick !== 'undefined' ? dpOverlayClick : window.dpOverlayClick;
+  window.dpSwitchTab = typeof dpSwitchTab !== 'undefined' ? dpSwitchTab : window.dpSwitchTab;
+  window.exportLogsCSV = typeof exportLogsCSV !== 'undefined' ? exportLogsCSV : window.exportLogsCSV;
+  window.goToStep = typeof goToStep !== 'undefined' ? goToStep : window.goToStep;
+  window.goToStep4 = typeof goToStep4 !== 'undefined' ? goToStep4 : window.goToStep4;
+  window.handleEmailLogin = typeof handleEmailLogin !== 'undefined' ? handleEmailLogin : window.handleEmailLogin;
+  window.handleEmailRegister = typeof handleEmailRegister !== 'undefined' ? handleEmailRegister : window.handleEmailRegister;
+  window.handleFinishOnboarding = typeof handleFinishOnboarding !== 'undefined' ? handleFinishOnboarding : window.handleFinishOnboarding;
+  window.handleForgotPassword = typeof handleForgotPassword !== 'undefined' ? handleForgotPassword : window.handleForgotPassword;
+  window.handleGoogleLogin = typeof handleGoogleLogin !== 'undefined' ? handleGoogleLogin : window.handleGoogleLogin;
+  window.handleLogout = typeof handleLogout !== 'undefined' ? handleLogout : window.handleLogout;
+  window.joinChallenge = typeof joinChallenge !== 'undefined' ? joinChallenge : window.joinChallenge;
+  window.loadMoreFoods = typeof loadMoreFoods !== 'undefined' ? loadMoreFoods : window.loadMoreFoods;
+  window.logMealTemplate = typeof logMealTemplate !== 'undefined' ? logMealTemplate : window.logMealTemplate;
+  window.logRecipe = typeof logRecipe !== 'undefined' ? logRecipe : window.logRecipe;
+  window.logWater = typeof logWater !== 'undefined' ? logWater : window.logWater;
+  window.logWeightEntry = typeof logWeightEntry !== 'undefined' ? logWeightEntry : window.logWeightEntry;
+  window.logWorkoutEntry = typeof logWorkoutEntry !== 'undefined' ? logWorkoutEntry : window.logWorkoutEntry;
+  window.openDietModal = typeof openDietModal !== 'undefined' ? openDietModal : window.openDietModal;
+  window.openRecipeBuilderModal = typeof openRecipeBuilderModal !== 'undefined' ? openRecipeBuilderModal : window.openRecipeBuilderModal;
+  window.openSaveTemplateModal = typeof openSaveTemplateModal !== 'undefined' ? openSaveTemplateModal : window.openSaveTemplateModal;
+  window.openShareCardModal = typeof openShareCardModal !== 'undefined' ? openShareCardModal : window.openShareCardModal;
+  window.pickScanPhoto = typeof pickScanPhoto !== 'undefined' ? pickScanPhoto : window.pickScanPhoto;
+  window.removeLog = typeof removeLog !== 'undefined' ? removeLog : window.removeLog;
+  window.saveBodyStats = typeof saveBodyStats !== 'undefined' ? saveBodyStats : window.saveBodyStats;
+  window.saveCustomRecipe = typeof saveCustomRecipe !== 'undefined' ? saveCustomRecipe : window.saveCustomRecipe;
+  window.saveGoals = typeof saveGoals !== 'undefined' ? saveGoals : window.saveGoals;
+  window.scanWithAI = typeof scanWithAI !== 'undefined' ? scanWithAI : window.scanWithAI;
+  window.searchFoods = typeof searchFoods !== 'undefined' ? searchFoods : window.searchFoods;
+  window.sendChatMessage = typeof sendChatMessage !== 'undefined' ? sendChatMessage : window.sendChatMessage;
+  window.sendChip = typeof sendChip !== 'undefined' ? sendChip : window.sendChip;
+  window.setCat = typeof setCat !== 'undefined' ? setCat : window.setCat;
+  window.setLanguage = typeof setLanguage !== 'undefined' ? setLanguage : window.setLanguage;
+  window.setMeal = typeof setMeal !== 'undefined' ? setMeal : window.setMeal;
+  window.showLoginForm = typeof showLoginForm !== 'undefined' ? showLoginForm : window.showLoginForm;
+  window.showPage = typeof showPage !== 'undefined' ? showPage : window.showPage;
+  window.showRegisterForm = typeof showRegisterForm !== 'undefined' ? showRegisterForm : window.showRegisterForm;
+  window.startBarcodeScan = typeof startBarcodeScan !== 'undefined' ? startBarcodeScan : window.startBarcodeScan;
+  window.startScanCamera = typeof startScanCamera !== 'undefined' ? startScanCamera : window.startScanCamera;
+  window.startVoiceLog = typeof startVoiceLog !== 'undefined' ? startVoiceLog : window.startVoiceLog;
+  window.stopScanCamera = typeof stopScanCamera !== 'undefined' ? stopScanCamera : window.stopScanCamera;
+  window.stopVoiceLog = typeof stopVoiceLog !== 'undefined' ? stopVoiceLog : window.stopVoiceLog;
+  window.syncGoogleFit = typeof syncGoogleFit !== 'undefined' ? syncGoogleFit : window.syncGoogleFit;
+  window.takeScanPhoto = typeof takeScanPhoto !== 'undefined' ? takeScanPhoto : window.takeScanPhoto;
+  window.toggleChat = typeof toggleChat !== 'undefined' ? toggleChat : window.toggleChat;
 }
