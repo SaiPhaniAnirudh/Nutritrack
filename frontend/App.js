@@ -1691,10 +1691,17 @@ function _buildFoodCard(f) {
   const desc = isDb
     ? '<span style="font-size:0.68rem;opacity:0.5;letter-spacing:0.03em">📦 From Database</span>'
     : (f.desc || FOOD_DESCRIPTIONS[f.cat] || '');
+
+  const safeId = 'food_' + String(f.id || f.name).replace(/[^a-zA-Z0-9_]/g, '_');
+  if (!window._foodCardMap) window._foodCardMap = {};
+  window._foodCardMap[safeId] = f;
+
+  const safeName = String(f.name).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+
   return `
-    <div class="food-result-card" onclick='addFoodToLog(${JSON.stringify(f).replace(/'/g, "&#39;")})'>
-      <div class="emoji">${f.emoji}</div>
-      <div class="name">${f.name}</div>
+    <div class="food-result-card" onclick="addFoodById('${safeId}')" style="cursor:pointer;">
+      <div class="emoji">${f.emoji || '🍽️'}</div>
+      <div class="name">${safeName}</div>
       ${desc ? `<div class="desc">${desc}</div>` : ''}
       <div class="cals">${f.cal} kcal</div>
       <div class="macros">P:${f.pro}g · C:${f.carb}g · F:${f.fat}g · Fiber:${f.fiber}g</div>
@@ -1703,6 +1710,15 @@ function _buildFoodCard(f) {
       </div>
       <div class="macros" style="color:rgba(184,201,186,0.5)">Sugar:${f.sugar}g · Salt:${f.sodium}mg</div>
     </div>`;
+}
+
+function addFoodById(safeId) {
+  const food = window._foodCardMap && window._foodCardMap[safeId];
+  if (food) {
+    addFoodToLog(food);
+  } else {
+    console.warn('Food item not found in card map:', safeId);
+  }
 }
 
 let _foodPage = 0;
@@ -3962,19 +3978,38 @@ async function fetchLogsFromCloud() {
 //  WATER INTAKE
 // ─────────────────────────────────────────────────
 async function fetchWaterFromCloud() {
-  const backendUrl = "https://nutritrack-k96f.onrender.com";
+  let dbWaterTotal = 0;
   try {
-    const res = await _authFetch(`${backendUrl}/api/water?date=${todayStr()}`, {});
-    if (res.ok) {
+    if (typeof supabaseClient !== 'undefined' && supabaseClient?.auth) {
+      const { data: sessData } = await supabaseClient.auth.getSession();
+      const user = sessData?.session?.user;
+      if (user) {
+        const { data, error } = await supabaseClient
+          .from('water_logs')
+          .select('amount_ml')
+          .eq('user_id', user.id)
+          .eq('date', todayStr());
+        if (!error && data) {
+          dbWaterTotal = data.reduce((sum, item) => sum + (item.amount_ml || 0), 0);
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Supabase fetch water notice:', err);
+  }
+
+  try {
+    const res = await _authFetch('/api/water?date=' + todayStr());
+    if (res && res.ok) {
       const data = await res.json();
-      window._waterTotalMl = data.total_ml || 0;
-      _renderWaterWidget();
-    } else {
-      console.error('fetchWaterFromCloud failed:', res.status, await res.text().catch(() => ''));
+      dbWaterTotal = Math.max(dbWaterTotal, data.total_ml || 0);
     }
   } catch (e) {
-    console.error('Failed to fetch water from cloud:', e);
+    console.warn('Backend fetch water notice:', e);
   }
+
+  window._waterTotalMl = dbWaterTotal;
+  _renderWaterWidget();
 }
 
 function _renderWaterWidget() {
@@ -3989,25 +4024,37 @@ function _renderWaterWidget() {
 }
 
 async function logWater(amountMl) {
-  // Optimistic update — reflect immediately, reconcile with the server after
+  // 1. Optimistic local update
   window._waterTotalMl = (window._waterTotalMl || 0) + amountMl;
   _renderWaterWidget();
   showToast(`💧 +${amountMl}ml logged`, 'success');
 
-  const backendUrl = "https://nutritrack-k96f.onrender.com";
+  // 2. Direct insert into Supabase water_logs cloud table
   try {
-    const res = await _authFetch(`${backendUrl}/api/water`, {
+    if (typeof supabaseClient !== 'undefined' && supabaseClient?.auth) {
+      const { data: sessData } = await supabaseClient.auth.getSession();
+      const user = sessData?.session?.user;
+      if (user) {
+        await supabaseClient.from('water_logs').insert({
+          user_id: user.id,
+          date: todayStr(),
+          amount_ml: amountMl
+        });
+      }
+    }
+  } catch (err) {
+    console.warn('Supabase water log insert notice:', err);
+  }
+
+  // 3. Sync with Flask backend API
+  try {
+    await _authFetch('/api/water', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ amount_ml: amountMl, date: todayStr() })
     });
-    if (!res.ok) {
-      console.error('logWater failed:', res.status, await res.text().catch(() => ''));
-      showToast('⚠️ Logged locally, but failed to sync to cloud.', 'error');
-    }
   } catch (e) {
-    console.error('Failed to log water:', e);
-    showToast('⚠️ Logged locally, but failed to sync to cloud.', 'error');
+    console.warn('Backend water sync notice:', e);
   }
 }
 
