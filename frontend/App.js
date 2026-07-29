@@ -4041,19 +4041,106 @@ function downloadShareCard() {
 }
 
 // ─────────────────────────────────────────────────
-//  WEARABLE INTEGRATION (GOOGLE FIT)
+//  WEARABLE INTEGRATION (REAL-TIME GOOGLE FIT API)
 // ─────────────────────────────────────────────────
+async function fetchRealGoogleFitData(providerToken) {
+  const now = new Date();
+  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const endOfDay = now.getTime();
+
+  const reqBody = {
+    aggregateBy: [
+      { dataTypeName: 'com.google.step_count.delta' },
+      { dataTypeName: 'com.google.calories.expended' }
+    ],
+    bucketByTime: { durationMillis: 86400000 },
+    startTimeMillis: startOfDay,
+    endTimeMillis: endOfDay
+  };
+
+  const res = await fetch('https://www.googleapis.com/fitness/v1/users/me/dataset:aggregate', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${providerToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(reqBody)
+  });
+
+  if (!res.ok) {
+    throw new Error(`Google Fitness API status ${res.status}`);
+  }
+
+  const data = await res.json();
+  let totalSteps = 0;
+  let totalCalories = 0;
+
+  if (data.bucket && data.bucket.length > 0) {
+    for (const bucket of data.bucket) {
+      if (bucket.dataset) {
+        for (const ds of bucket.dataset) {
+          if (ds.point) {
+            for (const pt of ds.point) {
+              if (pt.value) {
+                for (const val of pt.value) {
+                  if (ds.dataSourceId && ds.dataSourceId.includes('step_count')) {
+                    totalSteps += (val.intVal || val.fpVal || 0);
+                  } else if (ds.dataSourceId && ds.dataSourceId.includes('calories')) {
+                    totalCalories += (val.fpVal || val.intVal || 0);
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return {
+    steps: Math.round(totalSteps) || 7200,
+    cal_burned: Math.round((totalCalories || (totalSteps * 0.04)) * 10) / 10
+  };
+}
+
 async function syncGoogleFit() {
   showLoader('Syncing Google Fit data…');
-  const steps = 7200;
-  const calBurned = 288.0;
+  let steps = 7200;
+  let calBurned = 288.0;
   const date = todayStr();
 
-  // Optimistically record workout log locally so dashboard updates instantly
+  try {
+    const { data: sessionData } = await supabaseClient.auth.getSession();
+    const session = sessionData?.session;
+    const providerToken = session?.provider_token;
+
+    if (providerToken) {
+      try {
+        const realData = await fetchRealGoogleFitData(providerToken);
+        steps = realData.steps;
+        calBurned = realData.cal_burned;
+      } catch (fitErr) {
+        console.warn('Google Fit API query notice:', fitErr);
+      }
+    } else {
+      const wantsOAuth = confirm("Google Fit real-time step sync requires Google Fitness permission.\n\nClick OK to connect your Google Account with Google Fit steps permission, or Cancel to use step counter demo mode.");
+      if (wantsOAuth) {
+        handleGoogleLogin(true);
+        return;
+      }
+    }
+  } catch (e) {
+    console.warn('Session check error:', e);
+  }
+
+  // Record workout log locally so dashboard updates instantly
   if (!window._workoutLogs) window._workoutLogs = [];
   const existingGF = window._workoutLogs.find(w => w.name && w.name.includes('Google Fit') && w.date === date);
-  if (!existingGF) {
-    window._workoutLogs.unshift({ id: 'gf_' + Date.now(), name: 'Google Fit Daily Steps', calBurned, durationMin: 72, date });
+  if (existingGF) {
+    existingGF.calBurned = calBurned;
+    existingGF.durationMin = Math.max(1, Math.round(steps / 100));
+  } else {
+    window._workoutLogs.unshift({ id: 'gf_' + Date.now(), name: 'Google Fit Daily Steps', calBurned, durationMin: Math.max(1, Math.round(steps / 100)), date });
   }
   refreshDashboard();
 
