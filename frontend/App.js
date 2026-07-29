@@ -1729,53 +1729,91 @@ function searchFoods(query) {
   }
   renderCombined(results);
 
-  // ── 2. Debounced backend supplement (400ms after typing stops) ─────────
+  // ── 2. Debounced backend supplement (Supabase direct query + API fallback) ─────────
   clearTimeout(_searchDebounceTimer);
   if (q.length < 2) return;
   _lastSearchQuery = q;
   _searchDebounceTimer = setTimeout(async () => {
     if (_lastSearchQuery !== q) return;
     try {
-      const backendUrl = "https://nutritrack-k96f.onrender.com";
-      const resp = await fetch(`${backendUrl}/api/foods/search?q=${encodeURIComponent(q)}&limit=20`);
-      if (!resp.ok || _lastSearchQuery !== q) return;
-      const dbFoods = await resp.json();
+      let dbFoods = [];
+      if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+        const { data, error } = await supabaseClient
+          .from('base_foods')
+          .select('*')
+          .ilike('name', `%${q}%`)
+          .limit(25);
+        if (!error && data && data.length > 0) {
+          dbFoods = data.map(item => ({
+            name: item.name || '',
+            cat: item.category || 'custom',
+            emoji: '🥗',
+            cal: Math.round(floatVal(item.calories)),
+            pro: floatVal(item.protein),
+            carb: floatVal(item.carbs),
+            fat: floatVal(item.fat),
+            fiber: floatVal(item.fiber),
+            sugar: floatVal(item.sugar),
+            sodium: floatVal(item.sodium),
+            chol: floatVal(item.cholesterol),
+            source: 'db'
+          }));
+        }
+      }
+      if (!dbFoods.length) {
+        const resp = await _authFetch(`/api/foods/search?q=${encodeURIComponent(q)}&limit=25`);
+        if (resp && resp.ok && _lastSearchQuery === q) {
+          const raw = await resp.json();
+          dbFoods = raw.map(item => ({ ...item, source: 'db' }));
+        }
+      }
       if (_lastSearchQuery !== q) return;
       renderCombined(results, dbFoods);
     } catch (_) {
       // Silently ignore — local results already shown
     }
-  }, 400);
+  }, 350);
 }
 
-// ── Legacy card template (not used by searchFoods — kept for reference only) ──
-// function _legacyFoodCard_unused(f) { ... }
-
-
-
-// Wraps fetch() with the current auth token, and retries ONCE on a 401 by
-// forcing a fresh session refresh first. This is a safety net on top of the
-// TOKEN_REFRESHED listener above: browsers routinely throttle timers in
-// background/inactive tabs, which can delay Supabase's automatic token
-// refresh past the token's actual expiry — so a user who leaves a tab
-// backgrounded for a while and comes back to log food could still hit a
-// stale token even with that listener in place. This catches that case too.
+// ─────────────────────────────────────────────────
+//  AUTHENTICATED FETCH HELPER
+// ─────────────────────────────────────────────────
 async function _authFetch(url, options = {}) {
-  options.headers = { ...(options.headers || {}), 'Authorization': `Bearer ${currentUser.token}` };
-  let res = await fetch(url, options);
-  if (res.status === 401) {
+  let token = currentUser?.token;
+  if (!token && typeof supabaseClient !== 'undefined' && supabaseClient?.auth) {
+    try {
+      const { data } = await supabaseClient.auth.getSession();
+      token = data?.session?.access_token;
+      if (token && currentUser) currentUser.token = token;
+    } catch (e) { }
+  }
+
+  const backendBase = window._BACKEND_URL || '';
+  let fullUrl = url;
+  if (url.startsWith('https://nutritrack-k96f.onrender.com')) {
+    fullUrl = url.replace('https://nutritrack-k96f.onrender.com', backendBase);
+  } else if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    fullUrl = `${backendBase}${url}`;
+  }
+
+  const headers = { ...(options.headers || {}) };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  options.headers = headers;
+
+  let res = await fetch(fullUrl, options);
+  if (res.status === 401 && typeof supabaseClient !== 'undefined' && supabaseClient?.auth) {
     try {
       const { data, error } = await supabaseClient.auth.refreshSession();
       if (!error && data && data.session) {
-        currentUser.token = data.session.access_token;
-        options.headers['Authorization'] = `Bearer ${currentUser.token}`;
-        res = await fetch(url, options);
+        const freshToken = data.session.access_token;
+        if (currentUser) currentUser.token = freshToken;
+        headers['Authorization'] = `Bearer ${freshToken}`;
+        options.headers = headers;
+        res = await fetch(fullUrl, options);
       }
-    } catch (e) {
-      // Refresh itself failed (e.g. truly signed out) — fall through with
-      // the original 401 response so the caller's existing error handling
-      // still applies.
-    }
+    } catch (e) { }
   }
   return res;
 }
@@ -3424,6 +3462,44 @@ async function sendChatMessage() {
   const chips = document.getElementById('nutribotChips');
   if (chips) chips.style.display = 'none';
 
+  // Handle instant client-side slash commands (/clear, /help, /water, /log, /recipe, etc.)
+  const lowerMsg = msg.toLowerCase().trim();
+  if (lowerMsg === '/clear') {
+    _chatHistory = [];
+    _initChat();
+    return;
+  }
+  if (lowerMsg === '/recipe') {
+    openRecipeBuilderModal();
+    _addBotMessage("🍳 Opened the **Custom Recipe Builder** for you!");
+    return;
+  }
+  if (lowerMsg.startsWith('/water ')) {
+    const amount = parseInt(lowerMsg.replace('/water ', '').trim(), 10);
+    if (amount > 0 && amount <= 3000) {
+      logWater(amount);
+      _addBotMessage(`💧 Logged **${amount}ml** of water! Total today: **${window._waterTotalMl || amount}ml**.`);
+      return;
+    }
+  }
+  if (lowerMsg.startsWith('/log ') || lowerMsg.startsWith('/add ')) {
+    const query = msg.replace(/^\/(log|add)\s+/i, '').trim();
+    if (query) {
+      const match = FOODS.find(f => f.name.toLowerCase().includes(query.toLowerCase()));
+      if (match) {
+        await addFoodToLog(match);
+        _addBotMessage(`✅ Successfully logged **${match.emoji || '🍽️'} ${match.name}** (${match.cal} kcal, ${match.pro}g protein) to ${currentMealType}!`);
+        return;
+      } else {
+        _addBotMessage(`🔍 Couldn't find "${query}" in quick foods. Switching to Track Food tab to search...`);
+        showPage('track', document.querySelector('.nav-btn[onclick*=track]'));
+        const fInput = document.getElementById('foodSearch');
+        if (fInput) { fInput.value = query; searchFoods(query); }
+        return;
+      }
+    }
+  }
+
   _chatTyping = true;
   _renderMessages();
 
@@ -3452,7 +3528,7 @@ function sendChip(text) {
 
 async function _callNutriBot(message) {
   // Get JWT token if available (backend mode)
-  const jwt = _getJwt();
+  const jwt = await _getJwt();
 
   if (jwt) {
     // Use the backend proxy (which fetches logs from DB)
@@ -3465,11 +3541,11 @@ async function _callNutriBot(message) {
           'Authorization': `Bearer ${jwt}`,
         },
         body: JSON.stringify({ message }),
-        signal: AbortSignal.timeout(95000),
+        signal: AbortSignal.timeout(15000),
       });
       if (res.ok) {
         const data = await res.json();
-        return data.reply || "I didn't quite understand that. Could you rephrase?";
+        if (data.reply) return data.reply;
       }
     } catch (e) {
       // Fall through to client-side fallback
@@ -3478,12 +3554,6 @@ async function _callNutriBot(message) {
 
   // Client-side fallback: call LLM server directly with local log context
   const context = _buildLocalChatContext();
-  // NOTE: window.LLM_SERVER_URL is set (in index.html) to the *analyze*
-  // endpoint's full URL (".../api/ai/analyze"), not a bare origin. Appending
-  // "/api/ai/chat" directly onto it used to produce a malformed URL like
-  // ".../api/ai/analyze/api/ai/chat", which 404'd every time this fallback
-  // ran. Strip the known /api/ai/analyze suffix (if present) to get the
-  // real base origin first.
   const llmBase = (window.LLM_SERVER_URL || 'https://energyvenom-nutritrack-llm.hf.space/api/ai/analyze')
     .replace(/\/api\/ai\/analyze\/?$/, '');
   try {
@@ -3491,20 +3561,29 @@ async function _callNutriBot(message) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message, context }),
-      signal: AbortSignal.timeout(95000),
+      signal: AbortSignal.timeout(15000),
     });
     if (res.ok) {
       const data = await res.json();
-      return data.reply || "I didn't quite get that. Try asking something else!";
+      if (data.reply) return data.reply;
     }
   } catch (e) {
-    // Both failed — return a rule-based fallback inline
+    // Both failed — return rule-based response
   }
   return _localNutribotFallback(message, context);
 }
 
-function _getJwt() {
+async function _getJwt() {
   if (currentUser && currentUser.token) return currentUser.token;
+  if (typeof supabaseClient !== 'undefined' && supabaseClient?.auth) {
+    try {
+      const { data } = await supabaseClient.auth.getSession();
+      if (data?.session?.access_token) {
+        if (currentUser) currentUser.token = data.session.access_token;
+        return data.session.access_token;
+      }
+    } catch (e) { }
+  }
   try {
     const s = localStorage.getItem('nt_jwt');
     if (s) return s;
@@ -3515,7 +3594,7 @@ function _getJwt() {
 function _buildLocalChatContext() {
   if (!currentUser) return {};
   const goals = currentUser.goals || {};
-  const logs = window._foodLogs;
+  const logs = window._foodLogs || [];
   const today = todayStr();
 
   // Last 7 days of logs
@@ -3536,7 +3615,7 @@ function _buildLocalChatContext() {
     }));
 
   return {
-    user_name: currentUser.name.split(' ')[0],
+    user_name: (currentUser.name || 'User').split(' ')[0],
     goals: {
       calories: goals.calories || 2000,
       protein: goals.protein || 150,
@@ -3552,7 +3631,7 @@ function _buildLocalChatContext() {
 }
 
 function _localNutribotFallback(message, context) {
-  const msg = message.toLowerCase();
+  const msg = message.toLowerCase().trim();
   const goals = (context && context.goals) || {};
   const logs = (context && context.recent_logs) || [];
   const name = (context && context.user_name) || 'there';
@@ -3562,12 +3641,34 @@ function _localNutribotFallback(message, context) {
   const fatGoal = goals.fat || 65;
   const fiberGoal = goals.fiber || 28;
   const today = todayStr();
-  const todayLog = logs.filter(l => l.date === today);
+  const todayLog = (window._foodLogs || []).filter(l => l.date === today);
   const todayCal = todayLog.reduce((s, l) => s + (l.cal || 0), 0);
-  const todayProt = todayLog.reduce((s, l) => s + (l.protein_g || 0), 0);
-  const todayCarb = todayLog.reduce((s, l) => s + (l.carbs_g || 0), 0);
-  const todayFat = todayLog.reduce((s, l) => s + (l.fat_g || 0), 0);
+  const todayProt = todayLog.reduce((s, l) => s + (l.pro || 0), 0);
+  const todayCarb = todayLog.reduce((s, l) => s + (l.carb || 0), 0);
+  const todayFat = todayLog.reduce((s, l) => s + (l.fat || 0), 0);
   const remCal = calGoal - todayCal;
+
+  // Slash commands help
+  if (msg === '/help' || msg === 'help' || msg === 'commands') {
+    return `⚡ **Available NutriBot Commands:**\n` +
+      `- **/log <food>** — Quick-log a food item (e.g. \`/log apple\`)\n` +
+      `- **/water <ml>** — Log water intake (e.g. \`/water 250\`)\n` +
+      `- **/macros** — View today's detailed macro breakdown\n` +
+      `- **/recommend** — Get instant AI meal suggestions\n` +
+      `- **/recipe** — Open the custom recipe builder\n` +
+      `- **/clear** — Clear chat conversation window\n` +
+      `- **/help** — Show this command menu`;
+  }
+
+  if (msg === '/macros' || /macro|breakdown|split|nutrient|today.?s nutrition/.test(msg)) {
+    if (todayCal === 0) return `No food logged yet today, ${name}! Log your first meal and I'll give you a full macro breakdown.`;
+    return `Today's macros:\n- Protein: **${Math.round(todayProt)}g / ${protGoal}g** (${Math.round(todayProt / protGoal * 100)}%)\n- Carbs: **${Math.round(todayCarb)}g / ${carbGoal}g** (${Math.round(todayCarb / carbGoal * 100)}%)\n- Fat: **${Math.round(todayFat)}g / ${fatGoal}g** (${Math.round(todayFat / fatGoal * 100)}%)\n- Calories: **${Math.round(todayCal)} / ${calGoal} kcal**`;
+  }
+
+  if (msg === '/recommend' || /recommend|suggest|what to eat|meal ideas/.test(msg)) {
+    fetchAIMealRecommendations();
+    return `🥗 **Generated AI Meal Recommendations!** Check out the suggested meals section on your dashboard tab for options tailored to your remaining **${Math.max(0, Math.round(remCal))} kcal**.`;
+  }
 
   if (/on track|how am i doing|progress|summary|overview|status/.test(msg)) {
     if (todayCal === 0) return `Hey ${name}! You haven't logged any food today yet. Start tracking to see your progress!`;
@@ -3610,13 +3711,13 @@ function _localNutribotFallback(message, context) {
     return `To gain muscle, you need a **calorie surplus of 250-400 kcal**. Eat every 3-4 hours, prioritize protein (1.6-2.2g per kg body weight). Dal, eggs, milk, and bananas are great budget bulking foods.`;
   }
   if (/bmi|ideal weight|healthy weight|body mass/.test(msg)) {
-    return `BMI = weight(kg) / height(m)^2. Healthy range: **18.5-24.9**. But BMI doesn't account for muscle mass. Focus on waist circumference and body fat % for a fuller picture.`;
+    return `BMI = weight(kg) / height(m)^2. Healthy range: **18.5-24.9**. Focus on waist circumference and body fat % for a fuller picture.`;
   }
   if (/meal time|when to eat|timing|skip meal|intermittent|16:8|fasting/.test(msg)) {
     return `Ideal timing: **Breakfast** within 1hr of waking, **Lunch** 12-2 PM, **Dinner** before 8 PM. For intermittent fasting (16:8), eat between 12-8 PM. Avoid eating within 2 hours of sleep.`;
   }
   if (/breakfast|morning meal|wake up|poha|upma|idli|paratha/.test(msg)) {
-    return `Great Indian breakfasts: **Poha** (250 kcal), **Oats+milk** (300 kcal), **2 Eggs+2 roti** (350 kcal), **Idli+sambar** (220 kcal), **Greek yogurt+fruit** (200 kcal). High-protein breakfast controls hunger till lunch!`;
+    return `Great Indian breakfasts: **Poha** (250 kcal), **Oats+milk** (300 kcal), **2 Eggs+2 roti** (350 kcal), **Idli+sambar** (220 kcal), **Greek yogurt+fruit** (200 kcal).`;
   }
   if (/lunch|afternoon|midday|dal rice|thali/.test(msg)) {
     return `Balanced Indian lunch: **Dal + 2 roti + sabzi + curd** (~600 kcal, 25g protein), **Rajma rice** (~550 kcal), **Chicken curry + rice** (~650 kcal). Fill half your plate with vegetables!`;
@@ -3624,72 +3725,62 @@ function _localNutribotFallback(message, context) {
   if (/dinner|evening meal|night|supper/.test(msg)) {
     if (remCal > 500) return `You have **${Math.round(remCal)} kcal** for dinner - enjoy a proper meal: grilled chicken/paneer + vegetables + small portion rice or 2 rotis.`;
     if (remCal > 150) return `Keep dinner light - **${Math.round(remCal)} kcal** remaining. Try khichdi, vegetable soup + 1 roti, or salad with paneer.`;
-    return `You're near your limit. Have a very light dinner - vegetable soup, cucumber salad, or warm milk. Your body will thank you!`;
+    return `You're near your limit. Have a very light dinner - vegetable soup, cucumber salad, or warm milk.`;
   }
   if (/snack|munchies|hunger|evening bite|mid.?meal|craving/.test(msg)) {
-    return `Healthy snacks under 200 kcal: **Almonds** (164 kcal/28g), **Apple** (95 kcal), **Roasted chana** (120 kcal), **Greek yogurt** (100 kcal), **Cucumber+hummus** (80 kcal). Avoid chips and biscuits!`;
+    return `Healthy snacks under 200 kcal: **Almonds** (164 kcal/28g), **Apple** (95 kcal), **Roasted chana** (120 kcal), **Greek yogurt** (100 kcal), **Cucumber+hummus** (80 kcal).`;
   }
   if (/pre.?workout|before gym|before exercise|pre.?train/.test(msg)) {
-    return `**Pre-workout (1-2hr before):** Banana + peanut butter, oats with milk, or rice + chicken. You need fast carbs for energy + some protein. Avoid heavy/fatty meals right before training.`;
+    return `**Pre-workout (1-2hr before):** Banana + peanut butter, oats with milk, or rice + chicken. You need fast carbs for energy + some protein.`;
   }
   if (/post.?workout|after gym|after exercise|recovery meal|muscle recovery/.test(msg)) {
-    return `**Post-workout (within 45 min):** 30-40g protein + carbs. Try: protein shake + banana, eggs + toast, paneer + roti, or curd rice. Don't skip this meal - it's when muscles repair!`;
+    return `**Post-workout (within 45 min):** 30-40g protein + carbs. Try: protein shake + banana, eggs + toast, paneer + roti, or curd rice.`;
   }
   if (/biryani|butter chicken|dal makhani|samosa|pav bhaji|chole|rajma|dosa|idli|roti|chapati|paratha|paneer|tikka/.test(msg)) {
-    return `Indian food can be very nutritious! **Best choices:** Dal (high protein/fiber), Idli+sambar (light, fermented), Rajma (plant protein), Roti. **Limit:** Biryani (high cal), Butter chicken (high fat), Samosa (deep fried). Balance is key!`;
+    return `Indian food is very nutritious! **Best choices:** Dal (high protein/fiber), Idli+sambar, Rajma, Roti. **Limit:** Biryani, Butter chicken, Samosa (deep fried). Balance is key!`;
   }
   if (/vitamin|mineral|deficiency|iron|calcium|d3|b12|zinc|magnesium/.test(msg)) {
-    return `Common Indian deficiencies: **Vitamin D** (get 20min sun daily), **B12** (vegetarians: take supplements), **Iron** (eat spinach, lentils, jaggery), **Calcium** (milk, curd, ragi). Get a blood test annually!`;
+    return `Common Indian deficiencies: **Vitamin D** (20min sun daily), **B12** (supplements for vegetarians), **Iron** (spinach, lentils, jaggery), **Calcium** (milk, curd, ragi).`;
   }
   if (/diabetes|blood sugar|insulin|glycemic|glucose/.test(msg)) {
-    return `For blood sugar control: prefer **low glycemic foods** - oats, barley, dal, vegetables over white rice/bread. Eat smaller frequent meals. A 10-min walk after meals helps lower blood sugar significantly!`;
+    return `For blood sugar control: prefer **low glycemic foods** - oats, barley, dal, vegetables over white rice/bread. A 10-min walk after meals helps lower blood sugar!`;
   }
   if (/cholesterol|heart|hdl|ldl|triglyceride|cardiovascular/.test(msg)) {
-    return `For heart health: reduce saturated fat, increase soluble fiber (oats, beans), eat flaxseeds/walnuts for omega-3, exercise 150 min/week. Get your lipid panel checked annually.`;
+    return `For heart health: reduce saturated fat, increase soluble fiber (oats, beans), eat flaxseeds/walnuts for omega-3, exercise 150 min/week.`;
   }
   if (/sleep|rest|recovery|fatigue|tired|insomnia/.test(msg)) {
-    return `Sleep is when your body repairs muscle! Aim for **7-9 hours**. Poor sleep raises ghrelin (hunger hormone), causes cravings, and slows metabolism. Avoid screens 1hr before bed.`;
+    return `Sleep is essential! Aim for **7-9 hours**. Poor sleep raises ghrelin (hunger hormone) and slows metabolism. Avoid screens 1hr before bed.`;
   }
   if (/cheat|junk|pizza|burger|cheat meal|cheat day|treat yourself/.test(msg)) {
-    return `Cheat meals are okay! Rule: **1 cheat meal per week**, not a full cheat day. Enjoy what you love in moderation. One meal never ruined progress - just like one salad never created it. Get back on track the next meal!`;
+    return `Cheat meals are okay! Rule: **1 cheat meal per week**, not a full cheat day. Enjoy in moderation and get back on track next meal!`;
   }
   if (/vegetarian|vegan|plant.?based|no meat/.test(msg)) {
-    return `Top veg protein sources: **Paneer** (18g/100g), **Tofu** (8g/100g), **Rajma** (9g/cup), **Chana dal** (9g/cup), **Moong dal** (7g/cup), **Greek yogurt** (10g/100g), **Quinoa** (8g/cup). Combine sources for complete amino acids!`;
+    return `Top veg protein sources: **Paneer** (18g/100g), **Tofu** (8g/100g), **Rajma** (9g/cup), **Chana dal** (9g/cup), **Moong dal** (7g/cup), **Greek yogurt** (10g/100g).`;
   }
   if (/burn|exercise|workout|cardio|run|walk|cycling|swim|calorie burn/.test(msg)) {
-    return `Approx calorie burn (70kg, 30 min): **Running** ~300 kcal, **Cycling** ~240 kcal, **Swimming** ~250 kcal, **Brisk Walk** ~150 kcal, **HIIT** ~350 kcal, **Yoga** ~100 kcal.`;
-  }
-  if (/macro|breakdown|split|nutrient|today.?s nutrition/.test(msg)) {
-    if (todayCal === 0) return `No food logged yet today, ${name}! Log your first meal and I'll give you a full macro breakdown.`;
-    return `Today's macros:\n- Protein: **${Math.round(todayProt)}g / ${protGoal}g** (${Math.round(todayProt / protGoal * 100)}%)\n- Carbs: **${Math.round(todayCarb)}g / ${carbGoal}g** (${Math.round(todayCarb / carbGoal * 100)}%)\n- Fat: **${Math.round(todayFat)}g / ${fatGoal}g** (${Math.round(todayFat / fatGoal * 100)}%)\n- Calories: **${Math.round(todayCal)} / ${calGoal} kcal**`;
+    return `Approx calorie burn (70kg, 30 min): **Running** ~300 kcal, **Cycling** ~240 kcal, **Swimming** ~250 kcal, **Brisk Walk** ~150 kcal, **HIIT** ~350 kcal.`;
   }
   if (/metabolism|tdee|maintenance|metabolic rate|bmr/.test(msg)) {
-    return `Your TDEE is how many calories you burn daily at your activity level. Eat less to lose weight, more to gain. Strength training boosts metabolic rate long-term - you burn more even at rest!`;
+    return `Your TDEE is how many calories you burn daily. Strength training boosts metabolic rate long-term — you burn more calories even at rest!`;
   }
   if (/supplement|creatine|whey|protein powder|bcaa|multivitamin/.test(msg)) {
-    return `Supplements worth considering: **Creatine monohydrate** (proven for strength/muscle), **Whey protein** (convenient protein), **Vitamin D3+K2** (most Indians are deficient), **Omega-3** (heart+brain). Food first, supplements second!`;
-  }
-  if (/alcohol|beer|wine|whisky|drinking/.test(msg)) {
-    return `Alcohol has **7 kcal/gram** - more than carbs! A beer adds ~200 kcal, wine ~120 kcal. It disrupts sleep and fat metabolism. If you drink, account for it in your daily calories.`;
-  }
-  if (/motivat|inspire|stuck|plateau|not losing|demotivat|give up/.test(msg)) {
-    return `Plateaus are normal - your body adapts! Try: changing your workout, adjusting calories by 100-150 kcal, prioritizing sleep, taking body measurements instead of just scale weight. Consistency beats perfection, ${name}!`;
+    return `Supplements to consider: **Creatine monohydrate** (muscle strength), **Whey protein** (convenient protein), **Vitamin D3+K2**, **Omega-3**. Food first, supplements second!`;
   }
   if (/what did i eat|my food today|today.?s log|show log|food log/.test(msg)) {
     if (todayLog.length === 0) return `No food logged today yet, ${name}! Start logging your meals to track your nutrition.`;
-    const foods = todayLog.map(l => l.food).slice(0, 6).join(', ');
-    return `Today you logged: **${foods}** - totaling **${Math.round(todayCal)} kcal** and **${Math.round(todayProt)}g protein**. Check your Dashboard for the full breakdown!`;
+    const foods = todayLog.map(l => l.name).slice(0, 6).join(', ');
+    return `Today you logged: **${foods}** - totaling **${Math.round(todayCal)} kcal** and **${Math.round(todayProt)}g protein**. Check your Dashboard for details!`;
   }
   if (/my goal|daily goal|target|calorie goal|how much should/.test(msg)) {
-    return `Your daily targets: **${calGoal} kcal** - **${protGoal}g protein** - **${carbGoal}g carbs** - **${fatGoal}g fat** - **${fiberGoal}g fiber**. These are calculated from your body stats. Update your profile to recalculate!`;
+    return `Your daily targets: **${calGoal} kcal** - **${protGoal}g protein** - **${carbGoal}g carbs** - **${fatGoal}g fat** - **${fiberGoal}g fiber**.`;
   }
   if (/^(hi|hello|hey|hii|helo|namaste|sup|yo)\b/.test(msg)) {
-    return `Hey ${name}! I'm NutriBot, your AI nutritionist. Ask me about nutrition, your food logs, meal ideas, weight loss, protein, or anything health-related!`;
+    return `Hey ${name}! I'm NutriBot, your AI nutritionist. Type **/help** to see commands or ask me any question!`;
   }
   if (/thank|thanks|great|awesome|nice|helpful/.test(msg)) {
-    return `You're welcome, ${name}! Keep up the great work on your nutrition journey. Small consistent steps lead to big results! Anything else I can help with?`;
+    return `You're welcome, ${name}! Keep up the great work on your health journey. Anything else I can help with?`;
   }
-  return `I'm your AI nutritionist, **${name}**! Ask me about:\n- "Am I on track today?"\n- "What should I eat for dinner?"\n- "Show my macro breakdown"\n- "How to lose weight?"\n- "Best vegetarian protein sources"\n- "Pre-workout nutrition"\n- "Does sleep affect weight?"\n\nJust type your question!`;
+  return `I'm your AI nutritionist, **${name}**!\n\nTry commands like:\n- **/log <food name>**\n- **/water 250**\n- **/macros**\n- **/recommend**\n- **/help**\n\nOr ask any nutrition question!`;
 }
 // Show Floating Assistant Bar when user is logged in
 const _origLoginSuccess = loginSuccess;

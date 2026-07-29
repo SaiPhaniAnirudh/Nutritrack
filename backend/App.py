@@ -1980,9 +1980,8 @@ def sync_google_fit():
         w_log = WorkoutLog(
             user_id=uid,
             date=date,
-            title="Google Fit Daily Steps",
-            activity_type="walking",
-            duration_min=round(steps / 100),
+            name="Google Fit Daily Steps",
+            duration_min=max(1, round(steps / 100)),
             cal_burned=cal_burned
         )
         db.session.add(w_log)
@@ -1997,6 +1996,41 @@ def sync_google_fit():
         db.session.rollback()
         print(f"Google Fit sync error: {e}")
         return jsonify({'error': 'Failed to sync Google Fit data'}), 500
+
+
+@app.route('/api/foods/search', methods=['GET'])
+def search_foods():
+    """Search base_foods database table by query string."""
+    q = request.args.get('q', '').strip()
+    limit = min(int(request.args.get('limit', 30)), 100)
+    if not q:
+        return jsonify([])
+
+    try:
+        if supabase:
+            res = supabase.table('base_foods').select('*').ilike('name', f'%{q}%').limit(limit).execute()
+            items = res.data or []
+            normalized = []
+            for item in items:
+                normalized.append({
+                    'name': item.get('name', ''),
+                    'cat': item.get('category', 'custom'),
+                    'emoji': '🥗',
+                    'cal': float(item.get('calories', 0) or 0),
+                    'pro': float(item.get('protein', 0) or 0),
+                    'carb': float(item.get('carbs', 0) or 0),
+                    'fat': float(item.get('fat', 0) or 0),
+                    'fiber': float(item.get('fiber', 0) or 0),
+                    'sugar': float(item.get('sugar', 0) or 0),
+                    'sodium': float(item.get('sodium', 0) or 0),
+                    'chol': float(item.get('cholesterol', 0) or 0)
+                })
+            return jsonify(normalized)
+    except Exception as e:
+        print(f"Supabase food search error: {e}")
+
+    return jsonify([])
+
 
 
 # ══════════════════════════════════════════════════
