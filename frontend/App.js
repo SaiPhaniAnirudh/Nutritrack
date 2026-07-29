@@ -2343,44 +2343,94 @@ async function logMealTemplate(tplId) {
 async function fetchAIMealRecommendations() {
   const container = document.getElementById('aiRecommendationsList');
   if (!container) return;
-  const backendUrl = "https://nutritrack-k96f.onrender.com";
 
   const todayLogs = (window._foodLogs || []).filter(l => l.date === todayStr());
   const todayTotals = sumLogs(todayLogs);
-  const goalCal = currentUser?.goals?.calories || 2000;
-  const goalPro = currentUser?.goals?.protein || 150;
+  const goalCal = (currentUser && currentUser.goals && currentUser.goals.calories) || 2000;
+  const goalPro = (currentUser && currentUser.goals && currentUser.goals.protein) || 150;
 
   const remCal = Math.max(0, goalCal - todayTotals.cal);
   const remPro = Math.max(0, goalPro - todayTotals.pro);
+  const userDiet = String(currentUser?.diet_type || currentUser?.dietType || currentUser?.diet_goal || currentUser?.dietGoal || 'veg').toLowerCase();
 
+  // Diet-Specific Meal Pool
+  const DIET_MEAL_POOL = {
+    veg: [
+      { name: 'Paneer Tikka (150g)', emoji: '🧀', cal: 260, pro: 18, carb: 6, fat: 18, fiber: 1, reason: '🌱 Pure Veg · High Protein' },
+      { name: 'Dal Tadka + 2 Rotis', emoji: '🍲', cal: 310, pro: 14, carb: 48, fat: 7, fiber: 8, reason: '🌱 Pure Veg · Balanced Meal' },
+      { name: 'Chana Masala (200g)', emoji: '🫘', cal: 220, pro: 12, carb: 34, fat: 5, fiber: 9, reason: '🌱 Pure Veg · Rich in Fiber' },
+      { name: 'Sprouts & Paneer Salad', emoji: '🥗', cal: 180, pro: 14, carb: 16, fat: 6, fiber: 5, reason: '🌱 Pure Veg · Low Calorie' },
+      { name: 'Greek Yogurt with Honey', emoji: '🥛', cal: 160, pro: 13, carb: 18, fat: 4, fiber: 0, reason: '🌱 Pure Veg · Gut Healthy' },
+      { name: 'Moong Dal Khichdi', emoji: '🥣', cal: 250, pro: 11, carb: 42, fat: 4, fiber: 6, reason: '🌱 Pure Veg · Easy to Digest' }
+    ],
+    vegan: [
+      { name: 'Chana Masala (200g)', emoji: '🫘', cal: 220, pro: 12, carb: 34, fat: 5, fiber: 9, reason: '🌱 100% Vegan · Fiber Rich' },
+      { name: 'Tofu Stir Fry with Veggies', emoji: '🥗', cal: 210, pro: 16, carb: 12, fat: 10, fiber: 4, reason: '🌱 100% Vegan · High Protein' },
+      { name: 'Soybean Curry (180g)', emoji: '🫘', cal: 240, pro: 18, carb: 14, fat: 9, fiber: 6, reason: '🌱 100% Vegan · Complete Amino Acid' },
+      { name: 'Hummus & Whole Wheat Pita', emoji: '🫓', cal: 230, pro: 9, carb: 36, fat: 7, fiber: 6, reason: '🌱 100% Vegan · Clean Fuel' },
+      { name: 'Oats & Chia Seeds Bowl', emoji: '🥣', cal: 210, pro: 8, carb: 35, fat: 5, fiber: 8, reason: '🌱 100% Vegan · Slow Carbs' }
+    ],
+    keto: [
+      { name: 'Paneer Tikka (150g)', emoji: '🧀', cal: 260, pro: 18, carb: 6, fat: 18, fiber: 1, reason: '🥑 Keto · Low Carb High Fat' },
+      { name: 'Scrambled Eggs with Avocado', emoji: '🍳', cal: 310, pro: 16, carb: 4, fat: 24, fiber: 4, reason: '🥑 Keto · Healthy Fats' },
+      { name: 'Handful Almonds & Walnuts', emoji: '🌰', cal: 170, pro: 6, carb: 4, fat: 15, fiber: 3, reason: '🥑 Keto · Energy Snack' }
+    ],
+    eggetarian: [
+      { name: 'Egg Bhurji with Whole Wheat Toast', emoji: '🍳', cal: 260, pro: 16, carb: 22, fat: 12, fiber: 3, reason: '🥚 Eggetarian · Muscle Recovery' },
+      { name: '2 Boiled Eggs with Pepper', emoji: '🥚', cal: 155, pro: 13, carb: 1, fat: 10, fiber: 0, reason: '🥚 Eggetarian · Bioavailable Protein' },
+      { name: 'Paneer & Spinach Omelette', emoji: '🍳', cal: 280, pro: 20, carb: 5, fat: 18, fiber: 2, reason: '🥚 Eggetarian · Low Carb' }
+    ],
+    nonveg: [
+      { name: 'Grilled Chicken Breast (150g)', emoji: '🍗', cal: 220, pro: 35, carb: 0, fat: 4, fiber: 0, reason: '🍗 Lean Protein · Low Fat' },
+      { name: 'Egg White Omelette with Spinach', emoji: '🍳', cal: 140, pro: 18, carb: 3, fat: 2, fiber: 1, reason: '🍳 High Protein · Low Calorie' },
+      { name: 'Tandoori Fish Tikka (150g)', emoji: '🐟', cal: 210, pro: 28, carb: 2, fat: 8, fiber: 0, reason: '🐟 Rich in Omega-3' },
+      { name: 'Paneer Tikka (150g)', emoji: '🧀', cal: 260, pro: 18, carb: 6, fat: 18, fiber: 1, reason: '🧀 Vegetarian Option' }
+    ]
+  };
+
+  const selectedPool = userDiet.includes('vegan') ? DIET_MEAL_POOL.vegan
+    : userDiet.includes('veg') ? DIET_MEAL_POOL.veg
+    : userDiet.includes('keto') ? DIET_MEAL_POOL.keto
+    : userDiet.includes('egg') ? DIET_MEAL_POOL.eggetarian
+    : DIET_MEAL_POOL.nonveg;
+
+  let recommendations = selectedPool.filter(item => item.cal <= (remCal > 0 ? remCal + 100 : 350)).slice(0, 3);
+  if (recommendations.length === 0) recommendations = selectedPool.slice(0, 3);
+
+  // Render recommendations immediately
+  const renderList = (items) => {
+    if (!window._foodCardMap) window._foodCardMap = {};
+    container.innerHTML = items.map(item => {
+      const safeId = 'rec_' + String(item.name).replace(/[^a-zA-Z0-9_]/g, '_');
+      window._foodCardMap[safeId] = item;
+      return `
+        <div style="padding:10px 14px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08); border-radius:12px; display:flex; justify-content:space-between; align-items:center; transition:all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
+          <div>
+            <div style="font-weight:700; font-size:0.85rem; color:#fff;">${item.emoji} ${item.name}</div>
+            <div style="font-size:0.72rem; color:var(--kiwi); margin-top:2px; font-weight:600;">${item.reason} · ${item.cal} kcal (${item.pro}g P)</div>
+          </div>
+          <button type="button" onclick="addFoodById('${safeId}')" class="water-quick-btn" style="font-size:0.78rem; padding:5px 12px; font-weight:700; background:linear-gradient(135deg,#3ecf8e,#22c55e); color:#0a0f0d; border:none;">+ Log</button>
+        </div>`;
+    }).join('');
+  };
+
+  renderList(recommendations);
+
+  // Attempt backend API call asynchronously
   try {
-    const res = await _authFetch(`${backendUrl}/api/ai/recommend`, {
+    const res = await _authFetch('/api/ai/recommend', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        rem_cal: remCal,
-        rem_pro: remPro,
-        diet_type: currentUser?.dietType || 'nonveg'
-      })
+      body: JSON.stringify({ rem_cal: remCal, rem_pro: remPro, diet_type: userDiet })
     });
-    if (res.ok) {
-      const items = await res.json();
-      if (!items || !items.length) {
-        container.innerHTML = `<div style="font-size:0.8rem; color:var(--mist);">You are right on track! No additional meal recommendations needed right now.</div>`;
-        return;
+    if (res && res.ok) {
+      const apiItems = await res.json();
+      if (apiItems && apiItems.length > 0) {
+        renderList(apiItems);
       }
-      container.innerHTML = items.map(item => `
-        <div style="padding:8px 12px; background:rgba(255,255,255,0.05); border-radius:10px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick='addFoodToLog(${JSON.stringify(item).replace(/'/g, "&#39;")})'>
-          <div>
-            <div style="font-weight:600; font-size:0.85rem;">${item.emoji} ${item.name}</div>
-            <div style="font-size:0.72rem; color:var(--mist);">${item.reason}</div>
-          </div>
-          <button type="button" class="water-quick-btn" style="font-size:0.75rem; padding:3px 8px;">+ Log</button>
-        </div>
-      `).join('');
     }
   } catch (e) {
-    console.error('fetchAIMealRecommendations error', e);
+    console.warn('Backend AI recommend notice:', e);
   }
 }
 
