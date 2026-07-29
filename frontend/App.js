@@ -1865,60 +1865,100 @@ async function _authFetch(url, options = {}) {
 }
 
 async function addFoodToLog(food) {
-  const backendUrl = "https://nutritrack-k96f.onrender.com";
   const payload = {
     date: todayStr(),
     mealType: currentMealType,
     name: food.name,
-    emoji: food.emoji,
-    cal: food.cal,
-    pro: food.pro,
-    carb: food.carb,
-    fat: food.fat,
-    fiber: food.fiber || 0,
-    sugar: food.sugar || 0,
-    sodium: food.sodium || 0,
-    chol: food.chol || 0,
-    vit_d: food.vit_d || 0,
-    iron: food.iron || 0,
-    folate: food.folate || 0
+    emoji: food.emoji || '🍽️',
+    cal: floatVal(food.cal),
+    pro: floatVal(food.pro),
+    carb: floatVal(food.carb),
+    fat: floatVal(food.fat),
+    fiber: floatVal(food.fiber),
+    sugar: floatVal(food.sugar),
+    sodium: floatVal(food.sodium),
+    chol: floatVal(food.chol),
+    vit_d: floatVal(food.vit_d),
+    iron: floatVal(food.iron),
+    folate: floatVal(food.folate)
   };
 
+  // 1. Optimistically add to local food log so dashboard & totals update instantly
+  const localId = 'log_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+  const logEntry = { id: localId, ...payload };
+  if (!window._foodLogs) window._foodLogs = [];
+  window._foodLogs.unshift(logEntry);
+  refreshDashboard();
+  showToast(`✓ ${food.name} added to ${currentMealType}`, 'success');
+
+  // 2. Save directly to Supabase food_logs cloud table
   try {
-    const res = await _authFetch(`${backendUrl}/api/logs`, {
+    if (typeof supabaseClient !== 'undefined' && supabaseClient?.auth) {
+      const { data: sessData } = await supabaseClient.auth.getSession();
+      const user = sessData?.session?.user;
+      if (user) {
+        const sbRecord = {
+          user_id: user.id,
+          date: payload.date,
+          meal_type: payload.mealType,
+          name: payload.name,
+          emoji: payload.emoji,
+          cal: payload.cal,
+          pro: payload.pro,
+          carb: payload.carb,
+          fat: payload.fat,
+          fiber: payload.fiber,
+          sugar: payload.sugar,
+          sodium: payload.sodium,
+          chol: payload.chol,
+          vit_d: payload.vit_d,
+          iron: payload.iron,
+          folate: payload.folate
+        };
+        const { data: inserted, error: sbErr } = await supabaseClient
+          .from('food_logs')
+          .insert(sbRecord)
+          .select();
+        if (!sbErr && inserted && inserted.length > 0) {
+          logEntry.id = inserted[0].id || localId;
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Supabase food_logs insert notice:', err);
+  }
+
+  // 3. Sync with Flask backend API endpoint
+  try {
+    const res = await _authFetch('/api/logs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
-    if (res.ok) {
+    if (res && res.ok) {
       const savedLog = await res.json();
-      window._foodLogs.push(savedLog);
-      refreshDashboard();
-      showToast(`✓ ${food.name} added to ${currentMealType}`, 'success');
-    } else {
-      console.error('addFoodToLog failed:', res.status, await res.text().catch(() => ''));
-      showToast('Failed to add food to cloud.', 'error');
+      if (savedLog && savedLog.id) logEntry.id = savedLog.id;
     }
   } catch (e) {
-    showToast('Network error: ' + e.message, 'error');
+    console.warn('Backend food log sync notice:', e);
   }
 }
 
 async function removeLog(id) {
-  const backendUrl = "https://nutritrack-k96f.onrender.com";
+  // Optimistically remove from local food logs
+  window._foodLogs = (window._foodLogs || []).filter(l => String(l.id) !== String(id));
+  refreshDashboard();
+  renderHistory();
+  showToast('Item removed', 'success');
+
+  // Cloud deletion from Supabase DB & Backend API
   try {
-    const res = await _authFetch(`${backendUrl}/api/logs/${id}`, { method: 'DELETE' });
-    if (res.ok) {
-      window._foodLogs = window._foodLogs.filter(l => l.id !== id);
-      refreshDashboard();
-      renderHistory();
-      showToast('Item removed', 'success');
-    } else {
-      console.error('removeLog failed:', res.status, await res.text().catch(() => ''));
-      showToast('Failed to remove item from cloud.', 'error');
+    if (typeof supabaseClient !== 'undefined' && supabaseClient?.auth) {
+      await supabaseClient.from('food_logs').delete().eq('id', id);
     }
+    await _authFetch(`/api/logs/${id}`, { method: 'DELETE' });
   } catch (e) {
-    showToast('Network error removing item.', 'error');
+    console.warn('Cloud log deletion notice:', e);
   }
 }
 
@@ -1926,16 +1966,62 @@ async function removeLog(id) {
 //  CLOUD FETCH HELPERS
 // ─────────────────────────────────────────────────
 async function fetchLogsFromCloud() {
-  const backendUrl = "https://nutritrack-k96f.onrender.com";
+  let cloudLogs = [];
   try {
-    const res = await _authFetch(`${backendUrl}/api/logs`);
-    if (res.ok) {
-      window._foodLogs = await res.json();
-      refreshDashboard();
-      renderHistory();
+    if (typeof supabaseClient !== 'undefined' && supabaseClient?.auth) {
+      const { data: sessData } = await supabaseClient.auth.getSession();
+      const user = sessData?.session?.user;
+      if (user) {
+        const { data, error } = await supabaseClient
+          .from('food_logs')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('id', { ascending: false });
+        if (!error && data) {
+          cloudLogs = data.map(item => ({
+            id: item.id,
+            date: item.date,
+            mealType: item.meal_type || item.mealType || 'breakfast',
+            name: item.name,
+            emoji: item.emoji || '🍽️',
+            cal: floatVal(item.cal),
+            pro: floatVal(item.pro),
+            carb: floatVal(item.carb),
+            fat: floatVal(item.fat),
+            fiber: floatVal(item.fiber),
+            sugar: floatVal(item.sugar),
+            sodium: floatVal(item.sodium),
+            chol: floatVal(item.chol),
+            vit_d: floatVal(item.vit_d),
+            iron: floatVal(item.iron),
+            folate: floatVal(item.folate)
+          }));
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Supabase fetch logs notice:', err);
+  }
+
+  try {
+    const res = await _authFetch('/api/logs');
+    if (res && res.ok) {
+      const apiLogs = await res.json();
+      if (apiLogs && apiLogs.length > 0) {
+        const logMap = new Map();
+        cloudLogs.forEach(l => logMap.set(String(l.id), l));
+        apiLogs.forEach(l => logMap.set(String(l.id || l.name + '_' + l.date), l));
+        cloudLogs = Array.from(logMap.values());
+      }
     }
   } catch (e) {
-    console.error('fetchLogsFromCloud error', e);
+    console.warn('Backend fetch logs notice:', e);
+  }
+
+  if (cloudLogs.length > 0) {
+    window._foodLogs = cloudLogs;
+    refreshDashboard();
+    renderHistory();
   }
 }
 
