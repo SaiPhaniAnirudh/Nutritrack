@@ -61,7 +61,9 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    window._BACKEND_URL = "https://nutritrack-rho-rust.vercel.app";
+    window._BACKEND_URL = window.location.hostname.includes('localhost') || window.location.hostname.includes('127.0.0.1')
+      ? 'http://127.0.0.1:5000'
+      : 'https://nutritrack-k96f.onrender.com';
   </script>
 </head>
 
@@ -158,7 +160,7 @@
     <div class="auth-container">
       <div class="auth-panel auth-panel-form">
         <div class="auth-logo">
-          <img src="/logo-auth.svg" alt="NutriTrack" class="auth-logo-img" onerror="this.onerror=null; this.src='/logo-nav.png';" />
+          <img src="/logo-nav.png" alt="NutriTrack" class="auth-logo-img" />
         </div>
 
         <h1 class="auth-headline">Know exactly<br>what's on your plate.</h1>
@@ -420,7 +422,7 @@
     <nav class="topnav">
       <div class="nav-brand">
         <a href="/" style="display: flex; align-items: center; text-decoration: none;">
-          <img src="/logo-nav.svg" alt="Nav Logo" style="height: 28px; width: auto;" onerror="this.onerror=null; this.src='/logo-nav.png';" />
+          <img src="/logo-nav.png" alt="NutriTrack" style="height: 32px; width: auto;" />
         </a>
         <!-- Brand name commented out because it is built into the logo image -->
         <!-- <span class="nav-brand-name">NutriTrack</span> -->
@@ -800,16 +802,7 @@
         </div>
       </div>
 
-      <!-- Recipe Builder Card -->
-      <div class="glass-card" style="margin-top:1.2rem">
-        <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
-          <div><div class="dot"></div>🍳 Custom Recipe Builder</div>
-          <button type="button" onclick="openRecipeBuilderModal()" class="water-quick-btn" style="font-size:0.75rem; padding:4px 10px;">+ Create Recipe</button>
-        </div>
-        <div id="recipesList" style="display:flex; gap:10px; overflow-x:auto; padding-bottom:6px; margin-top:0.6rem;">
-          <div style="font-size:0.8rem; color:var(--mist); opacity:0.7;">No custom recipes built yet. Combine raw ingredients into custom meals!</div>
-        </div>
-      </div>
+
     </div>
 
     <!-- ══════════════════════
