@@ -1528,14 +1528,20 @@ function _renderScanResult(r) {
         <span>💪 ${f.pro}g</span><span>🌾 ${f.carb}g</span><span>🥑 ${f.fat}g</span><span>🌿 ${f.fiber}g</span>
         <span>🍬 ${f.sugar}g</span><span>🧂 ${f.sod}mg</span><span>❤️ ${f.chol}mg</span>
       </div>
-      <button class="scan-add-btn" style="padding:0.45rem;font-size:0.78rem;" onclick='addFoodToLog(${foodJson})'>
-        ✓ Add ${f.name} to ${currentMealType}
+      <button type="button" class="scan-add-btn" style="padding:0.45rem;font-size:0.78rem;" onclick="addFoodById('${itemSafeId}')">
+        ✓ Add ${f.name} to ${currentMealType || 'meal'}
       </button>
     </div>`;
   }).join('');
 
-  const allFoodsJson = JSON.stringify({ name: parsed.map(f => f.name).join(' + '), emoji: '🍽️', cal: total.cal, pro: total.pro, carb: total.carb, fat: total.fat, fiber: total.fiber, sugar: total.sugar, sodium: total.sod, chol: total.chol, vit_d: total.vit_d, iron: total.iron, folate: total.folate }).replace(/'/g, "&#39;");
-  const singleFoodJson = JSON.stringify({ name: parsed[0].name, emoji: '🍽️', cal: parsed[0].cal, pro: parsed[0].pro, carb: parsed[0].carb, fat: parsed[0].fat, fiber: parsed[0].fiber, sugar: parsed[0].sugar, sodium: parsed[0].sod, chol: parsed[0].chol, vit_d: parsed[0].vit_d, iron: parsed[0].iron, folate: parsed[0].folate }).replace(/'/g, "&#39;");
+  const allFoodsObj = { name: parsed.map(f => f.name).join(' + '), emoji: '🍽️', cal: total.cal, pro: total.pro, carb: total.carb, fat: total.fat, fiber: total.fiber, sugar: total.sugar, sodium: total.sod, chol: total.chol, vit_d: total.vit_d, iron: total.iron, folate: total.folate };
+  const allSafeId = 'scan_all_' + Math.random().toString(36).substr(2, 5);
+  if (!window._foodCardMap) window._foodCardMap = {};
+  window._foodCardMap[allSafeId] = allFoodsObj;
+
+  const singleFoodObj = { name: parsed[0].name, emoji: '🍽️', cal: parsed[0].cal, pro: parsed[0].pro, carb: parsed[0].carb, fat: parsed[0].fat, fiber: parsed[0].fiber, sugar: parsed[0].sugar, sodium: parsed[0].sod, chol: parsed[0].chol, vit_d: parsed[0].vit_d, iron: parsed[0].iron, folate: parsed[0].folate };
+  const singleSafeId = 'scan_single_' + Math.random().toString(36).substr(2, 5);
+  window._foodCardMap[singleSafeId] = singleFoodObj;
 
   document.getElementById('scanResult').innerHTML = `
     <div class="scan-result-card">
@@ -1566,7 +1572,7 @@ function _renderScanResult(r) {
         ${_buildNutrientCell('🥑', 'Fat', total.fat, 'g', false)}
         ${_buildNutrientCell('🌿', 'Fiber', total.fiber, 'g', false)}
         ${_buildNutrientCell('🍬', 'Sugar', total.sugar, 'g', sugarWarn)}
-        ${_buildNutrientCell('🧂', 'Salt', total.sod, 'mg', sodWarn)}<!-- change #13 -->
+        ${_buildNutrientCell('🧂', 'Salt', total.sod, 'mg', sodWarn)}
         ${_buildNutrientCell('❤️', 'Cholesterol', total.chol, 'mg', cholWarn)}
         ${_buildNutrientCell('🔥', 'Calories', total.cal, 'kcal', false)}
         ${_buildNutrientCell('☀️', 'Vit D', total.vit_d, 'mcg', false)}
@@ -1575,11 +1581,11 @@ function _renderScanResult(r) {
       </div>
       ${r.tips ? `<div style="font-size:0.72rem;color:rgba(100,180,110,0.7);background:rgba(100,180,110,0.06);border:1px solid rgba(100,180,110,0.15);border-radius:8px;padding:0.55rem 0.8rem;margin-bottom:0.9rem;line-height:1.4">💡 ${r.tips}</div>` : ''}
       ${isMulti ? `
-        <button class="scan-add-btn" style="margin-bottom:1rem;" onclick='addFoodToLog(${allFoodsJson})'>✓ Add Entire Meal to ${currentMealType}</button>
+        <button type="button" class="scan-add-btn" style="margin-bottom:1rem;" onclick="addFoodById('${allSafeId}')">✓ Add Entire Meal to ${currentMealType || 'meal'}</button>
         <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.07em;color:var(--ink-50);margin-bottom:0.6rem;font-weight:600;">Or add individually:</div>
         ${itemRows}
       ` : `
-        <button class="scan-add-btn" onclick='addFoodToLog(${singleFoodJson})'>✓ Add to ${currentMealType}</button>
+        <button type="button" class="scan-add-btn" onclick="addFoodById('${singleSafeId}')">✓ Add to ${currentMealType || 'meal'}</button>
       `}
     </div>`;
 }
