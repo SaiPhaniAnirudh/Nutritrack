@@ -960,6 +960,9 @@ function refreshDashboard() {
   const workoutBurn = (window._workoutLogs || []).reduce((s, w) => s + (w.calBurned || 0), 0);
   const netCals = Math.max(0, totals.cal - workoutBurn);
 
+  const dashBurnEl = document.getElementById('dashWorkoutBurn');
+  if (dashBurnEl) dashBurnEl.textContent = Math.round(workoutBurn);
+
   [['dashCals', 'calBar', totals.cal, goals.calories, false],
   ['dashProtein', 'protBar', totals.pro, goals.protein, false],
   ['dashCarbs', 'carbBar', totals.carb, goals.carbs, false],
@@ -1718,11 +1721,15 @@ async function searchFoods(query = '', page = 0) {
 
   _lastSearchQuery = `${currentCat}:${q}`;
 
-  // 1. Initial local items match
+  // 1. Initial local items match (render immediately so UI is never empty while awaiting DB)
   let localMatches = FOODS;
   if (currentCat !== 'all') localMatches = localMatches.filter(f => f.cat === currentCat);
   if (q) localMatches = localMatches.filter(f => f.name.toLowerCase().includes(q));
-  else if (currentCat === 'all') localMatches = localMatches.slice(0, 15);
+  else if (currentCat === 'all') localMatches = localMatches.slice(0, 24);
+
+  if (page === 0 && localMatches.length > 0 && container) {
+    container.innerHTML = localMatches.map(_buildFoodCard).join('');
+  }
 
   try {
     let dbFetched = [];
