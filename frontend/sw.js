@@ -14,7 +14,10 @@
  *   - Images                           → Stale While Revalidate
  */
 
-const CACHE_NAME = 'nutritrack-v13'; // bumped again (v12->v13) to force-evict any client still on the pre-fix App.js, since same-URL assets are Cache-First and won't refetch on their own
+const CACHE_NAME = 'nutritrack-v14'; // v13->v14: cache.addAll() was pre-caching '/logo-auth.png', which
+// does not exist (only logo-auth.svg does) — cache.addAll() is atomic, so that single 404 rejected the
+// whole install() call and silently killed precaching of the ENTIRE app shell, including logo-nav.png.
+// Bumping the version forces every client (even ones stuck on the broken SW) to re-run install() clean.
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -23,7 +26,8 @@ const APP_SHELL = [
   '/Foods.js',
   '/manifest.json',
   '/logo-nav.png',
-  '/logo-auth.png',
+  '/logo-auth.svg',
+  '/logo-loader.svg',
   '/icons/icon.png',
 ];
 
@@ -31,10 +35,18 @@ const APP_SHELL = [
 self.addEventListener('install', (event) => {
   console.log('[SW] Installing service worker...');
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      console.log('[SW] Pre-caching app shell');
-      return cache.addAll(APP_SHELL);
-    })
+    caches.open(CACHE_NAME).then((cache) =>
+      Promise.all(
+        APP_SHELL.map((url) =>
+          cache.add(url).catch((err) => {
+            // Don't let one missing/renamed file (a 404, typo, etc.) reject
+            // the whole install — that's exactly what happened with the old
+            // '/logo-auth.png' entry. Log it and keep going.
+            console.warn('[SW] Failed to precache (skipping):', url, err);
+          })
+        )
+      )
+    )
   );
   self.skipWaiting();
 });

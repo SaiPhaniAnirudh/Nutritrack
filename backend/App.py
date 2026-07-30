@@ -1709,7 +1709,7 @@ def ai_chat():
     sys_context = f"User Profile: Diet Goal={user.diet_goal if user else 'maintain'}, Diet Type={diet_type}. Today's Progress: Logged {round(today_cals)} kcal / {goal_cals} kcal, Protein {round(today_pro)}g / {goal_pro}g. Remaining: {round(rem_cal)} kcal, {round(rem_pro)}g protein."
 
     # Try LLM server first if available
-    llm_url = os.getenv('LLM_SERVER_URL', 'http://localhost:5002')
+    llm_url = os.getenv('LLM_SERVER_URL', 'https://energyvenom-nutritrack-llm.hf.space')
     try:
         resp = requests.post(
             f'{llm_url}/api/ai/chat',
@@ -1751,7 +1751,7 @@ def analyze_menu():
     if not image:
         return jsonify({'error': 'No image provided'}), 400
 
-    llm_url = os.getenv('LLM_SERVER_URL', 'http://localhost:5002')
+    llm_url = os.getenv('LLM_SERVER_URL', 'https://energyvenom-nutritrack-llm.hf.space')
     try:
         resp = requests.post(
             f'{llm_url}/api/ai/analyze',
@@ -1799,7 +1799,7 @@ def ai_analyze():
     if not image:
         return jsonify({'error': 'No image provided'}), 400
 
-    llm_url = os.getenv('LLM_SERVER_URL', 'http://localhost:5002')
+    llm_url = os.getenv('LLM_SERVER_URL', 'https://energyvenom-nutritrack-llm.hf.space')
     try:
         resp = requests.post(
             f'{llm_url}/api/ai/analyze',
@@ -1843,7 +1843,7 @@ def ai_analyze_stream():
     if not image:
         return jsonify({'error': 'No image provided'}), 400
 
-    llm_url = os.getenv('LLM_SERVER_URL', 'http://localhost:5002')
+    llm_url = os.getenv('LLM_SERVER_URL', 'https://energyvenom-nutritrack-llm.hf.space')
     try:
         # We must stream=True on the requests call and yield the bytes
         resp = requests.post(
