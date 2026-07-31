@@ -14,6 +14,17 @@
    #13 "Sodium" → "Salt" in all display strings
 ═══════════════════════════════════════════════════ */
 // ─────────────────────────────────────────────────
+//  NUMERIC HELPERS
+// ─────────────────────────────────────────────────
+// Was called 22+ times (search normalization, addFoodToLog, cloud-log
+// merge) but never defined — every call threw "floatVal is not defined",
+// which silently aborted food logging before Supabase/UI ever ran.
+function floatVal(v) {
+  const n = parseFloat(v);
+  return isNaN(n) ? 0 : n;
+}
+
+// ─────────────────────────────────────────────────
 //  PAGE LOADER  (non-blocking)
 // ─────────────────────────────────────────────────
 function showLoader(msg = 'Loading…') {
