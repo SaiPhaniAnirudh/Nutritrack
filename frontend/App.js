@@ -181,15 +181,25 @@ function hideAuthError() {
 // ─────────────────────────────────────────────────
 //  GOOGLE LOGIN
 // ─────────────────────────────────────────────────
-async function handleGoogleLogin() {
+async function handleGoogleLogin(forFitness) {
   showLoader('Connecting to Google...');
   try {
+    const oauthOptions = {
+      redirectTo: window.location.origin + window.location.pathname,
+      queryParams: { prompt: 'select_account' }
+    };
+    if (forFitness) {
+      // Fitness scope + offline access + consent prompt are what actually
+      // make Google issue a refresh_token — without all three, Google Fit
+      // access silently isn't granted, or expires in ~1hr with no way to
+      // renew it, forcing a fresh login every time.
+      oauthOptions.scopes = 'https://www.googleapis.com/auth/fitness.activity.read';
+      oauthOptions.queryParams = { access_type: 'offline', prompt: 'consent' };
+      sessionStorage.setItem('_connectingGoogleFit', '1');
+    }
     const { data, error } = await supabaseClient.auth.signInWithOAuth({
       provider: 'google',
-      options: {
-        redirectTo: window.location.origin + window.location.pathname,
-        queryParams: { prompt: 'select_account' }
-      }
+      options: oauthOptions
     });
     if (error) throw error;
   } catch (err) {
@@ -505,6 +515,34 @@ supabaseClient.auth.onAuthStateChange(async (event, session) => {
         return;
       }
       await loadProfileForSession(session);
+
+      // If this sign-in was specifically to connect Google Fit, grab the
+      // refresh_token Google just issued (only available on this first
+      // redirect — Supabase does not persist or refresh it automatically)
+      // and hand it to the backend once so future syncs don't need it again.
+      if (sessionStorage.getItem('_connectingGoogleFit') === '1') {
+        sessionStorage.removeItem('_connectingGoogleFit');
+        const refreshToken = session.provider_refresh_token;
+        if (refreshToken) {
+          try {
+            const res = await _authFetch('/api/integrations/google-fit/connect', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ refresh_token: refreshToken })
+            });
+            if (res && res.ok) {
+              showToast('⌚ Google Fit connected!', 'success');
+              syncGoogleFit();
+            } else {
+              showToast('⚠️ Could not save Google Fit connection', 'error');
+            }
+          } catch (e) {
+            console.error('Google Fit connect error', e);
+          }
+        } else {
+          showToast('⚠️ Google didn\'t grant offline access — try connecting again.', 'error');
+        }
+      }
     } else if (event === 'SIGNED_OUT') {
       handleLogoutUI();
     }
@@ -786,6 +824,7 @@ async function loginSuccess(userProfile) {
   fetchWeeklyInsights();
   fetchCommunityChallenges();
   fetchWorkoutsFromCloud();
+  refreshGoogleFitStatus();
   fetchRecipesFromCloud();
 
   // Route to the correct tab based on URL path
@@ -4273,125 +4312,68 @@ function downloadShareCard() {
   showToast('✓ Card image downloaded!', 'success');
 }
 
-// ─────────────────────────────────────────────────
-//  WEARABLE INTEGRATION (REAL-TIME GOOGLE FIT API)
-// ─────────────────────────────────────────────────
-async function fetchRealGoogleFitData(providerToken) {
-  const now = new Date();
-  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-  const endOfDay = now.getTime();
-
-  const reqBody = {
-    aggregateBy: [
-      { dataTypeName: 'com.google.step_count.delta' },
-      { dataTypeName: 'com.google.calories.expended' }
-    ],
-    bucketByTime: { durationMillis: 86400000 },
-    startTimeMillis: startOfDay,
-    endTimeMillis: endOfDay
-  };
-
-  const res = await fetch('https://www.googleapis.com/fitness/v1/users/me/dataset:aggregate', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${providerToken}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(reqBody)
-  });
-
-  if (!res.ok) {
-    throw new Error(`Google Fitness API status ${res.status}`);
-  }
-
-  const data = await res.json();
-  let totalSteps = 0;
-  let totalCalories = 0;
-
-  if (data.bucket && data.bucket.length > 0) {
-    for (const bucket of data.bucket) {
-      if (bucket.dataset) {
-        for (const ds of bucket.dataset) {
-          if (ds.point) {
-            for (const pt of ds.point) {
-              if (pt.value) {
-                for (const val of pt.value) {
-                  if (ds.dataSourceId && ds.dataSourceId.includes('step_count')) {
-                    totalSteps += (val.intVal || val.fpVal || 0);
-                  } else if (ds.dataSourceId && ds.dataSourceId.includes('calories')) {
-                    totalCalories += (val.fpVal || val.intVal || 0);
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  return {
-    steps: Math.round(totalSteps) || 7200,
-    cal_burned: Math.round((totalCalories || (totalSteps * 0.04)) * 10) / 10
-  };
-}
-
 async function syncGoogleFit() {
   showLoader('Syncing Google Fit data…');
-  let steps = 7200;
-  let calBurned = 288.0;
   const date = todayStr();
-
-  try {
-    const { data: sessionData } = await supabaseClient.auth.getSession();
-    const session = sessionData?.session;
-    const providerToken = session?.provider_token;
-
-    if (providerToken) {
-      try {
-        const realData = await fetchRealGoogleFitData(providerToken);
-        steps = realData.steps;
-        calBurned = realData.cal_burned;
-      } catch (fitErr) {
-        console.warn('Google Fit API query notice:', fitErr);
-      }
-    } else {
-      const wantsOAuth = confirm("Google Fit real-time step sync requires Google Fitness permission.\n\nClick OK to connect your Google Account with Google Fit steps permission, or Cancel to use step counter demo mode.");
-      if (wantsOAuth) {
-        handleGoogleLogin(true);
-        return;
-      }
-    }
-  } catch (e) {
-    console.warn('Session check error:', e);
-  }
-
-  // Record workout log locally so dashboard updates instantly
-  if (!window._workoutLogs) window._workoutLogs = [];
-  const existingGF = window._workoutLogs.find(w => w.name && w.name.includes('Google Fit') && w.date === date);
-  if (existingGF) {
-    existingGF.calBurned = calBurned;
-    existingGF.durationMin = Math.max(1, Math.round(steps / 100));
-  } else {
-    window._workoutLogs.unshift({ id: 'gf_' + Date.now(), name: 'Google Fit Daily Steps', calBurned, durationMin: Math.max(1, Math.round(steps / 100)), date });
-  }
-  refreshDashboard();
 
   try {
     const res = await _authFetch('/api/integrations/google-fit/sync', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ steps, cal_burned: calBurned, date })
+      body: JSON.stringify({ date })
     });
+    const data = res && res.ok ? await res.json() : null;
     hideLoader();
-    showToast(`⌚ Google Fit synced: ${steps} steps (${calBurned} kcal burned)!`, 'success');
-    if (res && res.ok) {
+
+    if (!data || !data.connected) {
+      // Not connected yet (or the stored refresh token was revoked) —
+      // ask once, then request Fitness-scoped access if they agree.
+      const wantsOAuth = confirm(data && data.needs_reauth
+        ? "Your Google Fit connection expired. Reconnect now?"
+        : "Connect your Google account to sync real step count & calories burned from Google Fit?");
+      if (wantsOAuth) handleGoogleLogin(true);
+      return;
+    }
+
+    if (data.synced) {
       await fetchWorkoutsFromCloud();
       refreshDashboard();
+      showToast(`⌚ Google Fit synced: ${data.steps} steps (${data.cal_burned} kcal burned)!`, 'success');
     }
   } catch (e) {
     hideLoader();
-    showToast(`⌚ Google Fit synced: ${steps} steps (${calBurned} kcal burned)!`, 'success');
+    console.error('Google Fit sync error', e);
+    showToast('⚠️ Google Fit sync failed — try again shortly.', 'error');
+  }
+}
+
+async function disconnectGoogleFit() {
+  if (!confirm('Disconnect Google Fit? You can reconnect the same or a different Google account anytime.')) return;
+  try {
+    const res = await _authFetch('/api/integrations/google-fit/disconnect', { method: 'POST' });
+    if (res && res.ok) {
+      showToast('⌚ Google Fit disconnected.', 'success');
+      refreshGoogleFitStatus();
+    } else {
+      showToast('⚠️ Could not disconnect Google Fit', 'error');
+    }
+  } catch (e) {
+    console.error('Google Fit disconnect error', e);
+    showToast('⚠️ Could not disconnect Google Fit', 'error');
+  }
+}
+
+async function refreshGoogleFitStatus() {
+  const el = document.getElementById('googleFitStatus');
+  if (!el) return;
+  try {
+    const res = await _authFetch('/api/integrations/google-fit/status');
+    const data = res && res.ok ? await res.json() : { connected: false };
+    el.innerHTML = data.connected
+      ? `<span style="color:var(--kiwi);">⌚ Connected</span> · <a href="#" onclick="disconnectGoogleFit(); return false;" style="color:var(--mist); text-decoration:underline;">Disconnect / switch account</a>`
+      : `<span style="opacity:0.7;">Not connected</span>`;
+  } catch (e) {
+    // Leave whatever was there before — a status-check failure isn't worth alarming over.
   }
 }
 

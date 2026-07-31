@@ -532,6 +532,18 @@ class WorkoutLog(db.Model):
         }
 
 
+class GoogleFitToken(db.Model):
+    __tablename__ = 'google_fit_tokens'
+
+    user_id       = db.Column(db.String(36), db.ForeignKey('users.id'), primary_key=True)
+    refresh_token = db.Column(db.Text, nullable=False)
+    connected_at  = db.Column(db.DateTime(timezone=True),
+                              default=lambda: datetime.now(timezone.utc))
+    updated_at    = db.Column(db.DateTime(timezone=True),
+                              default=lambda: datetime.now(timezone.utc),
+                              onupdate=lambda: datetime.now(timezone.utc))
+
+
 class Recipe(db.Model):
     __tablename__ = 'recipes'
 
@@ -1967,36 +1979,151 @@ def serve_sitemap():
 #  WEARABLE INTEGRATION (GOOGLE FIT)
 # ══════════════════════════════════════════════════
 
+@app.route('/api/integrations/google-fit/connect', methods=['POST'])
+@jwt_required()
+def connect_google_fit():
+    """Store the Google OAuth refresh token (captured once, right after the
+    user grants Fitness API access) so future syncs don't need them to log
+    back in every time — Supabase itself does NOT auto-refresh third-party
+    provider tokens, only its own JWT, so this is done manually here."""
+    uid = get_jwt_identity()
+    data = request.get_json() or {}
+    refresh_token = data.get('refresh_token')
+    if not refresh_token:
+        return jsonify({'error': 'refresh_token required'}), 400
+
+    try:
+        existing = GoogleFitToken.query.filter_by(user_id=uid).first()
+        if existing:
+            existing.refresh_token = refresh_token
+        else:
+            db.session.add(GoogleFitToken(user_id=uid, refresh_token=refresh_token))
+        db.session.commit()
+        return jsonify({'connected': True}), 200
+    except Exception as e:
+        db.session.rollback()
+        print(f"Google Fit connect error: {e}")
+        return jsonify({'error': 'Failed to store Google Fit connection'}), 500
+
+
+@app.route('/api/integrations/google-fit/status', methods=['GET'])
+@jwt_required()
+def google_fit_status():
+    """Lets the frontend show 'Connected' / 'Not connected' without
+    triggering a full sync."""
+    uid = get_jwt_identity()
+    tok = GoogleFitToken.query.filter_by(user_id=uid).first()
+    return jsonify({'connected': tok is not None,
+                     'connected_at': tok.connected_at.isoformat() if tok else None})
+
+
+@app.route('/api/integrations/google-fit/disconnect', methods=['POST'])
+@jwt_required()
+def disconnect_google_fit():
+    """Lets the user disconnect (e.g. to reconnect a different Google
+    account) rather than being stuck with whichever account they first used."""
+    uid = get_jwt_identity()
+    try:
+        GoogleFitToken.query.filter_by(user_id=uid).delete()
+        db.session.commit()
+        return jsonify({'connected': False}), 200
+    except Exception as e:
+        db.session.rollback()
+        print(f"Google Fit disconnect error: {e}")
+        return jsonify({'error': 'Failed to disconnect'}), 500
+
+
+def _refresh_google_access_token(refresh_token):
+    """Exchange a stored refresh_token for a short-lived Google access token."""
+    client_id = os.getenv('GOOGLE_CLIENT_ID')
+    client_secret = os.getenv('GOOGLE_CLIENT_SECRET')
+    if not client_id or not client_secret:
+        raise RuntimeError('GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET not configured on the server')
+    resp = requests.post('https://oauth2.googleapis.com/token', data={
+        'client_id': client_id,
+        'client_secret': client_secret,
+        'refresh_token': refresh_token,
+        'grant_type': 'refresh_token',
+    }, timeout=10)
+    if not resp.ok:
+        raise RuntimeError(f'Google token refresh failed: {resp.status_code} {resp.text[:200]}')
+    return resp.json()['access_token']
+
+
+def _fetch_google_fitness_today(access_token):
+    """Same aggregate query the frontend used to run client-side, now run
+    server-side with a freshly-minted access token."""
+    now = datetime.now(timezone.utc)
+    start_of_day = int(datetime(now.year, now.month, now.day, tzinfo=timezone.utc).timestamp() * 1000)
+    end_of_day = int(now.timestamp() * 1000)
+    body = {
+        'aggregateBy': [
+            {'dataTypeName': 'com.google.step_count.delta'},
+            {'dataTypeName': 'com.google.calories.expended'},
+        ],
+        'bucketByTime': {'durationMillis': 86400000},
+        'startTimeMillis': start_of_day,
+        'endTimeMillis': end_of_day,
+    }
+    resp = requests.post(
+        'https://www.googleapis.com/fitness/v1/users/me/dataset:aggregate',
+        headers={'Authorization': f'Bearer {access_token}'},
+        json=body, timeout=10,
+    )
+    if not resp.ok:
+        raise RuntimeError(f'Google Fitness API status {resp.status_code}')
+    data = resp.json()
+    total_steps, total_cal = 0, 0.0
+    for bucket in data.get('bucket', []):
+        for ds in bucket.get('dataset', []):
+            is_steps = 'step_count' in (ds.get('dataSourceId') or '')
+            is_cal = 'calories' in (ds.get('dataSourceId') or '')
+            for point in ds.get('point', []):
+                for val in point.get('value', []):
+                    v = val.get('intVal', val.get('fpVal', 0))
+                    if is_steps:
+                        total_steps += v
+                    elif is_cal:
+                        total_cal += v
+    return round(total_steps), round(total_cal or total_steps * 0.04, 1)
+
+
 @app.route('/api/integrations/google-fit/sync', methods=['POST'])
 @jwt_required()
 def sync_google_fit():
-    """Sync step count & active calorie burn from Google Fit API."""
+    """Pull TODAY's real step count & active calorie burn from Google Fit
+    using the stored refresh token — no hardcoded numbers, no re-login."""
     uid = get_jwt_identity()
-    data = request.get_json() or {}
-    steps = int(data.get('steps', 6500))
-    cal_burned = float(data.get('cal_burned', round(steps * 0.04, 1)))
-    date = data.get('date', datetime.utcnow().strftime('%Y-%m-%d'))
+    date = (request.get_json() or {}).get('date', datetime.now(timezone.utc).strftime('%Y-%m-%d'))
+
+    tok = GoogleFitToken.query.filter_by(user_id=uid).first()
+    if not tok:
+        return jsonify({'connected': False}), 200
+
+    try:
+        access_token = _refresh_google_access_token(tok.refresh_token)
+        steps, cal_burned = _fetch_google_fitness_today(access_token)
+    except Exception as e:
+        print(f"Google Fit sync error: {e}")
+        if 'token refresh failed' in str(e).lower():
+            db.session.delete(tok)
+            db.session.commit()
+            return jsonify({'connected': False, 'needs_reauth': True}), 200
+        return jsonify({'error': 'Failed to sync Google Fit data'}), 502
 
     try:
         w_log = WorkoutLog(
-            user_id=uid,
-            date=date,
-            name="Google Fit Daily Steps",
-            duration_min=max(1, round(steps / 100)),
-            cal_burned=cal_burned
+            user_id=uid, date=date, name="Google Fit Daily Steps",
+            duration_min=max(1, round(steps / 100)), cal_burned=cal_burned,
         )
         db.session.add(w_log)
         db.session.commit()
-        return jsonify({
-            'synced': True,
-            'steps': steps,
-            'cal_burned': cal_burned,
-            'workout': w_log.to_dict()
-        }), 201
+        return jsonify({'connected': True, 'synced': True, 'steps': steps,
+                         'cal_burned': cal_burned, 'workout': w_log.to_dict()}), 201
     except Exception as e:
         db.session.rollback()
-        print(f"Google Fit sync error: {e}")
-        return jsonify({'error': 'Failed to sync Google Fit data'}), 500
+        print(f"Google Fit sync (DB write) error: {e}")
+        return jsonify({'error': 'Failed to save synced data'}), 500
 
 
 
