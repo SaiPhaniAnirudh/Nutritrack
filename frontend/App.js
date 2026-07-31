@@ -13,8 +13,6 @@
    #11/#12 "Plan My Diet" navbar widget with personalised plan
    #13 "Sodium" → "Salt" in all display strings
 ═══════════════════════════════════════════════════ */
-
-
 // ─────────────────────────────────────────────────
 //  PAGE LOADER  (non-blocking)
 // ─────────────────────────────────────────────────
@@ -396,7 +394,7 @@ async function loadProfileForSession(session) {
       );
       const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
       if (!error && data) userProfile = data;
-    } catch (_) {}
+    } catch (_) { }
 
     const meta = session.user.user_metadata || {};
     const localSaved = JSON.parse(localStorage.getItem(`nutritrack_profile_${session.user.id}`) || '{}');
@@ -879,20 +877,20 @@ function showPage(id, btn, pushState = true) {
       try { refreshDashboard(); } catch (e) { console.error('refreshDashboard error', e); }
     }
     if (id === 'track') {
-      try { autoSelectMeal(); } catch (e) {}
+      try { autoSelectMeal(); } catch (e) { }
       try {
         const searchInput = document.getElementById('foodSearch');
         searchFoods(searchInput ? searchInput.value : '');
       } catch (e) { console.error('searchFoods error', e); }
-      try { renderMealTemplates(); } catch (e) {}
+      try { renderMealTemplates(); } catch (e) { }
     }
     if (id === 'history') {
       try { renderHistory(); } catch (e) { console.error('renderHistory error', e); }
-      try { fetchWeeklyInsights(); } catch (e) {}
+      try { fetchWeeklyInsights(); } catch (e) { }
     }
     if (id === 'profile') {
       try { renderProfile(); } catch (e) { console.error('renderProfile error', e); }
-      try { fetchWeightFromCloud(); } catch (e) {}
+      try { fetchWeightFromCloud(); } catch (e) { }
     }
 
     if (pushState && typeof pushState !== 'object') {
@@ -1521,7 +1519,7 @@ function _renderScanResult(r) {
     const mT = (f.pro * 4) + (f.carb * 4) + (f.fat * 9) || 1;
     const ipW = Math.round((f.pro * 4 / mT) * 100), icW = Math.round((f.carb * 4 / mT) * 100), ifW = 100 - ipW - icW;
     const iCC = f.conf >= 85 ? 'rgba(100,180,110,0.8)' : f.conf >= 65 ? 'rgba(212,168,83,0.8)' : 'rgba(196,132,90,0.8)';
-    
+
     const itemFoodObj = {
       name: f.name,
       emoji: '🍽️',
@@ -2142,39 +2140,10 @@ async function fetchLogsFromCloud() {
   renderHistory();
 }
 
-async function fetchWaterFromCloud() {
-  const backendUrl = "https://nutritrack-k96f.onrender.com";
-  try {
-    const res = await _authFetch(`${backendUrl}/api/water`);
-    if (res.ok) {
-      const data = await res.json();
-      const waterTotal = document.getElementById('waterTotal');
-      if (waterTotal) waterTotal.textContent = data.total_ml || 0;
-      const bar = document.getElementById('waterBar');
-      const goal = currentUser?.goals?.water_ml || 2000;
-      if (bar) bar.style.width = Math.min(100, Math.round(((data.total_ml || 0) / goal) * 100)) + '%';
-    }
-  } catch (e) {
-    console.error('fetchWaterFromCloud error', e);
-  }
-}
-
-async function logWater(ml) {
-  const backendUrl = "https://nutritrack-k96f.onrender.com";
-  try {
-    const res = await _authFetch(`${backendUrl}/api/water`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ amount_ml: ml })
-    });
-    if (res.ok) {
-      showToast(`+${ml}ml water logged!`, 'success');
-      fetchWaterFromCloud();
-    }
-  } catch (e) {
-    showToast('Failed to log water', 'error');
-  }
-}
+// NOTE: the real fetchWaterFromCloud()/logWater() live later in this file
+// (Supabase-first, with _renderWaterWidget()). A dead, backend-only duplicate
+// used to be defined here and was silently shadowed — removed to avoid a
+// future edit accidentally landing in the unreachable copy.
 
 async function loadPopularFoodsFromCloud() {
   const backendUrl = "https://nutritrack-k96f.onrender.com";
@@ -2307,7 +2276,7 @@ async function logWeightEntry() {
   const input = document.getElementById('quickWeightInput');
   const val = parseFloat(input?.value || 0);
   if (!val || val <= 0 || val > 300) return showToast('⚠️ Enter a valid weight (e.g. 70.5)', 'error');
-  
+
   const backendUrl = "https://nutritrack-k96f.onrender.com";
   try {
     const res = await _authFetch(`${backendUrl}/api/weight`, {
@@ -2485,9 +2454,9 @@ async function fetchAIMealRecommendations() {
 
   const selectedPool = userDiet.includes('vegan') ? DIET_MEAL_POOL.vegan
     : userDiet.includes('veg') ? DIET_MEAL_POOL.veg
-    : userDiet.includes('keto') ? DIET_MEAL_POOL.keto
-    : userDiet.includes('egg') ? DIET_MEAL_POOL.eggetarian
-    : DIET_MEAL_POOL.nonveg;
+      : userDiet.includes('keto') ? DIET_MEAL_POOL.keto
+        : userDiet.includes('egg') ? DIET_MEAL_POOL.eggetarian
+          : DIET_MEAL_POOL.nonveg;
 
   let recommendations = selectedPool.filter(item => item.cal <= (remCal > 0 ? remCal + 100 : 350)).slice(0, 3);
   if (recommendations.length === 0) recommendations = selectedPool.slice(0, 3);
@@ -4055,21 +4024,10 @@ handleLogout = function () {
 };
 
 
-async function fetchLogsFromCloud() {
-  const backendUrl = "https://nutritrack-k96f.onrender.com";
-  try {
-    const res = await _authFetch(`${backendUrl}/api/logs`, {});
-    if (res.ok) {
-      window._foodLogs = await res.json();
-      refreshDashboard();
-      renderHistory();
-    } else {
-      console.error('fetchLogsFromCloud failed:', res.status, await res.text().catch(() => ''));
-    }
-  } catch (e) {
-    console.error("Failed to fetch logs from cloud:", e);
-  }
-}
+// NOTE: fetchLogsFromCloud() lives earlier in this file (Supabase-first, merge-based).
+// A dead duplicate used to be defined here — it silently shadowed the good version and
+// unconditionally overwrote window._foodLogs with only the Flask backend's (often-empty,
+// ephemeral-SQLite) response, wiping real food logs on every page load. Removed.
 
 // ─────────────────────────────────────────────────
 //  WATER INTAKE
@@ -4280,7 +4238,7 @@ function openShareCardModal() {
     ctx.fillText('No meals logged yet today', 45, 420);
   } else {
     logs.slice(0, 2).forEach((l, i) => {
-      ctx.fillText(`• ${l.emoji || '🍽️'} ${l.name.slice(0,24)} - ${Math.round(l.cal)} kcal`, 45, 420 + (i * 20));
+      ctx.fillText(`• ${l.emoji || '🍽️'} ${l.name.slice(0, 24)} - ${Math.round(l.cal)} kcal`, 45, 420 + (i * 20));
     });
   }
 
