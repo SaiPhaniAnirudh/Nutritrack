@@ -181,25 +181,15 @@ function hideAuthError() {
 // ─────────────────────────────────────────────────
 //  GOOGLE LOGIN
 // ─────────────────────────────────────────────────
-async function handleGoogleLogin(forFitness) {
+async function handleGoogleLogin() {
   showLoader('Connecting to Google...');
   try {
-    const oauthOptions = {
-      redirectTo: window.location.origin + window.location.pathname,
-      queryParams: { prompt: 'select_account' }
-    };
-    if (forFitness) {
-      // Fitness scope + offline access + consent prompt are what actually
-      // make Google issue a refresh_token — without all three, Google Fit
-      // access silently isn't granted, or expires in ~1hr with no way to
-      // renew it, forcing a fresh login every time.
-      oauthOptions.scopes = 'https://www.googleapis.com/auth/fitness.activity.read';
-      oauthOptions.queryParams = { access_type: 'offline', prompt: 'consent' };
-      sessionStorage.setItem('_connectingGoogleFit', '1');
-    }
     const { data, error } = await supabaseClient.auth.signInWithOAuth({
       provider: 'google',
-      options: oauthOptions
+      options: {
+        redirectTo: window.location.origin + window.location.pathname,
+        queryParams: { prompt: 'select_account' }
+      }
     });
     if (error) throw error;
   } catch (err) {
@@ -207,6 +197,83 @@ async function handleGoogleLogin(forFitness) {
     showAuthError('⚠️ ' + err.message);
   }
 }
+
+// ─────────────────────────────────────────────────
+//  GOOGLE FIT — standalone OAuth, decoupled from login
+//  Deliberately does NOT use supabase.auth.signInWithOAuth. That flow
+//  replaces the app's actual session with whatever Google account comes
+//  back — so if you're logged into NutriTrack via email/password, or a
+//  different Google account than your browser's active one, "connecting
+//  Google Fit" could silently swap which NutriTrack account you're using.
+//  This builds the Google consent redirect directly instead: it only ever
+//  grants an extra permission to the account you're ALREADY logged into
+//  here, never touches your NutriTrack session, and uses login_hint to
+//  default to your current email so you're not even shown a picker.
+// ─────────────────────────────────────────────────
+async function connectGoogleFit() {
+  try {
+    const res = await fetch((window._BACKEND_URL || '') + '/api/integrations/google-fit/client-id');
+    const { client_id } = await res.json();
+    if (!client_id) {
+      showToast('⚠️ Google Fit isn\'t configured on the server yet.', 'error');
+      return;
+    }
+    sessionStorage.setItem('_connectingGoogleFit', '1');
+    const redirectUri = window.location.origin + window.location.pathname;
+    const params = new URLSearchParams({
+      client_id,
+      redirect_uri: redirectUri,
+      response_type: 'code',
+      scope: 'https://www.googleapis.com/auth/fitness.activity.read',
+      access_type: 'offline',
+      prompt: 'consent',
+      login_hint: (currentUser && currentUser.email) || ''
+    });
+    window.location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + params.toString();
+  } catch (e) {
+    console.error('connectGoogleFit error', e);
+    showToast('⚠️ Could not start Google Fit connection.', 'error');
+  }
+}
+
+// Runs once on every page load — picks up the ?code=... Google appends
+// after redirecting back from the consent screen above, exchanges it via
+// the backend, then cleans the URL so a refresh doesn't re-trigger it.
+(function handleGoogleFitOAuthReturn() {
+  if (sessionStorage.getItem('_connectingGoogleFit') !== '1') return;
+  const urlParams = new URLSearchParams(window.location.search);
+  const code = urlParams.get('code');
+  sessionStorage.removeItem('_connectingGoogleFit');
+  if (!code) return; // user cancelled on Google's screen — nothing to do
+
+  // Clean the ?code=... out of the URL immediately.
+  const cleanUrl = window.location.origin + window.location.pathname;
+  window.history.replaceState({}, document.title, cleanUrl);
+
+  // _authFetch needs currentUser/session to exist — the auth flow above
+  // (onAuthStateChange) runs first on page load, so defer this slightly.
+  const trySend = (attemptsLeft) => {
+    if (!currentUser && attemptsLeft > 0) {
+      setTimeout(() => trySend(attemptsLeft - 1), 500);
+      return;
+    }
+    _authFetch('/api/integrations/google-fit/connect', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, redirect_uri: cleanUrl })
+    }).then(async (res) => {
+      const data = res ? await res.json().catch(() => ({})) : {};
+      if (res && res.ok) {
+        showToast('⌚ Google Fit connected!', 'success');
+        refreshGoogleFitStatus();
+        syncGoogleFit();
+      } else {
+        showToast('⚠️ ' + (data.message || 'Could not connect Google Fit.'), 'error');
+      }
+    }).catch((e) => console.error('Google Fit code exchange error', e));
+  };
+  trySend(10);
+})();
 
 // ─────────────────────────────────────────────────
 //  EMAIL/PASSWORD LOGIN & REGISTER
@@ -515,34 +582,6 @@ supabaseClient.auth.onAuthStateChange(async (event, session) => {
         return;
       }
       await loadProfileForSession(session);
-
-      // If this sign-in was specifically to connect Google Fit, grab the
-      // refresh_token Google just issued (only available on this first
-      // redirect — Supabase does not persist or refresh it automatically)
-      // and hand it to the backend once so future syncs don't need it again.
-      if (sessionStorage.getItem('_connectingGoogleFit') === '1') {
-        sessionStorage.removeItem('_connectingGoogleFit');
-        const refreshToken = session.provider_refresh_token;
-        if (refreshToken) {
-          try {
-            const res = await _authFetch('/api/integrations/google-fit/connect', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ refresh_token: refreshToken })
-            });
-            if (res && res.ok) {
-              showToast('⌚ Google Fit connected!', 'success');
-              syncGoogleFit();
-            } else {
-              showToast('⚠️ Could not save Google Fit connection', 'error');
-            }
-          } catch (e) {
-            console.error('Google Fit connect error', e);
-          }
-        } else {
-          showToast('⚠️ Google didn\'t grant offline access — try connecting again.', 'error');
-        }
-      }
     } else if (event === 'SIGNED_OUT') {
       handleLogoutUI();
     }
@@ -4331,7 +4370,7 @@ async function syncGoogleFit() {
       const wantsOAuth = confirm(data && data.needs_reauth
         ? "Your Google Fit connection expired. Reconnect now?"
         : "Connect your Google account to sync real step count & calories burned from Google Fit?");
-      if (wantsOAuth) handleGoogleLogin(true);
+      if (wantsOAuth) connectGoogleFit();
       return;
     }
 

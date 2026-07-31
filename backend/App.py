@@ -1979,20 +1979,58 @@ def serve_sitemap():
 #  WEARABLE INTEGRATION (GOOGLE FIT)
 # ══════════════════════════════════════════════════
 
+@app.route('/api/integrations/google-fit/client-id', methods=['GET'])
+def google_fit_client_id():
+    """Client ID is not a secret (only the Client Secret is) — safe to
+    expose so the frontend can build the Google consent URL itself,
+    entirely independent of Supabase's own login flow."""
+    return jsonify({'client_id': os.getenv('GOOGLE_CLIENT_ID', '')})
+
+
 @app.route('/api/integrations/google-fit/connect', methods=['POST'])
 @jwt_required()
 def connect_google_fit():
-    """Store the Google OAuth refresh token (captured once, right after the
-    user grants Fitness API access) so future syncs don't need them to log
-    back in every time — Supabase itself does NOT auto-refresh third-party
-    provider tokens, only its own JWT, so this is done manually here."""
+    """Exchange a Google authorization `code` (from a dedicated consent
+    redirect that never touches Supabase auth) for tokens, and store the
+    refresh_token for THIS already-logged-in user. Because this never goes
+    through supabase.auth.signInWithOAuth, granting Fitness access can never
+    replace/switch the user's actual NutriTrack login session — it's just
+    an extra permission grant layered on top of whoever is already signed in."""
     uid = get_jwt_identity()
     data = request.get_json() or {}
-    refresh_token = data.get('refresh_token')
-    if not refresh_token:
-        return jsonify({'error': 'refresh_token required'}), 400
+    code = data.get('code')
+    redirect_uri = data.get('redirect_uri')
+    if not code or not redirect_uri:
+        return jsonify({'error': 'code and redirect_uri required'}), 400
+
+    client_id = os.getenv('GOOGLE_CLIENT_ID')
+    client_secret = os.getenv('GOOGLE_CLIENT_SECRET')
+    if not client_id or not client_secret:
+        return jsonify({'error': 'GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET not configured on the server'}), 500
 
     try:
+        resp = requests.post('https://oauth2.googleapis.com/token', data={
+            'client_id': client_id,
+            'client_secret': client_secret,
+            'code': code,
+            'grant_type': 'authorization_code',
+            'redirect_uri': redirect_uri,
+        }, timeout=10)
+        if not resp.ok:
+            print(f"Google code exchange failed: {resp.status_code} {resp.text[:300]}")
+            return jsonify({'error': 'Google rejected the authorization code'}), 400
+        token_data = resp.json()
+        refresh_token = token_data.get('refresh_token')
+        if not refresh_token:
+            # Google only returns a refresh_token the FIRST time a user
+            # consents (or when prompt=consent forces re-issue). If this
+            # happens, the account most likely already has a prior grant
+            # Google didn't re-issue a token for — safest is to tell the
+            # user to revoke access at myaccount.google.com/permissions and
+            # try connecting again.
+            return jsonify({'error': 'no_refresh_token',
+                             'message': 'Google did not return a refresh token. Revoke NutriTrack access at myaccount.google.com/permissions and try connecting again.'}), 400
+
         existing = GoogleFitToken.query.filter_by(user_id=uid).first()
         if existing:
             existing.refresh_token = refresh_token
