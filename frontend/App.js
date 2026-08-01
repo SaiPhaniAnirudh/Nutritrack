@@ -2598,6 +2598,10 @@ async function fetchWeeklyInsights() {
     const res = await _authFetch(`${backendUrl}/api/analytics/weekly-insights`);
     if (res.ok) {
       const data = await res.json();
+      if (!data.daysLogged) {
+        container.innerHTML = `<div style="font-size:0.82rem; color:var(--mist); opacity:0.8;">Log food for a few days this week to see your personalised insights here.</div>`;
+        return;
+      }
       container.innerHTML = `
         <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:8px;">
           <div style="background:rgba(62,207,142,0.1); padding:8px 14px; border-radius:10px; flex:1; min-width:120px;">
@@ -2617,9 +2621,12 @@ async function fetchWeeklyInsights() {
           ${(data.insights || []).map(i => `<div style="font-size:0.82rem; color:rgba(255,255,255,0.85);">${i}</div>`).join('')}
         </div>
       `;
+    } else {
+      container.innerHTML = `<div style="font-size:0.82rem; color:var(--mist); opacity:0.8;">Couldn't load weekly insights right now. <a href="#" onclick="fetchWeeklyInsights(); return false;" style="color:var(--kiwi); text-decoration:underline;">Retry</a></div>`;
     }
   } catch (e) {
     console.error('fetchWeeklyInsights error', e);
+    container.innerHTML = `<div style="font-size:0.82rem; color:var(--mist); opacity:0.8;">Couldn't load weekly insights right now. <a href="#" onclick="fetchWeeklyInsights(); return false;" style="color:var(--kiwi); text-decoration:underline;">Retry</a></div>`;
   }
 }
 
@@ -3010,6 +3017,12 @@ function _renderAchievements(logs, streak) {
       ${b.progress ? `<div class="ab-progress">${b.progress}</div>` : ''}
     </div>
   `).join('');
+
+  const tagEl = document.getElementById('achievementsWidgetTag');
+  if (tagEl) {
+    const earnedCount = badges.filter(b => b.earned).length;
+    tagEl.textContent = `${earnedCount}/${badges.length} unlocked`;
+  }
 }
 
 async function saveGoals() {
@@ -3120,6 +3133,27 @@ function _updateDietWidget() {
 
 function dpOverlayClick(e) {
   if (e.target === e.currentTarget) closeDietModal();
+}
+
+function achOverlayClick(e) {
+  if (e.target === e.currentTarget) closeAchievementsModal();
+}
+
+function openAchievementsModal() {
+  const modal = document.getElementById('achievementsModal');
+  if (!modal) return;
+  modal.classList.add('open');
+}
+
+function closeAchievementsModal() {
+  const modal = document.getElementById('achievementsModal');
+  const panel = document.getElementById('achPanel');
+  if (!modal || !panel) return;
+  panel.style.animation = 'dpSlideOut 0.3s cubic-bezier(0.4,0,1,1) both';
+  setTimeout(() => {
+    modal.classList.remove('open');
+    panel.style.animation = '';
+  }, 280);
 }
 
 function closeDietModal() {

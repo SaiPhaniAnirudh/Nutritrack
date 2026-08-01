@@ -95,6 +95,9 @@ NUTRIENT_MAP = {
     1063: "sugar",      # Sugars, Total (g)   <- fallback alternate ID
     1093: "sodium",     # Sodium, Na (mg)
     1253: "chol",       # Cholesterol (mg)
+    1114: "vit_d",      # Vitamin D (D2 + D3) (mcg)
+    1089: "iron",       # Iron, Fe (mg)
+    1177: "folate",     # Folate, total (mcg)
 }
 
 # ─── USDA Food Category -> our app category ──────────────────────────────────
@@ -303,6 +306,9 @@ def extract_nutrients(food_nutrients):
         "sugar":    None,
         "sodium":   None,
         "chol":     None,
+        "vit_d":    None,
+        "iron":     None,
+        "folate":   None,
     }
 
     for n in food_nutrients:

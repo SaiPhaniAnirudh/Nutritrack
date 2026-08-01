@@ -145,6 +145,32 @@
     </div>
   </div>
 
+  <!-- ACHIEVEMENTS — FULL PANEL (same pattern as Plan My Diet) -->
+  <div id="achievementsModal" class="dp-overlay" onclick="achOverlayClick(event)">
+    <div class="dp-panel" id="achPanel">
+
+      <div class="dp-header">
+        <div class="dp-header-left">
+          <div class="dp-logo">🏅</div>
+          <div>
+            <div class="dp-title">Achievements</div>
+            <div class="dp-subtitle">Your logging milestones & badges</div>
+          </div>
+        </div>
+        <button type="button" class="dp-close" onclick="closeAchievementsModal()">✕</button>
+      </div>
+
+      <div class="dp-body">
+        <div id="achievementsGrid" class="achievements-grid"></div>
+      </div>
+
+      <div class="dp-footer">
+        <button type="button" class="dp-footer-btn" onclick="closeAchievementsModal()">Close</button>
+      </div>
+
+    </div>
+  </div>
+
   <div class="toast" id="toast"></div>
 
   <!-- ════════════════════════════════════════
@@ -454,6 +480,13 @@
           <div class="diet-widget-text">
             <span class="diet-widget-label">Plan My Diet</span>
             <span class="diet-widget-tag" id="dietWidgetTag">Set up profile</span>
+          </div>
+        </button>
+        <button type="button" class="diet-widget" id="achievementsWidget" onclick="openAchievementsModal()">
+          <span class="diet-widget-icon">🏅</span>
+          <div class="diet-widget-text">
+            <span class="diet-widget-label">Achievements</span>
+            <span class="diet-widget-tag" id="achievementsWidgetTag">0/6 unlocked</span>
           </div>
         </button>
         <div class="user-chip" onclick="showPage('profile', document.querySelector('.nav-btn[onclick*=profile]'))"
@@ -1086,12 +1119,7 @@
           <div class="chart-wrap" style="height:220px; margin-top:0.8rem;"><canvas id="weightChart"></canvas></div>
         </div>
 
-        <div class="glass-card" style="grid-column: 1 / -1;">
-          <div class="card-title">
-            <div class="dot"></div>🏅 Achievements
-          </div>
-          <div id="achievementsGrid" class="achievements-grid"></div>
-        </div>
+        <!-- Achievements moved to a navbar widget/modal (see #achievementsModal) -->
       </div>
     </div>
 
@@ -1146,7 +1174,7 @@
   </script>
   <script src="/i18n.js" defer></script>
   <script src="/Foods.js" defer></script>
-  <script src="/App.js?v=64" defer></script>
+  <script src="/App.js?v=65" defer></script>
 
   <!-- PWA Install Prompt Banner -->
   <div id="pwaInstallBanner" style="
