@@ -1369,12 +1369,49 @@ def parse_voice_log():
 #  AI MEAL RECOMMENDATIONS
 # ══════════════════════════════════════════════════
 
+import re as _re
+
+# base_foods has no is_veg/is_vegan/diet tag column, so diet filtering here is
+# name-based keyword matching — a heuristic, not a perfect classifier. Word
+# boundaries (\b) matter: without them "butter" would also match "peanut
+# butter", "ham" would match "hamburger bun", etc.
+_NONVEG_KEYWORDS = [
+    'chicken', 'beef', 'pork', 'mutton', 'lamb', 'goat', 'veal', 'venison',
+    'bacon', 'ham', 'sausage', 'turkey', 'duck', 'meat', 'meatball',
+    'fish', 'salmon', 'tuna', 'shrimp', 'prawn', 'crab', 'lobster',
+    'oyster', 'squid', 'octopus', 'anchovy', 'sardine', 'gelatin',
+]
+_EGG_KEYWORDS = ['egg', 'eggs', 'omelette', 'omelet']
+_DAIRY_KEYWORDS = [
+    'milk', 'cheese', 'paneer', 'yogurt', 'yoghurt', 'curd', 'butter',
+    'ghee', 'cream', 'whey', 'custard', 'khoya',
+]
+
+
+def _food_matches_diet(name, diet_type):
+    n = (name or '').lower()
+
+    def has_any(words):
+        return any(_re.search(r'\b' + _re.escape(w) + r'\b', n) for w in words)
+
+    if diet_type in ('nonveg', 'non-veg', 'non_vegetarian'):
+        return True
+    if diet_type in ('eggetarian', 'egg'):
+        return not has_any(_NONVEG_KEYWORDS)
+    if diet_type == 'vegan':
+        return not has_any(_NONVEG_KEYWORDS) and not has_any(_EGG_KEYWORDS) and not has_any(_DAIRY_KEYWORDS) and 'honey' not in n
+    # default: 'veg' / 'vegetarian' / anything else — excludes meat, fish, and eggs; dairy is fine
+    return not has_any(_NONVEG_KEYWORDS) and not has_any(_EGG_KEYWORDS)
+
+
 @app.route('/api/ai/recommend', methods=['POST'])
 @jwt_required(optional=True)
 def recommend_meals():
     """
-    Recommends meals based on current user goals, remaining calories/macros, and diet type.
-    Queries Supabase base_foods for best matching food options.
+    Recommends meals based on current user goals, remaining calories/macros,
+    and diet type. Queries Supabase base_foods for best matching food options,
+    filtered by diet_type (see _food_matches_diet — keyword-based, since
+    base_foods has no explicit veg/vegan column).
     """
     data = request.get_json() or {}
     rem_cal = float(data.get('rem_cal', 500))
@@ -1385,20 +1422,23 @@ def recommend_meals():
         return jsonify([])
 
     try:
-        # Fetch base foods matching diet / macro profile
-        res = supabase.table('base_foods').select('*').limit(150).execute()
+        # Fetch a larger pool so filtering still leaves enough matches
+        res = supabase.table('base_foods').select('*').limit(400).execute()
         rows = res.data or []
 
         recommendations = []
         for r in rows:
+            name = r.get('name') or ''
+            if not _food_matches_diet(name, diet_type):
+                continue
             cal = float(r.get('calories') or 0)
             pro = float(r.get('protein') or 0)
-            
+
             # Filter foods that fit roughly into remaining calories & offer good protein
             if 50 <= cal <= (rem_cal + 150) and pro >= (rem_pro * 0.2):
                 recommendations.append({
                     'id': f"rec_{r.get('id')}",
-                    'name': (r.get('name') or '').title(),
+                    'name': name.title(),
                     'emoji': '🥗',
                     'cal': round(cal, 1),
                     'pro': round(pro, 1),
@@ -1479,23 +1519,32 @@ def weekly_insights():
 @app.route('/api/challenges', methods=['GET'])
 def get_challenges():
     """List available public community challenges."""
-    challenges = Challenge.query.all()
-    if not challenges:
-        # Seed default public challenges if empty
-        defaults = [
-            Challenge(title="7-Day Protein Streak", description="Hit your daily protein target for 7 consecutive days", metric="protein", target_val=7, badge_emoji="💪"),
-            Challenge(title="Hydration Hero", description="Log at least 2000ml water for 5 days this week", metric="water", target_val=5, badge_emoji="💧"),
-            Challenge(title="Century Club", description="Log 100 total meals in NutriTrack", metric="logs", target_val=100, badge_emoji="💯"),
-        ]
-        try:
-            for d in defaults:
+    defaults = [
+        Challenge(title="7-Day Protein Streak", description="Hit your daily protein target for 7 consecutive days", metric="protein", target_val=7, badge_emoji="💪"),
+        Challenge(title="Hydration Hero", description="Log at least 2000ml water for 5 days this week", metric="water", target_val=5, badge_emoji="💧"),
+        Challenge(title="Century Club", description="Log 100 total meals in NutriTrack", metric="logs", target_val=100, badge_emoji="💯"),
+        Challenge(title="Fiber Fanatic", description="Hit your daily fiber goal for 5 days this week", metric="fiber", target_val=5, badge_emoji="🌾"),
+        Challenge(title="Calorie Consistency", description="Stay within 10% of your calorie goal for 7 days", metric="calorie_consistency", target_val=7, badge_emoji="🎯"),
+        Challenge(title="No Sugar Sundown", description="Keep added sugar under 25g for 5 days this week", metric="low_sugar", target_val=5, badge_emoji="🍬"),
+        Challenge(title="30-Day Logger", description="Log at least one meal every day for 30 days straight", metric="streak", target_val=30, badge_emoji="🗓️"),
+        Challenge(title="Move More Week", description="Log a workout on 5 different days this week", metric="workouts", target_val=5, badge_emoji="🏃"),
+        Challenge(title="Recipe Explorer", description="Create 3 custom recipes with the Recipe Builder", metric="recipes", target_val=3, badge_emoji="👩‍🍳"),
+        Challenge(title="Early Riser Streak", description="Log breakfast before 10am for 5 days this week", metric="early_breakfast", target_val=5, badge_emoji="🌅"),
+    ]
+    try:
+        existing_titles = {c.title for c in Challenge.query.all()}
+        added = False
+        for d in defaults:
+            if d.title not in existing_titles:
                 db.session.add(d)
+                added = True
+        if added:
             db.session.commit()
-        except Exception as e:
-            db.session.rollback()
-            print(f"Challenge seed error: {e}")
-        challenges = Challenge.query.all()
+    except Exception as e:
+        db.session.rollback()
+        print(f"Challenge seed error: {e}")
 
+    challenges = Challenge.query.all()
     return jsonify([c.to_dict() for c in challenges])
 
 

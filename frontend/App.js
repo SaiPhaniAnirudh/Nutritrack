@@ -2354,11 +2354,15 @@ async function fetchWeightFromCloud() {
     const res = await _authFetch(`${backendUrl}/api/weight?days=30`);
     if (res.ok) {
       window._weightLogs = await res.json();
-      renderWeightChart();
+    } else {
+      window._weightLogs = window._weightLogs || [];
+      console.warn('fetchWeightFromCloud: request failed', res.status);
     }
   } catch (e) {
+    window._weightLogs = window._weightLogs || [];
     console.error('fetchWeightFromCloud error', e);
   }
+  renderWeightChart();
 }
 
 async function logWeightEntry() {
