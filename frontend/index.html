@@ -464,11 +464,11 @@
         <!-- Language Switcher -->
         <select id="langSelect" onchange="setLanguage(this.value)"
           style="background:rgba(255,255,255,0.08); color:#fff; border:1px solid rgba(255,255,255,0.15); border-radius:8px; padding:4px 8px; font-size:0.8rem; cursor:pointer;">
-          <option value="en">🌐 EN</option>
-          <option value="hi">🇮🇳 हिंदी</option>
-          <option value="te">🇮🇳 తెలుగు</option>
-          <option value="ta">🇮🇳 தமிழ்</option>
-          <option value="es">🇪🇸 ES</option>
+          <option value="en" style="background:#12110F; color:#fff;">🌐 EN</option>
+          <option value="hi" style="background:#12110F; color:#fff;">🇮🇳 हिंदी</option>
+          <option value="te" style="background:#12110F; color:#fff;">🇮🇳 తెలుగు</option>
+          <option value="ta" style="background:#12110F; color:#fff;">🇮🇳 தமிழ்</option>
+          <option value="es" style="background:#12110F; color:#fff;">🇪🇸 ES</option>
         </select>
 
         <button type="button" onclick="openShareCardModal()" class="water-quick-btn"
@@ -486,7 +486,7 @@
           <span class="diet-widget-icon">🏅</span>
           <div class="diet-widget-text">
             <span class="diet-widget-label">Achievements</span>
-            <span class="diet-widget-tag" id="achievementsWidgetTag">0/6 unlocked</span>
+            <span class="diet-widget-tag" id="achievementsWidgetTag">0/10 unlocked</span>
           </div>
         </button>
         <div class="user-chip" onclick="showPage('profile', document.querySelector('.nav-btn[onclick*=profile]'))"
@@ -1174,7 +1174,7 @@
   </script>
   <script src="/i18n.js" defer></script>
   <script src="/Foods.js" defer></script>
-  <script src="/App.js?v=65" defer></script>
+  <script src="/App.js?v=66" defer></script>
 
   <!-- PWA Install Prompt Banner -->
   <div id="pwaInstallBanner" style="
@@ -1366,6 +1366,9 @@
         food</button>
       <button type="button" class="nutribot-chip" onclick="sendChip('Best vegetarian protein sources')">🌱 Veg
         protein</button>
+      <button type="button" class="nutribot-chip" onclick="sendChip('/streak')">🔥 My streak</button>
+      <button type="button" class="nutribot-chip" onclick="sendChip('/goals')">🎯 My goals</button>
+      <button type="button" class="nutribot-chip" onclick="sendChip('/help')">⚡ All commands</button>
     </div>
 
     <div class="nutribot-input-row">

@@ -909,7 +909,7 @@ function initApp() {
 
   const greetNameEl = document.getElementById('greetName');
   if (greetNameEl) greetNameEl.textContent = displayName.split(' ')[0];
-  document.getElementById('greetDate').textContent = new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  document.getElementById('greetDate').textContent = new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }).replace(',', '');
   document.getElementById('navAvatar').textContent = displayName[0].toUpperCase();
   document.getElementById('navName').textContent = displayName.split(' ')[0];
 
@@ -1970,7 +1970,7 @@ async function searchFoods(query = '', page = 0) {
 
     if (countEl) {
       const catText = currentCat !== 'all' ? ` in ${currentCat.toUpperCase()} category` : '';
-      countEl.textContent = `Showing ${_currentDbFoods.length} of ${_totalDbCount}+ foods${catText} in Supabase Database`;
+      countEl.textContent = `Showing ${_currentDbFoods.length} of ${_totalDbCount}+${catText}`;
     }
 
     let cardsHtml = _currentDbFoods.map(_buildFoodCard).join('');
@@ -3009,6 +3009,30 @@ function _renderAchievements(logs, streak) {
     },
   ];
 
+  const workoutCount = (window._workoutLogs || []).length;
+  const weightLogCount = (window._weightLogs || []).length;
+  const uniqueFoods = new Set(logs.map(l => l.name)).size;
+  const breakfastCount = logs.filter(l => l.mealType === 'breakfast').length;
+
+  badges.push(
+    {
+      icon: '🏋️', name: 'Fitness Fanatic', desc: 'Logged 10 workouts',
+      earned: workoutCount >= 10, progress: workoutCount >= 10 ? null : `${workoutCount}/10 workouts`
+    },
+    {
+      icon: '⚖️', name: 'Weigh-In Streak', desc: 'Logged your weight 5 times',
+      earned: weightLogCount >= 5, progress: weightLogCount >= 5 ? null : `${weightLogCount}/5 entries`
+    },
+    {
+      icon: '🍜', name: 'Variety Seeker', desc: 'Logged 20 different foods',
+      earned: uniqueFoods >= 20, progress: uniqueFoods >= 20 ? null : `${uniqueFoods}/20 foods`
+    },
+    {
+      icon: '🌅', name: 'Early Bird', desc: 'Logged breakfast 5 times',
+      earned: breakfastCount >= 5, progress: breakfastCount >= 5 ? null : `${breakfastCount}/5 breakfasts`
+    }
+  );
+
   grid.innerHTML = badges.map(b => `
     <div class="achievement-badge ${b.earned ? 'earned' : ''}" title="${b.desc}">
       <div class="ab-icon">${b.icon}</div>
@@ -3811,6 +3835,56 @@ async function sendChatMessage() {
     _addBotMessage("🍳 Opened the **Custom Recipe Builder** for you!");
     return;
   }
+  if (lowerMsg === '/achievements') {
+    openAchievementsModal();
+    _addBotMessage("🏅 Opened your **Achievements**!");
+    return;
+  }
+  if (lowerMsg === '/plan') {
+    openDietModal();
+    _addBotMessage("🥗 Opened your **Diet Plan**!");
+    return;
+  }
+  if (lowerMsg === '/streak') {
+    const flogs = window._foodLogs || [];
+    let streak = 0;
+    for (let i = 0; i < 30; i++) {
+      const d = new Date(); d.setDate(d.getDate() - i);
+      const ds = d.toISOString().split('T')[0];
+      if (flogs.some(l => l.date === ds)) streak++; else break;
+    }
+    _addBotMessage(`🔥 Your current logging streak is **${streak} day${streak === 1 ? '' : 's'}**. ${streak >= 7 ? "You've unlocked the 7-Day Streak badge!" : `${7 - streak} more day${7 - streak === 1 ? '' : 's'} to unlock the 7-Day Streak badge.`}`);
+    return;
+  }
+  if (lowerMsg === '/goals') {
+    const g = (currentUser && currentUser.goals) || {};
+    _addBotMessage(`🎯 **Your daily goals:**\n- Calories: **${g.calories || 2000} kcal**\n- Protein: **${g.protein || 150}g**\n- Carbs: **${g.carbs || 250}g**\n- Fat: **${g.fat || 65}g**\n- Fiber: **${g.fiber || 28}g**\n\nWant to change these? Go to Profile, or say "/plan" to open your diet plan.`);
+    return;
+  }
+  if (lowerMsg.startsWith('/weight ')) {
+    const val = parseFloat(lowerMsg.replace('/weight ', '').trim());
+    if (val > 0 && val <= 300) {
+      try {
+        const res = await _authFetch(`${window._BACKEND_URL || "https://nutritrack-k96f.onrender.com"}/api/weight`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ weight_kg: val })
+        });
+        if (res.ok) {
+          fetchWeightFromCloud();
+          _addBotMessage(`⚖️ Logged **${val}kg**! Keep tracking consistently to see your trend.`);
+        } else {
+          _addBotMessage("⚠️ Couldn't save that weight entry — try again shortly.");
+        }
+      } catch (e) {
+        _addBotMessage("⚠️ Couldn't save that weight entry — try again shortly.");
+      }
+      return;
+    } else {
+      _addBotMessage("Please give a weight between 1–300kg, e.g. `/weight 70.5`");
+      return;
+    }
+  }
   if (lowerMsg.startsWith('/water ')) {
     const amount = parseInt(lowerMsg.replace('/water ', '').trim(), 10);
     if (amount > 0 && amount <= 3000) {
@@ -3990,9 +4064,14 @@ function _localNutribotFallback(message, context) {
     return `⚡ **Available NutriBot Commands:**\n` +
       `- **/log <food>** — Quick-log a food item (e.g. \`/log apple\`)\n` +
       `- **/water <ml>** — Log water intake (e.g. \`/water 250\`)\n` +
+      `- **/weight <kg>** — Log your body weight (e.g. \`/weight 70.5\`)\n` +
       `- **/macros** — View today's detailed macro breakdown\n` +
+      `- **/goals** — View your current daily nutrition goals\n` +
+      `- **/streak** — Check your current logging streak\n` +
       `- **/recommend** — Get instant AI meal suggestions\n` +
       `- **/recipe** — Open the custom recipe builder\n` +
+      `- **/achievements** — Open your achievements & badges\n` +
+      `- **/plan** — Open your full diet plan\n` +
       `- **/clear** — Clear chat conversation window\n` +
       `- **/help** — Show this command menu`;
   }
