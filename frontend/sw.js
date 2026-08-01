@@ -14,7 +14,9 @@
  *   - Images                           → Stale While Revalidate
  */
 
-const CACHE_NAME = 'nutritrack-v14'; // v13->v14: cache.addAll() was pre-caching '/logo-auth.png', which
+const CACHE_NAME = 'nutritrack-v15'; // v14->v15: cache.put() was crashing on 206 Partial
+// Content responses (response.ok is true for 206 too, but the Cache API rejects it outright) —
+// this threw an uncaught promise rejection on every matching request. Now explicitly skipped.
 // does not exist (only logo-auth.svg does) — cache.addAll() is atomic, so that single 404 rejected the
 // whole install() call and silently killed precaching of the ENTIRE app shell, including logo-nav.png.
 // Bumping the version forces every client (even ones stuck on the broken SW) to re-run install() clean.
@@ -86,7 +88,7 @@ self.addEventListener('fetch', (event) => {
       fetch(req)
         .then((response) => {
           // Cache successful GET API responses
-          if (response.ok) {
+          if (response.ok && response.status !== 206) {
             const clone = response.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
           }
@@ -110,7 +112,7 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(req)
         .then((response) => {
-          if (response.ok) {
+          if (response.ok && response.status !== 206) {
             const clone = response.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
           }
@@ -136,7 +138,7 @@ self.addEventListener('fetch', (event) => {
         // this file did, which risked a "body already used" error.
         fetch(req)
           .then((response) => {
-            if (response.ok) {
+            if (response.ok && response.status !== 206) {
               const clone = response.clone();
               caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
             }
@@ -146,7 +148,7 @@ self.addEventListener('fetch', (event) => {
       }
       // Not in cache → fetch from network
       return fetch(req).then((response) => {
-        if (response.ok) {
+        if (response.ok && response.status !== 206) {
           const clone = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
         }
