@@ -864,6 +864,7 @@ async function loginSuccess(userProfile) {
   fetchCommunityChallenges();
   fetchWorkoutsFromCloud();
   refreshGoogleFitStatus();
+  updateAchievementsAndStats();
   fetchRecipesFromCloud();
 
   // Route to the correct tab based on URL path
@@ -2926,14 +2927,26 @@ function renderProfile() {
   if (hEl && currentUser.height) hEl.value = currentUser.height;
   if (huEl) huEl.value = currentUser.heightUnit || 'cm';
 
-  const logs = window._foodLogs;
+  updateAchievementsAndStats();
+}
+
+// Was previously inlined only inside renderProfile(), which meant the
+// Achievements navbar widget/modal — reachable from any page — showed
+// nothing at all unless the user had already visited the Profile page at
+// least once this session. Extracted so it can run independently, from
+// anywhere, on demand.
+function updateAchievementsAndStats() {
+  const logs = window._foodLogs || [];
   const days = [...new Set(logs.map(l => l.date))];
   const totals = sumLogs(logs);
   const avgCal = days.length ? Math.round(totals.cal / days.length) : 0;
 
-  document.getElementById('totalMeals').textContent = logs.length;
-  document.getElementById('totalDays').textContent = days.length;
-  document.getElementById('avgCals').textContent = avgCal;
+  const totalMealsEl = document.getElementById('totalMeals');
+  const totalDaysEl = document.getElementById('totalDays');
+  const avgCalsEl = document.getElementById('avgCals');
+  if (totalMealsEl) totalMealsEl.textContent = logs.length;
+  if (totalDaysEl) totalDaysEl.textContent = days.length;
+  if (avgCalsEl) avgCalsEl.textContent = avgCal;
 
   let streak = 0;
   for (let i = 0; i < 30; i++) {
@@ -2941,7 +2954,8 @@ function renderProfile() {
     const ds = d.toISOString().split('T')[0];
     if (logs.some(l => l.date === ds)) streak++; else break;
   }
-  document.getElementById('streakDays').textContent = streak;
+  const streakDaysEl = document.getElementById('streakDays');
+  if (streakDaysEl) streakDaysEl.textContent = streak;
 
   _renderAchievements(logs, streak);
 }
@@ -3170,6 +3184,7 @@ function achOverlayClick(e) {
 function openAchievementsModal() {
   const modal = document.getElementById('achievementsModal');
   if (!modal) return;
+  updateAchievementsAndStats();
   modal.classList.add('open');
 }
 
