@@ -1377,11 +1377,16 @@ import re as _re
 # butter", "ham" would match "hamburger bun", etc.
 _NONVEG_KEYWORDS = [
     'chicken', 'beef', 'pork', 'mutton', 'lamb', 'goat', 'veal', 'venison',
-    'bacon', 'ham', 'sausage', 'turkey', 'duck', 'meat', 'meatball',
+    'bacon', 'ham', 'sausage', 'turkey', 'duck', 'meat', 'meatball', 'meatloaf',
     'fish', 'salmon', 'tuna', 'shrimp', 'prawn', 'crab', 'lobster',
     'oyster', 'squid', 'octopus', 'anchovy', 'sardine', 'gelatin',
+    # Dish/ingredient names that imply meat or fish without spelling out the
+    # animal — a plain word-list of animal names alone misses these entirely.
+    'bolognese', 'carbonara', 'pepperoni', 'salami', 'chorizo', 'prosciutto',
+    'jerky', 'pastrami', 'brisket', 'mince', 'minced', 'pate', 'ribs',
+    'bologna', 'pancetta', 'lardons', 'charcuterie',
 ]
-_EGG_KEYWORDS = ['egg', 'eggs', 'omelette', 'omelet']
+_EGG_KEYWORDS = ['egg', 'omelette', 'omelet']
 _DAIRY_KEYWORDS = [
     'milk', 'cheese', 'paneer', 'yogurt', 'yoghurt', 'curd', 'butter',
     'ghee', 'cream', 'whey', 'custard', 'khoya',
@@ -1390,16 +1395,23 @@ _DAIRY_KEYWORDS = [
 
 def _food_matches_diet(name, diet_type):
     n = (name or '').lower()
+    # "butter" alone means dairy, but "peanut butter" / "almond butter" etc.
+    # are not — strip these known compounds before checking dairy keywords
+    # so they don't false-positive as non-vegan/non-dairy.
+    n_for_dairy = _re.sub(r'\b(peanut|almond|cashew|cocoa|shea|apple|sunflower)\s+butter\b', '', n)
 
-    def has_any(words):
-        return any(_re.search(r'\b' + _re.escape(w) + r'\b', n) for w in words)
+    def has_any(words, text=n):
+        # Allow a simple plural suffix (sardine/sardines, egg/eggs) — the
+        # earlier version required an exact whole-word match with nothing
+        # after it, which missed plurals entirely.
+        return any(_re.search(r'\b' + _re.escape(w) + r'(e?s)?\b', text) for w in words)
 
     if diet_type in ('nonveg', 'non-veg', 'non_vegetarian'):
         return True
     if diet_type in ('eggetarian', 'egg'):
         return not has_any(_NONVEG_KEYWORDS)
     if diet_type == 'vegan':
-        return not has_any(_NONVEG_KEYWORDS) and not has_any(_EGG_KEYWORDS) and not has_any(_DAIRY_KEYWORDS) and 'honey' not in n
+        return not has_any(_NONVEG_KEYWORDS) and not has_any(_EGG_KEYWORDS) and not has_any(_DAIRY_KEYWORDS, n_for_dairy) and not has_any(['honey'])
     # default: 'veg' / 'vegetarian' / anything else — excludes meat, fish, and eggs; dairy is fine
     return not has_any(_NONVEG_KEYWORDS) and not has_any(_EGG_KEYWORDS)
 
