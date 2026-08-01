@@ -2015,15 +2015,6 @@ def streak():
 
 
 
-@app.route('/api/health', methods=['GET'])
-def health():
-    return jsonify({
-        'status':  'ok',
-        'service': 'NutriTrack API',
-        'db':      'connected'
-    })
-
-
 @app.route('/robots.txt')
 def serve_robots():
     frontend_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'frontend')
