@@ -1160,21 +1160,19 @@
     // AI scan points to the Hugging Face Space LLM server
     window.LLM_SERVER_URL = "https://energyvenom-nutritrack-llm.hf.space/api/ai/analyze";
 
-    // _BACKEND_URL: empty string = same-origin relative /api/* calls, which is
-    // correct when App.py serves the frontend itself (Render deployment).
-    // BUT .github/workflows/deploy.yml publishes this same frontend/ folder to
-    // GitHub Pages as a *separate* static origin with no Flask backend at all —
-    // relative /api/* calls there would 404 against github.io itself. The
-    // backend's CORS config already whitelists https://saiphanianirudh.github.io
-    // (see backend/App.py _cors_origins), so cross-origin calls are allowed;
-    // this was just never wired up on the frontend side. Auto-detect it here.
-    window._BACKEND_URL = location.hostname.endsWith('github.io')
-      ? 'https://nutritrack-k96f.onrender.com'
-      : '';
+    // NOTE: window._BACKEND_URL is set once, near the top of <head> — it
+    // already correctly resolves to the Render backend for every deployment
+    // target (Vercel, GitHub Pages, production in general) and to the local
+    // dev server on localhost. A second assignment used to live here that
+    // unconditionally overwrote it to '' for anything other than github.io —
+    // which silently broke EVERY backend API call on the actual Vercel
+    // deployment (relative /api/* requests were hitting Vercel's own SPA
+    // catch-all instead of the Flask backend, getting back index.html instead
+    // of JSON). Removed — do not reintroduce a second assignment here.
   </script>
   <script src="/i18n.js" defer></script>
   <script src="/Foods.js" defer></script>
-  <script src="/App.js?v=66" defer></script>
+  <script src="/App.js?v=67" defer></script>
 
   <!-- PWA Install Prompt Banner -->
   <div id="pwaInstallBanner" style="
