@@ -544,46 +544,6 @@ class GoogleFitToken(db.Model):
                               onupdate=lambda: datetime.now(timezone.utc))
 
 
-class Recipe(db.Model):
-    __tablename__ = 'recipes'
-
-    id         = db.Column(db.Integer, primary_key=True)
-    user_id    = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
-    name       = db.Column(db.String(200), nullable=False)
-    servings   = db.Column(db.Integer, default=1)
-    items_json = db.Column(db.Text, nullable=False)          # JSON array of ingredients
-    total_cal  = db.Column(db.Float, default=0)
-    total_pro  = db.Column(db.Float, default=0)
-    total_carb = db.Column(db.Float, default=0)
-    total_fat  = db.Column(db.Float, default=0)
-    created_at = db.Column(db.DateTime(timezone=True),
-                           default=lambda: datetime.now(timezone.utc))
-
-    def to_dict(self):
-        try:
-            items = json.loads(self.items_json)
-        except Exception:
-            items = []
-        serv = max(1, self.servings)
-        return {
-            'id':          self.id,
-            'userId':      self.user_id,
-            'name':        self.name,
-            'servings':    serv,
-            'items':       items,
-            'perServing': {
-                'cal':  round(self.total_cal / serv, 1),
-                'pro':  round(self.total_pro / serv, 1),
-                'carb': round(self.total_carb / serv, 1),
-                'fat':  round(self.total_fat / serv, 1),
-            },
-            'total_cal':   self.total_cal,
-            'total_pro':   self.total_pro,
-            'total_carb':  self.total_carb,
-            'total_fat':   self.total_fat,
-            'created_at':  self.created_at.isoformat(),
-        }
-
 
 with app.app_context():
     try:
@@ -1540,7 +1500,7 @@ def get_challenges():
         Challenge(title="No Sugar Sundown", description="Keep added sugar under 25g for 5 days this week", metric="low_sugar", target_val=5, badge_emoji="🍬"),
         Challenge(title="30-Day Logger", description="Log at least one meal every day for 30 days straight", metric="streak", target_val=30, badge_emoji="🗓️"),
         Challenge(title="Move More Week", description="Log a workout on 5 different days this week", metric="workouts", target_val=5, badge_emoji="🏃"),
-        Challenge(title="Recipe Explorer", description="Create 3 custom recipes with the Recipe Builder", metric="recipes", target_val=3, badge_emoji="👩‍🍳"),
+        Challenge(title="Balanced Plate", description="Hit protein, carb, and fat targets together on 3 days this week", metric="balanced_macros", target_val=3, badge_emoji="⚖️"),
         Challenge(title="Early Riser Streak", description="Log breakfast before 10am for 5 days this week", metric="early_breakfast", target_val=5, badge_emoji="🌅"),
     ]
     try:
@@ -1675,74 +1635,6 @@ def delete_workout(log_id):
         return jsonify({'deleted': True})
     except Exception as e:
         print(f"Error deleting workout: {e}")
-        return jsonify({'error': 'Internal server error'}), 500
-
-
-# ══════════════════════════════════════════════════
-#  RECIPE BUILDER
-# ══════════════════════════════════════════════════
-
-@app.route('/api/recipes', methods=['GET'])
-@jwt_required()
-def get_recipes():
-    """List saved recipes for user."""
-    uid = get_jwt_identity()
-    recipes = Recipe.query.filter_by(user_id=uid).order_by(Recipe.created_at.desc()).all()
-    return jsonify([r.to_dict() for r in recipes])
-
-
-@app.route('/api/recipes', methods=['POST'])
-@jwt_required()
-def save_recipe():
-    """Save a list of raw ingredients + quantities into a combined recipe."""
-    uid  = get_jwt_identity()
-    data = request.get_json() or {}
-    name = (data.get('name') or '').strip()
-    ingredients = data.get('ingredients', [])
-    servings = int(data.get('servings', 1))
-
-    if not name or not ingredients or not isinstance(ingredients, list):
-        return jsonify({'error': 'Recipe name and ingredients required'}), 400
-
-    tot_cal  = sum(float(i.get('cal', 0)) for i in ingredients)
-    tot_pro  = sum(float(i.get('pro', 0)) for i in ingredients)
-    tot_carb = sum(float(i.get('carb', 0)) for i in ingredients)
-    tot_fat  = sum(float(i.get('fat', 0)) for i in ingredients)
-
-    try:
-        recipe = Recipe(
-            user_id=uid,
-            name=name,
-            servings=servings,
-            items_json=json.dumps(ingredients),
-            total_cal=round(tot_cal, 1),
-            total_pro=round(tot_pro, 1),
-            total_carb=round(tot_carb, 1),
-            total_fat=round(tot_fat, 1)
-        )
-        db.session.add(recipe)
-        db.session.commit()
-        return jsonify(recipe.to_dict()), 201
-    except Exception as e:
-        print(f"⚠️ save_recipe error: {e}")
-        return jsonify({'error': 'Could not save recipe.'}), 500
-
-
-@app.route('/api/recipes/<string:recipe_id>', methods=['DELETE'])
-@jwt_required()
-def delete_recipe(recipe_id):
-    uid = get_jwt_identity()
-    if not recipe_id.isdigit():
-        return jsonify({'error': 'Recipe not found'}), 404
-    try:
-        recipe = Recipe.query.filter_by(id=int(recipe_id), user_id=uid).first()
-        if not recipe:
-            return jsonify({'error': 'Recipe not found'}), 404
-        db.session.delete(recipe)
-        db.session.commit()
-        return jsonify({'deleted': True})
-    except Exception as e:
-        print(f"Error deleting recipe: {e}")
         return jsonify({'error': 'Internal server error'}), 500
 
 
@@ -2013,6 +1905,15 @@ def streak():
 # ══════════════════════════════════════════════════
 
 
+
+
+@app.route('/api/health', methods=['GET'])
+def health():
+    return jsonify({
+        'status':  'ok',
+        'service': 'NutriTrack API',
+        'db':      'connected'
+    })
 
 
 @app.route('/robots.txt')

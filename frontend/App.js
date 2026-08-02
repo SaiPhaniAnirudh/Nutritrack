@@ -865,7 +865,6 @@ async function loginSuccess(userProfile) {
   fetchWorkoutsFromCloud();
   refreshGoogleFitStatus();
   updateAchievementsAndStats();
-  fetchRecipesFromCloud();
 
   // Route to the correct tab based on URL path
   let path = window.location.pathname.replace('/', '');
@@ -2766,27 +2765,6 @@ async function logWorkoutEntry() {
 }
 
 // ─────────────────────────────────────────────────
-// ─────────────────────────────────────────────────
-//  RECIPE BUILDER MANAGEMENT
-// ─────────────────────────────────────────────────
-
-async function logRecipe(id) {
-  const recipe = (window._recipes || []).find(r => r.id === id);
-  if (!recipe || !recipe.perServing) return;
-
-  const item = {
-    name: `${recipe.name} (1 serving)`,
-    emoji: '🍳',
-    cal: recipe.perServing.cal,
-    pro: recipe.perServing.pro,
-    carb: recipe.perServing.carb,
-    fat: recipe.perServing.fat,
-    source: 'recipe'
-  };
-  await addFoodToLog(item);
-}
-
-// ─────────────────────────────────────────────────
 //  CONTEXT-AWARE NUTRIBOT CHATBOT
 // ─────────────────────────────────────────────────
 async function sendNutriBotMessage(userMsg) {
@@ -3842,16 +3820,11 @@ async function sendChatMessage() {
   const chips = document.getElementById('nutribotChips');
   if (chips) chips.style.display = 'none';
 
-  // Handle instant client-side slash commands (/clear, /help, /water, /log, /recipe, etc.)
+  // Handle instant client-side slash commands (/clear, /help, /water, /log, etc.)
   const lowerMsg = msg.toLowerCase().trim();
   if (lowerMsg === '/clear') {
     _chatHistory = [];
     _initChat();
-    return;
-  }
-  if (lowerMsg === '/recipe') {
-    openRecipeBuilderModal();
-    _addBotMessage("🍳 Opened the **Custom Recipe Builder** for you!");
     return;
   }
   if (lowerMsg === '/achievements') {
@@ -4088,7 +4061,6 @@ function _localNutribotFallback(message, context) {
       `- **/goals** — View your current daily nutrition goals\n` +
       `- **/streak** — Check your current logging streak\n` +
       `- **/recommend** — Get instant AI meal suggestions\n` +
-      `- **/recipe** — Open the custom recipe builder\n` +
       `- **/achievements** — Open your achievements & badges\n` +
       `- **/plan** — Open your full diet plan\n` +
       `- **/clear** — Clear chat conversation window\n` +
@@ -4363,7 +4335,7 @@ function updateLanguageUI() {
 //  VISUAL SOCIAL SHARE CARD GENERATOR
 // ─────────────────────────────────────────────────
 function closeAllModals() {
-  const modals = ['recipeBuilderModal', 'shareCardModal', 'saveTemplateModal', 'dietModal', 'nonFoodModal'];
+  const modals = ['shareCardModal', 'saveTemplateModal', 'dietModal', 'nonFoodModal'];
   modals.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
@@ -4549,131 +4521,14 @@ async function refreshGoogleFitStatus() {
 }
 
 // ─────────────────────────────────────────────────
-//  CUSTOM RECIPE BUILDER
-// ─────────────────────────────────────────────────
-function openRecipeBuilderModal() {
-  closeAllModals();
-  const m = document.getElementById('recipeBuilderModal');
-  if (m) m.style.display = 'flex';
-}
-
-function closeRecipeBuilderModal() {
-  const m = document.getElementById('recipeBuilderModal');
-  if (m) m.style.display = 'none';
-}
-
-function addRecipeIngredientRow() {
-  const container = document.getElementById('recipeIngredientsRows');
-  if (!container) return;
-  const row = document.createElement('div');
-  row.className = 'recipe-ing-row';
-  row.style.cssText = 'display:flex; gap:6px;';
-  row.innerHTML = `
-    <input type="text" placeholder="Ingredient" class="ing-name" style="flex:2; padding:6px 10px; border-radius:6px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.2); color:#fff; font-size:0.8rem;">
-    <input type="number" placeholder="Cal" class="ing-cal" style="width:65px; padding:6px 10px; border-radius:6px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.2); color:#fff; font-size:0.8rem;">
-    <input type="number" placeholder="Pro(g)" class="ing-pro" style="width:65px; padding:6px 10px; border-radius:6px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.2); color:#fff; font-size:0.8rem;">
-  `;
-  container.appendChild(row);
-}
-
-async function saveCustomRecipe() {
-  const nameEl = document.getElementById('recipeName');
-  const servEl = document.getElementById('recipeServings');
-  const name = nameEl ? nameEl.value.trim() : '';
-  const servings = servEl ? (parseInt(servEl.value) || 1) : 1;
-
-  if (!name) { showToast('Please enter a recipe name', 'error'); return; }
-
-  const rows = document.querySelectorAll('.recipe-ing-row');
-  const ingredients = [];
-  rows.forEach(r => {
-    const ingName = r.querySelector('.ing-name')?.value.trim();
-    const cal = parseFloat(r.querySelector('.ing-cal')?.value) || 0;
-    const pro = parseFloat(r.querySelector('.ing-pro')?.value) || 0;
-    if (ingName) ingredients.push({ name: ingName, cal, pro });
-  });
-
-  if (ingredients.length === 0) { showToast('Please add at least 1 ingredient', 'error'); return; }
-
-  showLoader('Saving custom recipe…');
-  try {
-    const res = await _authFetch(`${window._BACKEND_URL || ''}/api/recipes`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, servings, ingredients })
-    });
-    hideLoader();
-    if (res.ok) {
-      showToast(`🍳 Recipe "${name}" created!`, 'success');
-      closeRecipeBuilderModal();
-      await fetchRecipesFromCloud();
-    } else {
-      showToast('⚠️ Could not save recipe.', 'error');
-    }
-  } catch (e) {
-    hideLoader();
-    console.error('saveCustomRecipe error:', e);
-    showToast('⚠️ Could not save recipe.', 'error');
-  }
-}
-
-async function fetchRecipesFromCloud() {
-  try {
-    const res = await _authFetch(`${window._BACKEND_URL || ''}/api/recipes`);
-    if (res.ok) {
-      const data = await res.json();
-      window._recipes = data || [];
-      renderRecipesList();
-    }
-  } catch (e) {
-    console.error('fetchRecipesFromCloud error:', e);
-  }
-}
-
-function renderRecipesList() {
-  const el = document.getElementById('recipesList');
-  if (!el) return;
-  const recipes = window._recipes || [];
-  if (recipes.length === 0) {
-    el.innerHTML = `<div style="font-size:0.8rem; color:var(--mist); opacity:0.7;">No custom recipes built yet. Click "+ Create Custom Recipe" to combine ingredients & auto-calculate per-serving nutrition!</div>`;
-    return;
-  }
-
-  el.innerHTML = recipes.map(r => `
-    <div style="background:rgba(255,255,255,0.06); border:1px solid rgba(62,207,142,0.2); border-radius:12px; padding:10px 14px; min-width:180px; display:flex; flex-direction:column; gap:4px;">
-      <div style="font-weight:700; font-size:0.85rem; color:#fff;">🍳 ${r.name}</div>
-      <div style="font-size:0.75rem; color:var(--kiwi);">${r.total_cal || 0} kcal / ${r.total_pro || 0}g pro (${r.servings || 1} serv)</div>
-      <button type="button" onclick="addRecipeToLog('${r.id}')" class="water-quick-btn" style="font-size:0.72rem; padding:3px 8px; margin-top:4px;">+ Log Recipe</button>
-    </div>
-  `).join('');
-}
-
-async function addRecipeToLog(recipeId) {
-  const recipe = (window._recipes || []).find(r => String(r.id) === String(recipeId));
-  if (!recipe) return;
-  const foodItem = {
-    name: recipe.name,
-    cal: recipe.total_cal || 0,
-    pro: recipe.total_pro || 0,
-    carb: recipe.total_carb || 0,
-    fat: recipe.total_fat || 0,
-    emoji: '🍳'
-  };
-  await addFoodToLog(foodItem);
-}
-
-// ─────────────────────────────────────────────────
 //  EXPLICIT GLOBAL WINDOW EVENT HANDLER EXPORTS
 // ─────────────────────────────────────────────────
 if (typeof window !== 'undefined') {
   window.addFoodById = typeof addFoodById !== 'undefined' ? addFoodById : window.addFoodById;
   window.addFoodToLog = typeof addFoodToLog !== 'undefined' ? addFoodToLog : window.addFoodToLog;
-  window.addRecipeIngredientRow = typeof addRecipeIngredientRow !== 'undefined' ? addRecipeIngredientRow : window.addRecipeIngredientRow;
-  window.addRecipeToLog = typeof addRecipeToLog !== 'undefined' ? addRecipeToLog : window.addRecipeToLog;
   window.clearScan = typeof clearScan !== 'undefined' ? clearScan : window.clearScan;
   window.closeDietModal = typeof closeDietModal !== 'undefined' ? closeDietModal : window.closeDietModal;
   window.closeNonFoodModal = typeof closeNonFoodModal !== 'undefined' ? closeNonFoodModal : window.closeNonFoodModal;
-  window.closeRecipeBuilderModal = typeof closeRecipeBuilderModal !== 'undefined' ? closeRecipeBuilderModal : window.closeRecipeBuilderModal;
   window.closeShareCardModal = typeof closeShareCardModal !== 'undefined' ? closeShareCardModal : window.closeShareCardModal;
   window.downloadShareCard = typeof downloadShareCard !== 'undefined' ? downloadShareCard : window.downloadShareCard;
   window.dpOverlayClick = typeof dpOverlayClick !== 'undefined' ? dpOverlayClick : window.dpOverlayClick;
@@ -4690,18 +4545,15 @@ if (typeof window !== 'undefined') {
   window.joinChallenge = typeof joinChallenge !== 'undefined' ? joinChallenge : window.joinChallenge;
   window.loadMoreFoods = typeof loadMoreFoods !== 'undefined' ? loadMoreFoods : window.loadMoreFoods;
   window.logMealTemplate = typeof logMealTemplate !== 'undefined' ? logMealTemplate : window.logMealTemplate;
-  window.logRecipe = typeof logRecipe !== 'undefined' ? logRecipe : window.logRecipe;
   window.logWater = typeof logWater !== 'undefined' ? logWater : window.logWater;
   window.logWeightEntry = typeof logWeightEntry !== 'undefined' ? logWeightEntry : window.logWeightEntry;
   window.logWorkoutEntry = typeof logWorkoutEntry !== 'undefined' ? logWorkoutEntry : window.logWorkoutEntry;
   window.openDietModal = typeof openDietModal !== 'undefined' ? openDietModal : window.openDietModal;
-  window.openRecipeBuilderModal = typeof openRecipeBuilderModal !== 'undefined' ? openRecipeBuilderModal : window.openRecipeBuilderModal;
   window.openSaveTemplateModal = typeof openSaveTemplateModal !== 'undefined' ? openSaveTemplateModal : window.openSaveTemplateModal;
   window.openShareCardModal = typeof openShareCardModal !== 'undefined' ? openShareCardModal : window.openShareCardModal;
   window.pickScanPhoto = typeof pickScanPhoto !== 'undefined' ? pickScanPhoto : window.pickScanPhoto;
   window.removeLog = typeof removeLog !== 'undefined' ? removeLog : window.removeLog;
   window.saveBodyStats = typeof saveBodyStats !== 'undefined' ? saveBodyStats : window.saveBodyStats;
-  window.saveCustomRecipe = typeof saveCustomRecipe !== 'undefined' ? saveCustomRecipe : window.saveCustomRecipe;
   window.saveGoals = typeof saveGoals !== 'undefined' ? saveGoals : window.saveGoals;
   window.scanWithAI = typeof scanWithAI !== 'undefined' ? scanWithAI : window.scanWithAI;
   window.searchFoods = typeof searchFoods !== 'undefined' ? searchFoods : window.searchFoods;
