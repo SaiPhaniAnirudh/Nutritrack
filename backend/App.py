@@ -896,27 +896,43 @@ def search_foods():
     if len(q) < 2:
         return jsonify([])
 
-    try:
-        # Try substring match on name
-        res = supabase.table('base_foods') \
-                      .select('*') \
-                      .ilike('name', f'%{q}%') \
-                      .limit(limit) \
-                      .execute()
-        rows = res.data or []
+    # Quality tier: prefer lab-analyzed/verified USDA data over branded or
+    # unlabeled entries, since those are far more likely to be a composite
+    # dish (e.g. "Pita With Zaatar & Olive Oil") rather than the plain food.
+    TIER = {
+        'usda_foundation': 0,
+        'usda_sr_legacy':  1,
+        'usda_fndds':      2,
+        'usda_branded':    3,
+    }
 
-        # Fallback: try each word individually (handles "dal fry" → "dal")
-        if not rows:
-            words = [w for w in q.split() if len(w) >= 3]
-            for word in words:
-                res = supabase.table('base_foods') \
-                              .select('*') \
-                              .ilike('name', f'%{word}%') \
-                              .limit(limit) \
-                              .execute()
-                rows = res.data or []
-                if rows:
-                    break
+    def rank(row, query):
+        tier = TIER.get(row.get('data_source'), 4)
+        name_len = len(row.get('name') or '')
+        # Prefer names close in length to the query — filters out long
+        # composite-dish names that happen to contain all the words.
+        closeness = abs(name_len - len(query))
+        return (tier, closeness, name_len)
+
+    try:
+        words = [w for w in q.split() if len(w) >= 3] or [q]
+
+        # Require ALL words to appear (handles punctuation like "rice, cooked"
+        # since each word is checked as its own substring, comma-agnostic).
+        # Progressively drop trailing words if the full set has no matches,
+        # so "chicken breast grilled" still falls back to "chicken breast".
+        rows = []
+        for n in range(len(words), 0, -1):
+            query_builder = supabase.table('base_foods').select('*')
+            for word in words[:n]:
+                query_builder = query_builder.ilike('name', f'%{word}%')
+            res = query_builder.limit(50).execute()
+            rows = res.data or []
+            if rows:
+                break
+
+        rows.sort(key=lambda r: rank(r, q))
+        rows = rows[:limit]
 
         # Normalize to the FOODS shape the frontend expects
         def normalize(row):
