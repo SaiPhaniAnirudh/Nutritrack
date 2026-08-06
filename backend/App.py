@@ -907,25 +907,35 @@ def search_foods():
     }
 
     def rank(row, query):
+        name = row.get('name') or ''
         tier = TIER.get(row.get('data_source'), 4)
-        name_len = len(row.get('name') or '')
-        # Prefer names close in length to the query — filters out long
-        # composite-dish names that happen to contain all the words.
-        closeness = abs(name_len - len(query))
-        return (tier, closeness, name_len)
+        primary = name.split(',')[0].lower()
+        query_words = query.lower().split()
+        # Strong boost: every query word appears in the food's primary
+        # (pre-comma) segment — USDA convention puts the real food name
+        # there, e.g. "Salmon, cooked" vs "Fish Oil, Salmon" (salmon is
+        # only a descriptor in the second one).
+        primary_match = 0 if all(w in primary for w in query_words) else 1
+        closeness = abs(len(name) - len(query))
+        return (primary_match, tier, closeness, len(name))
 
     try:
         words = [w for w in q.split() if len(w) >= 3] or [q]
+        # Word-boundary regex (Postgres \y), not raw substring — avoids
+        # "apple" matching inside "Applebee's".
+        import re as _re
+        def word_pattern(w):
+            return f"\\y{_re.escape(w)}\\y"
 
         # Require ALL words to appear (handles punctuation like "rice, cooked"
-        # since each word is checked as its own substring, comma-agnostic).
+        # since each word is checked as its own boundary match).
         # Progressively drop trailing words if the full set has no matches,
         # so "chicken breast grilled" still falls back to "chicken breast".
         rows = []
         for n in range(len(words), 0, -1):
             query_builder = supabase.table('base_foods').select('*')
             for word in words[:n]:
-                query_builder = query_builder.ilike('name', f'%{word}%')
+                query_builder = query_builder.filter('name', 'imatch', word_pattern(word))
             res = query_builder.limit(50).execute()
             rows = res.data or []
             if rows:

@@ -21,40 +21,41 @@ import requests
 
 ROOT = Path(__file__).resolve().parent.parent
 
-# Reference values are per standard USDA serving, sourced from
-# USDA FoodData Central (SR Legacy / Foundation entries).
-# tuple: (query, ref_calories, ref_protein_g, ref_carbs_g, ref_fat_g, serving)
+# Reference values are per 100g (matching NutriTrack's DB convention, which
+# stores USDA values per 100g) — sourced from USDA FoodData Central
+# (SR Legacy / Foundation entries).
+# tuple: (query, ref_calories_per_100g, ref_protein, ref_carbs, ref_fat)
 REFERENCE_FOODS = [
-    ("banana",            105, 1.3, 27.0, 0.4, "1 medium (118g)"),
-    ("boiled egg",         78, 6.3,  0.6, 5.3, "1 large (50g)"),
-    ("white rice cooked", 205, 4.3, 44.5, 0.4, "1 cup (158g)"),
-    ("chicken breast",    165, 31.0, 0.0, 3.6, "100g cooked"),
-    ("whole milk",        149, 7.7, 11.7, 8.0, "1 cup (244g)"),
-    ("almonds",            164, 6.0,  6.1, 14.2, "1 oz (28g)"),
-    ("broccoli",            55, 3.7, 11.2, 0.6, "1 cup (91g)"),
-    ("apple",               95, 0.5, 25.1, 0.3, "1 medium (182g)"),
-    ("peanut butter",      188, 8.0,  6.9, 16.0, "2 tbsp (32g)"),
-    ("white bread",         79, 2.7, 14.7, 1.0, "1 slice (28g)"),
-    ("oatmeal cooked",     166, 5.9, 28.1, 3.6, "1 cup (234g)"),
-    ("cheddar cheese",     113, 7.0,  0.4, 9.3, "1 oz (28g)"),
-    ("salmon",             206, 22.1, 0.0, 12.4, "100g cooked"),
-    ("potato baked",       161, 4.3, 36.6, 0.2, "1 medium (173g)"),
-    ("greek yogurt plain", 100, 17.3,  6.1, 0.7, "170g container"),
-    ("avocado",            234, 2.9, 12.5, 21.4, "1 medium (150g)"),
-    ("orange",              62, 1.2, 15.4, 0.2, "1 medium (131g)"),
-    ("spinach raw",          7, 0.9,  1.1, 0.1, "1 cup (30g)"),
-    ("ground beef 80/20",  287, 19.9, 0.0, 21.8, "100g cooked"),
-    ("black beans cooked", 227, 15.2, 40.8, 0.9, "1 cup (172g)"),
-    ("brown rice cooked",  216, 5.0, 44.8, 1.8, "1 cup (195g)"),
-    ("olive oil",           119, 0.0,  0.0, 13.5, "1 tbsp (13.5g)"),
-    ("carrot raw",           25, 0.6,  5.8, 0.1, "1 medium (61g)"),
-    ("tofu firm",           181, 21.8, 2.3, 11.0, "1 cup (252g)"),
-    ("shrimp cooked",       84, 20.4,  0.0, 0.5, "3 oz (85g)"),
-    ("whole wheat bread",   69, 3.6, 12.0, 0.9, "1 slice (28g)"),
-    ("cottage cheese",      98, 11.1,  3.4, 4.3, "1/2 cup (113g)"),
-    ("sweet potato baked", 103, 2.3, 23.6, 0.2, "1 medium (114g)"),
-    ("walnuts",              185, 4.3,  3.9, 18.5, "1 oz (28g)"),
-    ("lentils cooked",     230, 17.9, 39.9, 0.8, "1 cup (198g)"),
+    ("banana",             89, 1.1, 22.8, 0.3),
+    ("boiled egg",        155, 12.6, 1.1, 10.6),
+    ("white rice cooked", 130, 2.7, 28.2, 0.3),
+    ("chicken breast",    120, 22.5, 0.0, 2.6),
+    ("whole milk",          61, 3.2,  4.8, 3.3),
+    ("almonds",            579, 21.2, 21.6, 49.9),
+    ("broccoli",             34, 2.8,  6.6, 0.4),
+    ("apple",                52, 0.3, 13.8, 0.2),
+    ("peanut butter",      588, 25.1, 20.0, 50.4),
+    ("white bread",         265, 9.0, 49.0, 3.2),
+    ("oatmeal cooked",       71, 2.5, 12.0, 1.5),
+    ("cheddar cheese",     403, 24.9,  1.3, 33.1),
+    ("salmon",              206, 22.1, 0.0, 12.4),
+    ("potato baked",         93, 2.5, 21.1, 0.1),
+    ("greek yogurt plain",   59, 10.2,  3.6, 0.4),
+    ("avocado",             167, 2.0,  8.5, 15.4),
+    ("orange",                47, 0.9, 11.8, 0.1),
+    ("spinach raw",           23, 2.9,  3.6, 0.4),
+    ("ground beef 80/20",   254, 17.2, 0.0, 20.0),
+    ("black beans cooked",  132, 8.9, 23.7, 0.5),
+    ("brown rice cooked",   123, 2.6, 25.6, 1.0),
+    ("olive oil",           884, 0.0,  0.0, 100.0),
+    ("carrot raw",            41, 0.9,  9.6, 0.2),
+    ("tofu firm",            144, 15.8, 3.0, 8.7),
+    ("shrimp cooked",         99, 24.0, 0.2, 0.3),
+    ("whole wheat bread",   247, 13.0, 41.0, 3.5),
+    ("cottage cheese",        98, 11.1,  3.4, 4.3),
+    ("sweet potato baked",    90, 2.0, 20.7, 0.2),
+    ("walnuts",             654, 15.2, 13.7, 65.2),
+    ("lentils cooked",      116, 9.0, 20.1, 0.4),
 ]
 
 TOLERANCE_PCT = 5.0  # matches the "within 5% of USDA reference" bar used industry-wide
@@ -68,7 +69,7 @@ def pct_diff(actual, ref):
 
 def run_audit(base_url: str):
     results = []
-    for query, ref_cal, ref_pro, ref_carb, ref_fat, serving in REFERENCE_FOODS:
+    for query, ref_cal, ref_pro, ref_carb, ref_fat in REFERENCE_FOODS:
         try:
             r = requests.get(f"{base_url}/api/foods/search",
                               params={"q": query, "limit": 1}, timeout=15)
@@ -90,7 +91,6 @@ def run_audit(base_url: str):
             "query": query,
             "found": True,
             "matched_name": item.get("name"),
-            "ref_serving": serving,
             "ref_cal": ref_cal,
             "actual_cal": item.get("cal"),
             "cal_diff_pct": round(cal_diff, 1),
