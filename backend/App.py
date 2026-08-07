@@ -896,65 +896,18 @@ def search_foods():
     if len(q) < 2:
         return jsonify([])
 
-    # Quality tier: prefer lab-analyzed/verified USDA data over branded or
-    # unlabeled entries, since those are far more likely to be a composite
-    # dish (e.g. "Pita With Zaatar & Olive Oil") rather than the plain food.
-    TIER = {
-        'usda_foundation': 0,
-        'usda_sr_legacy':  1,
-        'usda_fndds':      2,
-        'usda_branded':    3,
-    }
-
-    import re as _re
-
-    def rank(row, query):
-        name = row.get('name') or ''
-        tier = TIER.get(row.get('data_source'), 4)
-        query_words = set(query.lower().split())
-
-        # USDA names foods as "Category, Descriptor, Prep" (e.g. "Oil, olive,
-        # salad or cooking") or "Food, Prep" (e.g. "Orange, raw") — the real
-        # food identity is usually in the first two comma segments. Count how
-        # many words there are BEYOND the query itself: fewer extra words
-        # means the entry is closer to being exactly the queried food, not a
-        # dish/product that merely contains it (e.g. "Orange peel, raw" has
-        # one extra word "peel" versus "Orange, raw" which has none).
-        segments = [s.strip().lower() for s in name.split(',')]
-        core_words = set(_re.findall(r"[a-z0-9']+", ' '.join(segments[:2])))
-        missing = len(query_words - core_words)  # query word not even in core
-        extra = len(core_words - query_words)    # unrelated words in core
-        closeness = abs(len(name) - len(query))
-
-        # Exactness beats data-quality tier: a perfect "Orange, raw" match
-        # should win over a technically-higher-tier "Anchovies ... olive oil"
-        # that just happens to contain the query words.
-        return (missing, extra, tier, closeness, len(name))
-
+    # All matching/ranking now lives in the Postgres function
+    # search_foods_ranked() (word-boundary matching, trigram similarity,
+    # data-quality tiering, and legacy-unit deprioritization) — see
+    # migration 'search_foods_word_match_plus_trgm_rank'. Keeping this in
+    # the DB instead of Python means it's testable directly in SQL and one
+    # source of truth instead of duplicated logic.
     try:
-        words = [w for w in q.split() if len(w) >= 3] or [q]
-        # Word-boundary regex (Postgres \y), not raw substring — avoids
-        # "apple" matching inside "Applebee's". Plural-aware (optional
-        # trailing "s") so "apple" still matches "Apples, Raw".
-        def word_pattern(w):
-            return f"\\y{_re.escape(w)}s?\\y"
-
-        # Require ALL words to appear (handles punctuation like "rice, cooked"
-        # since each word is checked as its own boundary match).
-        # Progressively drop trailing words if the full set has no matches,
-        # so "chicken breast grilled" still falls back to "chicken breast".
-        rows = []
-        for n in range(len(words), 0, -1):
-            query_builder = supabase.table('base_foods').select('*')
-            for word in words[:n]:
-                query_builder = query_builder.filter('name', 'imatch', word_pattern(word))
-            res = query_builder.limit(50).execute()
-            rows = res.data or []
-            if rows:
-                break
-
-        rows.sort(key=lambda r: rank(r, q))
-        rows = rows[:limit]
+        res = supabase.rpc('search_foods_ranked', {
+            'search_query': q,
+            'result_limit': limit,
+        }).execute()
+        rows = res.data or []
 
         # Normalize to the FOODS shape the frontend expects
         def normalize(row):
