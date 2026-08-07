@@ -14,7 +14,7 @@
  *   - Images                           → Stale While Revalidate
  */
 
-const CACHE_NAME = 'nutritrack-v15'; // v14->v15: cache.put() was crashing on 206 Partial
+const CACHE_NAME = 'nutritrack-v16';
 // Content responses (response.ok is true for 206 too, but the Cache API rejects it outright) —
 // this threw an uncaught promise rejection on every matching request. Now explicitly skipped.
 // does not exist (only logo-auth.svg does) — cache.addAll() is atomic, so that single 404 rejected the

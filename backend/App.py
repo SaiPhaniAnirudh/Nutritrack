@@ -167,6 +167,15 @@ def serve_spa(path):
     # Otherwise, return index.html for all other routes to support HTML5 History API
     return app.send_static_file('index.html')
 
+@app.after_request
+def add_header(response):
+    """Disable caching for static files so localhost and dev server always serve fresh code."""
+    if request.path.endswith('.css') or request.path.endswith('.js') or request.path == '/' or request.path.endswith('.html'):
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+    return response
+
 # Database — SQLite locally, Postgres in production
 db_url = os.getenv('DATABASE_URL', 'sqlite:///nutritrack.db').strip()
 
@@ -923,9 +932,9 @@ def search_foods():
                 'sugar':  round(float(row.get('sugar')    or 0), 1),
                 'sodium': round(float(row.get('sodium')   or 0), 1),
                 'chol':   round(float(row.get('chol')     or 0), 1),
-                'vit_d':  0.0,
-                'iron':   0.0,
-                'folate': 0.0,
+                'vit_d':  round(float(row.get('vit_d')  or 0), 1),
+                'iron':   round(float(row.get('iron')   or 0), 1),
+                'folate': round(float(row.get('folate') or 0), 1),
                 'cat':    'other',
                 'source': 'db',  # flag so frontend can label these "From Database"
             }
@@ -958,9 +967,9 @@ def popular_foods():
                 'sugar':  round(float(row.get('sugar')    or 0), 1),
                 'sodium': round(float(row.get('sodium')   or 0), 1),
                 'chol':   round(float(row.get('chol')     or 0), 1),
-                'vit_d':  0.0,
-                'iron':   0.0,
-                'folate': 0.0,
+                'vit_d':  round(float(row.get('vit_d')  or 0), 1),
+                'iron':   round(float(row.get('iron')   or 0), 1),
+                'folate': round(float(row.get('folate') or 0), 1),
                 'cat':    (row.get('category') or 'other').lower(),
                 'source': 'db',
             }
