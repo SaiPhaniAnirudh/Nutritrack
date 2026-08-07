@@ -908,24 +908,31 @@ def search_foods():
 
     def rank(row, query):
         name = row.get('name') or ''
+        name_lower = name.lower()
         tier = TIER.get(row.get('data_source'), 4)
-        primary = name.split(',')[0].lower()
         query_words = query.lower().split()
-        # Strong boost: every query word appears in the food's primary
-        # (pre-comma) segment — USDA convention puts the real food name
-        # there, e.g. "Salmon, cooked" vs "Fish Oil, Salmon" (salmon is
-        # only a descriptor in the second one).
-        primary_match = 0 if all(w in primary for w in query_words) else 1
+        # Soft signal (not a hard filter): how early the query words appear
+        # in the name. "Nuts, Almonds, Raw" (pos ~6) still loses to a bad
+        # branded match on tier if needed, but wins the tie among foods of
+        # the same tier — e.g. prefers "Salmon, cooked" (pos 0) over
+        # "Fish Oil, Salmon" (pos 10) when both are equally trustworthy.
+        position_sum = sum(
+            (name_lower.find(w) if name_lower.find(w) != -1 else 999)
+            for w in query_words
+        )
         closeness = abs(len(name) - len(query))
-        return (primary_match, tier, closeness, len(name))
+        # Tier first: a lab-analyzed "Nuts, Almonds, Raw" should always beat
+        # a branded "Milked Almonds" product, regardless of word position.
+        return (tier, position_sum, closeness, len(name))
 
     try:
         words = [w for w in q.split() if len(w) >= 3] or [q]
         # Word-boundary regex (Postgres \y), not raw substring — avoids
-        # "apple" matching inside "Applebee's".
+        # "apple" matching inside "Applebee's". Plural-aware (optional
+        # trailing "s") so "apple" still matches "Apples, Raw".
         import re as _re
         def word_pattern(w):
-            return f"\\y{_re.escape(w)}\\y"
+            return f"\\y{_re.escape(w)}s?\\y"
 
         # Require ALL words to appear (handles punctuation like "rice, cooked"
         # since each word is checked as its own boundary match).
