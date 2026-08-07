@@ -906,31 +906,36 @@ def search_foods():
         'usda_branded':    3,
     }
 
+    import re as _re
+
     def rank(row, query):
         name = row.get('name') or ''
-        name_lower = name.lower()
         tier = TIER.get(row.get('data_source'), 4)
-        query_words = query.lower().split()
-        # Soft signal (not a hard filter): how early the query words appear
-        # in the name. "Nuts, Almonds, Raw" (pos ~6) still loses to a bad
-        # branded match on tier if needed, but wins the tie among foods of
-        # the same tier — e.g. prefers "Salmon, cooked" (pos 0) over
-        # "Fish Oil, Salmon" (pos 10) when both are equally trustworthy.
-        position_sum = sum(
-            (name_lower.find(w) if name_lower.find(w) != -1 else 999)
-            for w in query_words
-        )
+        query_words = set(query.lower().split())
+
+        # USDA names foods as "Category, Descriptor, Prep" (e.g. "Oil, olive,
+        # salad or cooking") or "Food, Prep" (e.g. "Orange, raw") — the real
+        # food identity is usually in the first two comma segments. Count how
+        # many words there are BEYOND the query itself: fewer extra words
+        # means the entry is closer to being exactly the queried food, not a
+        # dish/product that merely contains it (e.g. "Orange peel, raw" has
+        # one extra word "peel" versus "Orange, raw" which has none).
+        segments = [s.strip().lower() for s in name.split(',')]
+        core_words = set(_re.findall(r"[a-z0-9']+", ' '.join(segments[:2])))
+        missing = len(query_words - core_words)  # query word not even in core
+        extra = len(core_words - query_words)    # unrelated words in core
         closeness = abs(len(name) - len(query))
-        # Tier first: a lab-analyzed "Nuts, Almonds, Raw" should always beat
-        # a branded "Milked Almonds" product, regardless of word position.
-        return (tier, position_sum, closeness, len(name))
+
+        # Exactness beats data-quality tier: a perfect "Orange, raw" match
+        # should win over a technically-higher-tier "Anchovies ... olive oil"
+        # that just happens to contain the query words.
+        return (missing, extra, tier, closeness, len(name))
 
     try:
         words = [w for w in q.split() if len(w) >= 3] or [q]
         # Word-boundary regex (Postgres \y), not raw substring — avoids
         # "apple" matching inside "Applebee's". Plural-aware (optional
         # trailing "s") so "apple" still matches "Apples, Raw".
-        import re as _re
         def word_pattern(w):
             return f"\\y{_re.escape(w)}s?\\y"
 
