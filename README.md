@@ -20,6 +20,18 @@
 
 ---
 
+## 🎯 Food Database Accuracy
+
+NutriTrack's nutrition data is backed by ~15,000 USDA FoodData Central entries (SR Legacy, Foundation, FNDDS, and Branded), served through a Postgres search pipeline (word-boundary matching + trigram similarity ranking + a hand-curated alias table for common queries).
+
+To make that claim verifiable rather than just asserted, the repo includes a reproducible accuracy audit (`scripts/accuracy_audit.py`): 30 generic foods, checked against USDA reference calorie values, using the same "% within 5% of reference" methodology used in public comparisons of MyFitnessPal and Cronometer.
+
+**Result: 29/30 (97%) within 5% of USDA reference values** — see [`ACCURACY_AUDIT.md`](./ACCURACY_AUDIT.md) for the full breakdown.
+
+```bash
+python scripts/accuracy_audit.py
+```
+
 ## 🏗️ System Architecture
 
 ```

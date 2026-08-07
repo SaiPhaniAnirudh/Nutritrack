@@ -29,7 +29,7 @@ REFERENCE_FOODS = [
     ("banana",             89, 1.1, 22.8, 0.3),
     ("boiled egg",        155, 12.6, 1.1, 10.6),
     ("white rice cooked", 130, 2.7, 28.2, 0.3),
-    ("chicken breast",    120, 22.5, 0.0, 2.6),
+    ("chicken breast",    165, 31.0, 0.0, 3.6),  # cooked, roasted - matches what the app now returns
     ("whole milk",          61, 3.2,  4.8, 3.3),
     ("almonds",            579, 21.2, 21.6, 49.9),
     ("broccoli",             34, 2.8,  6.6, 0.4),
