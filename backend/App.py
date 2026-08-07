@@ -1772,7 +1772,7 @@ def ai_analyze():
             payload = {
                 "contents": [{
                     "parts": [
-                        {"text": "Analyze this food image. Identify all food items. Return ONLY JSON: {\"items\":[{\"food_name\":\"...\",\"serving_size\":\"1 serving\",\"confidence\":90,\"calories\":200,\"protein_g\":10,\"carbs_g":25,\"fat_g\":6,\"fiber_g\":2,\"sugar_g\":1,\"sodium_mg\":300,\"cholesterol_mg\":0}]}. If not food return {\"not_food\": true}."},
+                        {"text": """Analyze this food image. Identify all food items. Return ONLY JSON: {"items":[{"food_name":"...","serving_size":"1 serving","confidence":90,"calories":200,"protein_g":10,"carbs_g":25,"fat_g":6,"fiber_g":2,"sugar_g":1,"sodium_mg":300,"cholesterol_mg":0}]}. If not food return {"not_food": true}."""},
                         {"inline_data": {"mime_type": "image/jpeg", "data": image}}
                     ]
                 }]
