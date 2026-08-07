@@ -71,6 +71,20 @@ function showToast(msg, type = 'success') {
   toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
 }
 
+function triggerCelebration(type = 'meal') {
+  try {
+    if (typeof confetti === 'function') {
+      if (type === 'badge') {
+        confetti({ particleCount: 100, spread: 80, origin: { y: 0.6 } });
+      } else if (type === 'goal') {
+        confetti({ particleCount: 80, spread: 60, origin: { y: 0.5 } });
+      } else {
+        confetti({ particleCount: 35, spread: 45, origin: { y: 0.7 } });
+      }
+    }
+  } catch (e) { console.error('Confetti error:', e); }
+}
+
 // ─────────────────────────────────────────────────
 //  NON-FOOD POPUP  (change #8)
 // ─────────────────────────────────────────────────
@@ -2069,6 +2083,7 @@ async function addFoodToLog(food) {
   refreshDashboard();
   renderHistory();
   showToast(`✓ ${food.name} added to ${payload.mealType}`, 'success');
+  triggerCelebration('meal');
 
   // 2. Save directly to Supabase food_logs cloud table
   try {

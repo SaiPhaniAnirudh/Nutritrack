@@ -1002,9 +1002,9 @@ def lookup_food():
                 'sugar':  round(float(matched.get('sugar')    or 0), 1),
                 'sodium': round(float(matched.get('sodium')   or 0), 1),
                 'chol':   round(float(matched.get('chol')     or 0), 1),
-                'vit_d':  0.0,
-                'iron':   0.0,
-                'folate': 0.0,
+                'vit_d':  round(float(matched.get('vit_d')  or 0), 1),
+                'iron':   round(float(matched.get('iron')   or 0), 1),
+                'folate': round(float(matched.get('folate') or 0), 1),
                 'source': 'db',
             }
         })
