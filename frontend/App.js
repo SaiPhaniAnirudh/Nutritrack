@@ -4547,34 +4547,159 @@ if (typeof window !== 'undefined') {
   window.closeShareCardModal = typeof closeShareCardModal !== 'undefined' ? closeShareCardModal : window.closeShareCardModal;
   window.downloadShareCard = typeof downloadShareCard !== 'undefined' ? downloadShareCard : window.downloadShareCard;
   window.dpOverlayClick = typeof dpOverlayClick !== 'undefined' ? dpOverlayClick : window.dpOverlayClick;
-  window.dpSwitchTab = typeof dpSwitchTab !== 'undefined' ? dpSwitchTab : window.dpSwitchTab;
-  window.exportLogsCSV = typeof exportLogsCSV !== 'undefined' ? exportLogsCSV : window.exportLogsCSV;
-  window.goToStep = typeof goToStep !== 'undefined' ? goToStep : window.goToStep;
-  window.goToStep4 = typeof goToStep4 !== 'undefined' ? goToStep4 : window.goToStep4;
-  window.handleEmailLogin = typeof handleEmailLogin !== 'undefined' ? handleEmailLogin : window.handleEmailLogin;
-  window.handleEmailRegister = typeof handleEmailRegister !== 'undefined' ? handleEmailRegister : window.handleEmailRegister;
-  window.handleFinishOnboarding = typeof handleFinishOnboarding !== 'undefined' ? handleFinishOnboarding : window.handleFinishOnboarding;
-  window.handleForgotPassword = typeof handleForgotPassword !== 'undefined' ? handleForgotPassword : window.handleForgotPassword;
-  window.handleGoogleLogin = typeof handleGoogleLogin !== 'undefined' ? handleGoogleLogin : window.handleGoogleLogin;
-  window.handleLogout = typeof handleLogout !== 'undefined' ? handleLogout : window.handleLogout;
-  window.joinChallenge = typeof joinChallenge !== 'undefined' ? joinChallenge : window.joinChallenge;
-  window.loadMoreFoods = typeof loadMoreFoods !== 'undefined' ? loadMoreFoods : window.loadMoreFoods;
-  window.logMealTemplate = typeof logMealTemplate !== 'undefined' ? logMealTemplate : window.logMealTemplate;
-  window.logWater = typeof logWater !== 'undefined' ? logWater : window.logWater;
-  window.logWeightEntry = typeof logWeightEntry !== 'undefined' ? logWeightEntry : window.logWeightEntry;
-  window.logWorkoutEntry = typeof logWorkoutEntry !== 'undefined' ? logWorkoutEntry : window.logWorkoutEntry;
-  window.openDietModal = typeof openDietModal !== 'undefined' ? openDietModal : window.openDietModal;
-  window.openSaveTemplateModal = typeof openSaveTemplateModal !== 'undefined' ? openSaveTemplateModal : window.openSaveTemplateModal;
-  window.openShareCardModal = typeof openShareCardModal !== 'undefined' ? openShareCardModal : window.openShareCardModal;
-  window.pickScanPhoto = typeof pickScanPhoto !== 'undefined' ? pickScanPhoto : window.pickScanPhoto;
-  window.removeLog = typeof removeLog !== 'undefined' ? removeLog : window.removeLog;
-  window.saveBodyStats = typeof saveBodyStats !== 'undefined' ? saveBodyStats : window.saveBodyStats;
-  window.saveGoals = typeof saveGoals !== 'undefined' ? saveGoals : window.saveGoals;
-  window.scanWithAI = typeof scanWithAI !== 'undefined' ? scanWithAI : window.scanWithAI;
-  window.searchFoods = typeof searchFoods !== 'undefined' ? searchFoods : window.searchFoods;
-  window.sendChatMessage = typeof sendChatMessage !== 'undefined' ? sendChatMessage : window.sendChatMessage;
-  window.sendChip = typeof sendChip !== 'undefined' ? sendChip : window.sendChip;
-  window.setCat = typeof setCat !== 'undefined' ? setCat : window.setCat;
+// ─────────────────────────────────────────────────
+//  CUSTOM RECIPE BUILDER
+// ─────────────────────────────────────────────────
+let _selectedRecipeIngredients = [];
+
+function openCreateRecipeModal() {
+  _selectedRecipeIngredients = [];
+  document.getElementById('recipeTitleInput').value = '';
+  document.getElementById('recipeIngSearch').value = '';
+  document.getElementById('recipeIngSearchResults').innerHTML = '';
+  _renderSelectedRecipeIngredients();
+  document.getElementById('recipeModal').style.display = 'flex';
+}
+
+function closeRecipeModal() {
+  document.getElementById('recipeModal').style.display = 'none';
+}
+
+async function searchRecipeIngredients(query) {
+  const q = (query || '').toLowerCase().trim();
+  const resEl = document.getElementById('recipeIngSearchResults');
+  if (!q) { resEl.innerHTML = ''; return; }
+
+  try {
+    const res = await fetch(`${_getBackendURL()}/api/foods/search?q=${encodeURIComponent(q)}&limit=5`);
+    const foods = await res.json();
+    if (!foods || foods.length === 0) {
+      resEl.innerHTML = `<div style="font-size:0.75rem; color:var(--mist); padding:4px;">No matching ingredients</div>`;
+      return;
+    }
+    resEl.innerHTML = foods.map((f, idx) => `
+      <div onclick="addIngredientToRecipe(${idx})" style="padding:6px 10px; background:rgba(255,255,255,0.05); border-radius:6px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; font-size:0.8rem; color:#fff;">
+        <span>🍽️ ${f.name}</span>
+        <span style="color:#F5A623; font-weight:700;">${f.cal} kcal</span>
+      </div>
+    `).join('');
+    window._tempRecipeSearch = foods;
+  } catch (e) { console.error('Recipe search err:', e); }
+}
+
+function addIngredientToRecipe(idx) {
+  const item = window._tempRecipeSearch && window._tempRecipeSearch[idx];
+  if (item) {
+    _selectedRecipeIngredients.push({ ...item });
+    _renderSelectedRecipeIngredients();
+    document.getElementById('recipeIngSearchResults').innerHTML = '';
+    document.getElementById('recipeIngSearch').value = '';
+  }
+}
+
+function removeIngredientFromRecipe(idx) {
+  _selectedRecipeIngredients.splice(idx, 1);
+  _renderSelectedRecipeIngredients();
+}
+
+function _renderSelectedRecipeIngredients() {
+  const listEl = document.getElementById('recipeSelectedList');
+  if (_selectedRecipeIngredients.length === 0) {
+    listEl.innerHTML = `No ingredients added yet. Search above to add foods!`;
+  } else {
+    listEl.innerHTML = _selectedRecipeIngredients.map((item, idx) => `
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:4px 8px; background:rgba(255,255,255,0.06); border-radius:6px; margin-bottom:4px; font-size:0.8rem; color:#fff;">
+        <span>🍽️ ${item.name} (${item.cal} kcal)</span>
+        <button type="button" onclick="removeIngredientFromRecipe(${idx})" style="background:none; border:none; color:#F4613A; font-size:0.9rem; cursor:pointer;">✕</button>
+      </div>
+    `).join('');
+  }
+
+  const totals = _selectedRecipeIngredients.reduce((acc, item) => ({
+    cal: acc.cal + (item.cal || 0),
+    pro: acc.pro + (item.pro || 0),
+    carb: acc.carb + (item.carb || 0),
+    fat: acc.fat + (item.fat || 0),
+  }), { cal: 0, pro: 0, carb: 0, fat: 0 });
+
+  document.getElementById('recTotalCal').textContent = Math.round(totals.cal);
+  document.getElementById('recTotalPro').textContent = totals.pro.toFixed(1);
+  document.getElementById('recTotalCarb').textContent = totals.carb.toFixed(1);
+  document.getElementById('recTotalFat').textContent = totals.fat.toFixed(1);
+}
+
+function saveCustomRecipe() {
+  const title = (document.getElementById('recipeTitleInput').value || '').trim();
+  if (!title) { showToast('Please enter a recipe name', 'error'); return; }
+  if (_selectedRecipeIngredients.length === 0) { showToast('Add at least one ingredient', 'error'); return; }
+
+  const totals = _selectedRecipeIngredients.reduce((acc, item) => ({
+    cal: acc.cal + (item.cal || 0),
+    pro: acc.pro + (item.pro || 0),
+    carb: acc.carb + (item.carb || 0),
+    fat: acc.fat + (item.fat || 0),
+    fiber: acc.fiber + (item.fiber || 0),
+    sugar: acc.sugar + (item.sugar || 0),
+    sodium: acc.sodium + (item.sodium || 0),
+    chol: acc.chol + (item.chol || 0),
+  }), { cal: 0, pro: 0, carb: 0, fat: 0, fiber: 0, sugar: 0, sodium: 0, chol: 0 });
+
+  const newRecipe = {
+    id: 'recipe_' + Date.now(),
+    name: '🍲 ' + title,
+    emoji: '🍲',
+    cal: Math.round(totals.cal),
+    pro: +totals.pro.toFixed(1),
+    carb: +totals.carb.toFixed(1),
+    fat: +totals.fat.toFixed(1),
+    fiber: +totals.fiber.toFixed(1),
+    sugar: +totals.sugar.toFixed(1),
+    sodium: Math.round(totals.sodium),
+    chol: Math.round(totals.chol),
+  };
+
+  closeRecipeModal();
+  showToast(`✓ Custom Recipe "${title}" saved!`, 'success');
+  triggerCelebration('goal');
+  addFoodToLog(newRecipe);
+}
+
+// Window attachments
+window.openCreateRecipeModal = openCreateRecipeModal;
+window.closeRecipeModal = closeRecipeModal;
+window.searchRecipeIngredients = searchRecipeIngredients;
+window.addIngredientToRecipe = addIngredientToRecipe;
+window.removeIngredientFromRecipe = removeIngredientFromRecipe;
+window.saveCustomRecipe = saveCustomRecipe;
+
+window.dpSwitchTab = typeof dpSwitchTab !== 'undefined' ? dpSwitchTab : window.dpSwitchTab;
+window.exportLogsCSV = typeof exportLogsCSV !== 'undefined' ? exportLogsCSV : window.exportLogsCSV;
+window.goToStep = typeof goToStep !== 'undefined' ? goToStep : window.goToStep;
+window.goToStep4 = typeof goToStep4 !== 'undefined' ? goToStep4 : window.goToStep4;
+window.handleEmailLogin = typeof handleEmailLogin !== 'undefined' ? handleEmailLogin : window.handleEmailLogin;
+window.handleEmailRegister = typeof handleEmailRegister !== 'undefined' ? handleEmailRegister : window.handleEmailRegister;
+window.handleFinishOnboarding = typeof handleFinishOnboarding !== 'undefined' ? handleFinishOnboarding : window.handleFinishOnboarding;
+window.handleForgotPassword = typeof handleForgotPassword !== 'undefined' ? handleForgotPassword : window.handleForgotPassword;
+window.handleGoogleLogin = typeof handleGoogleLogin !== 'undefined' ? handleGoogleLogin : window.handleGoogleLogin;
+window.handleLogout = typeof handleLogout !== 'undefined' ? handleLogout : window.handleLogout;
+window.joinChallenge = typeof joinChallenge !== 'undefined' ? joinChallenge : window.joinChallenge;
+window.loadMoreFoods = typeof loadMoreFoods !== 'undefined' ? loadMoreFoods : window.loadMoreFoods;
+window.logMealTemplate = typeof logMealTemplate !== 'undefined' ? logMealTemplate : window.logMealTemplate;
+window.logWater = typeof logWater !== 'undefined' ? logWater : window.logWater;
+window.logWeightEntry = typeof logWeightEntry !== 'undefined' ? logWeightEntry : window.logWeightEntry;
+window.logWorkoutEntry = typeof logWorkoutEntry !== 'undefined' ? logWorkoutEntry : window.logWorkoutEntry;
+window.openDietModal = typeof openDietModal !== 'undefined' ? openDietModal : window.openDietModal;
+window.openSaveTemplateModal = typeof openSaveTemplateModal !== 'undefined' ? openSaveTemplateModal : window.openSaveTemplateModal;
+window.openShareCardModal = typeof openShareCardModal !== 'undefined' ? openShareCardModal : window.openShareCardModal;
+window.pickScanPhoto = typeof pickScanPhoto !== 'undefined' ? pickScanPhoto : window.pickScanPhoto;
+window.removeLog = typeof removeLog !== 'undefined' ? removeLog : window.removeLog;
+window.saveBodyStats = typeof saveBodyStats !== 'undefined' ? saveBodyStats : window.saveBodyStats;
+window.saveGoals = typeof saveGoals !== 'undefined' ? saveGoals : window.saveGoals;
+window.scanWithAI = typeof scanWithAI !== 'undefined' ? scanWithAI : window.scanWithAI;
+window.searchFoods = typeof searchFoods !== 'undefined' ? searchFoods : window.searchFoods;
+window.sendChatMessage = typeof sendChatMessage !== 'undefined' ? sendChatMessage : window.sendChatMessage;
+window.sendChip = typeof sendChip !== 'undefined' ? sendChip : window.sendChip;
+window.setCat = typeof setCat !== 'undefined' ? setCat : window.setCat;
   window.setLanguage = typeof setLanguage !== 'undefined' ? setLanguage : window.setLanguage;
   window.setMeal = typeof setMeal !== 'undefined' ? setMeal : window.setMeal;
   window.showLoginForm = typeof showLoginForm !== 'undefined' ? showLoginForm : window.showLoginForm;
