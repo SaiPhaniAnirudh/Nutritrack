@@ -1456,20 +1456,24 @@ async function _callLLMAPI(imageB64, signal) {
 }
 
 
-function _compressImage(b64, maxBytes = 900000) {
+function _compressImage(b64, maxBytes = 50000) {
   return new Promise(resolve => {
-    if (b64.length <= maxBytes) { resolve(b64); return; }
     const img = new Image();
     img.onload = () => {
       const cvs = document.getElementById('scanCanvas');
-      let w = img.width, h = img.height, quality = 0.85;
+      let w = img.width, h = img.height;
+      const MAX = 384;
+      if (w > MAX || h > MAX) {
+        if (w > h) { h = Math.round((h * MAX) / w); w = MAX; }
+        else { w = Math.round((w * MAX) / h); h = MAX; }
+      }
+      let quality = 0.8;
       const tryCompress = () => {
         cvs.width = w; cvs.height = h;
         cvs.getContext('2d').drawImage(img, 0, 0, w, h);
         const result = cvs.toDataURL('image/jpeg', quality).split(',')[1];
-        if (result.length <= maxBytes || quality < 0.3) { resolve(result); return; }
+        if (result.length <= maxBytes || quality <= 0.3) { resolve(result); return; }
         quality -= 0.15;
-        if (quality < 0.3) { w = Math.round(w * 0.75); h = Math.round(h * 0.75); quality = 0.75; }
         tryCompress();
       };
       tryCompress();
@@ -1498,7 +1502,7 @@ async function scanWithAI() {
       <div style="font-size:0.85rem;opacity:0.6;margin-top:0.5rem">AI model analysing food…</div>
       <div style="font-size:0.72rem;opacity:0.4;margin-top:0.3rem">Free AI server — may take 1-2 min ⏳</div>
     </div>`;
-  const imageToSend = await _compressImage(scanImageB64, 150000);
+  const imageToSend = await _compressImage(scanImageB64, 40000);
   showScanStatus('🧠 Contacting AI server…', 'info');
 
   let scanSec = 0;
