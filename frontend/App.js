@@ -4645,6 +4645,169 @@ async function refreshGoogleFitStatus() {
 }
 
 // ─────────────────────────────────────────────────
+//  CUSTOM RECIPE BUILDER
+// ─────────────────────────────────────────────────
+let _selectedRecipeIngredients = [];
+
+function openCreateRecipeModal() {
+  _selectedRecipeIngredients = [];
+  const titleInput = document.getElementById('recipeTitleInput');
+  const ingSearch = document.getElementById('recipeIngSearch');
+  const ingResults = document.getElementById('recipeIngSearchResults');
+  if (titleInput) titleInput.value = '';
+  if (ingSearch) ingSearch.value = '';
+  if (ingResults) ingResults.innerHTML = '';
+  _renderSelectedRecipeIngredients();
+  const modal = document.getElementById('recipeModal');
+  if (modal) {
+    modal.style.display = 'flex';
+    modal.classList.add('open');
+  }
+}
+
+function closeRecipeModal() {
+  const modal = document.getElementById('recipeModal');
+  if (modal) {
+    modal.style.display = 'none';
+    modal.classList.remove('open');
+  }
+}
+
+async function searchRecipeIngredients(query) {
+  const q = (query || '').toLowerCase().trim();
+  const resEl = document.getElementById('recipeIngSearchResults');
+  if (!q) { if (resEl) resEl.innerHTML = ''; return; }
+
+  try {
+    const res = await fetch(`${window._BACKEND_URL || ''}/api/foods/search?q=${encodeURIComponent(q)}&limit=5`);
+    const foods = await res.json();
+    if (!foods || foods.length === 0) {
+      if (resEl) resEl.innerHTML = `<div style="font-size:0.75rem; color:var(--mist); padding:4px;">No matching ingredients</div>`;
+      return;
+    }
+    if (resEl) {
+      resEl.innerHTML = foods.map((f, idx) => `
+      <div onclick="addIngredientToRecipe(${idx})" style="padding:6px 10px; background:rgba(255,255,255,0.05); border-radius:6px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; font-size:0.8rem; color:#fff;">
+        <span>🍽️ ${f.name}</span>
+        <span style="color:#F5A623; font-weight:700;">${f.cal} kcal</span>
+      </div>
+    `).join('');
+    }
+    window._tempRecipeSearch = foods;
+  } catch (e) { console.error('Recipe search err:', e); }
+}
+
+function addIngredientToRecipe(idx) {
+  const item = window._tempRecipeSearch && window._tempRecipeSearch[idx];
+  if (item) {
+    _selectedRecipeIngredients.push({ ...item, qty: 1 });
+    _renderSelectedRecipeIngredients();
+    const resEl = document.getElementById('recipeIngSearchResults');
+    const searchEl = document.getElementById('recipeIngSearch');
+    if (resEl) resEl.innerHTML = '';
+    if (searchEl) searchEl.value = '';
+  }
+}
+
+function removeIngredientFromRecipe(idx) {
+  _selectedRecipeIngredients.splice(idx, 1);
+  _renderSelectedRecipeIngredients();
+}
+
+function updateRecipeIngredientQty(idx, value) {
+  const qty = parseFloat(value);
+  _selectedRecipeIngredients[idx].qty = (isNaN(qty) || qty <= 0) ? 1 : qty;
+  _renderSelectedRecipeIngredients();
+}
+
+function _renderSelectedRecipeIngredients() {
+  const listEl = document.getElementById('recipeSelectedList');
+  if (!listEl) return;
+  if (_selectedRecipeIngredients.length === 0) {
+    listEl.innerHTML = `No ingredients added yet. Search above to add foods!`;
+  } else {
+    listEl.innerHTML = _selectedRecipeIngredients.map((item, idx) => `
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:4px 8px; background:rgba(255,255,255,0.06); border-radius:6px; margin-bottom:4px; font-size:0.8rem; color:#fff; gap:6px;">
+      <span style="flex:1;">🍽️ ${item.name} (${item.cal} kcal each)</span>
+      <input type="number" min="0.1" step="0.1" value="${item.qty || 1}"
+             onchange="updateRecipeIngredientQty(${idx}, this.value)"
+             style="width:48px; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); border-radius:4px; color:#fff; text-align:center; font-size:0.75rem;" />
+      <span style="font-size:0.7rem; color:var(--mist);">x</span>
+      <button type="button" onclick="removeIngredientFromRecipe(${idx})" style="background:none; border:none; color:#F4613A; font-size:0.9rem; cursor:pointer;">✕</button>
+    </div>
+  `).join('');
+  }
+
+  const totals = _selectedRecipeIngredients.reduce((acc, item) => {
+    const q = item.qty || 1;
+    return {
+      cal: acc.cal + (item.cal || 0) * q,
+      pro: acc.pro + (item.pro || 0) * q,
+      carb: acc.carb + (item.carb || 0) * q,
+      fat: acc.fat + (item.fat || 0) * q,
+    };
+  }, { cal: 0, pro: 0, carb: 0, fat: 0 });
+
+  const calEl = document.getElementById('recTotalCal');
+  const proEl = document.getElementById('recTotalPro');
+  const carbEl = document.getElementById('recTotalCarb');
+  const fatEl = document.getElementById('recTotalFat');
+  if (calEl) calEl.textContent = Math.round(totals.cal);
+  if (proEl) proEl.textContent = totals.pro.toFixed(1);
+  if (carbEl) carbEl.textContent = totals.carb.toFixed(1);
+  if (fatEl) fatEl.textContent = totals.fat.toFixed(1);
+}
+
+function saveCustomRecipe() {
+  const titleEl = document.getElementById('recipeTitleInput');
+  const title = (titleEl ? titleEl.value : '').trim();
+  if (!title) { showToast('Please enter a recipe name', 'error'); return; }
+  if (_selectedRecipeIngredients.length === 0) { showToast('Add at least one ingredient', 'error'); return; }
+
+  const totals = _selectedRecipeIngredients.reduce((acc, item) => {
+    const q = item.qty || 1;
+    return {
+      cal: acc.cal + (item.cal || 0) * q,
+      pro: acc.pro + (item.pro || 0) * q,
+      carb: acc.carb + (item.carb || 0) * q,
+      fat: acc.fat + (item.fat || 0) * q,
+      fiber: acc.fiber + (item.fiber || 0) * q,
+      sugar: acc.sugar + (item.sugar || 0) * q,
+      sodium: acc.sodium + (item.sodium || 0) * q,
+      chol: acc.chol + (item.chol || 0) * q,
+    };
+  }, { cal: 0, pro: 0, carb: 0, fat: 0, fiber: 0, sugar: 0, sodium: 0, chol: 0 });
+
+  const newRecipe = {
+    id: 'recipe_' + Date.now(),
+    name: '🍲 ' + title,
+    emoji: '🍲',
+    cal: Math.round(totals.cal),
+    pro: +totals.pro.toFixed(1),
+    carb: +totals.carb.toFixed(1),
+    fat: +totals.fat.toFixed(1),
+    fiber: +totals.fiber.toFixed(1),
+    sugar: +totals.sugar.toFixed(1),
+    sodium: Math.round(totals.sodium),
+    chol: Math.round(totals.chol),
+  };
+
+  closeRecipeModal();
+  showToast(`✓ Custom Recipe "${title}" saved!`, 'success');
+  triggerCelebration('goal');
+  addFoodToLog(newRecipe);
+}
+
+// Window attachments for Recipe Builder
+window.openCreateRecipeModal = openCreateRecipeModal;
+window.closeRecipeModal = closeRecipeModal;
+window.searchRecipeIngredients = searchRecipeIngredients;
+window.addIngredientToRecipe = addIngredientToRecipe;
+window.removeIngredientFromRecipe = removeIngredientFromRecipe;
+window.updateRecipeIngredientQty = updateRecipeIngredientQty;
+window.saveCustomRecipe = saveCustomRecipe;
+
+// ─────────────────────────────────────────────────
 //  EXPLICIT GLOBAL WINDOW EVENT HANDLER EXPORTS
 // ─────────────────────────────────────────────────
 if (typeof window !== 'undefined') {
@@ -4656,168 +4819,6 @@ if (typeof window !== 'undefined') {
   window.closeShareCardModal = typeof closeShareCardModal !== 'undefined' ? closeShareCardModal : window.closeShareCardModal;
   window.downloadShareCard = typeof downloadShareCard !== 'undefined' ? downloadShareCard : window.downloadShareCard;
   window.dpOverlayClick = typeof dpOverlayClick !== 'undefined' ? dpOverlayClick : window.dpOverlayClick;
-  // ─────────────────────────────────────────────────
-  //  CUSTOM RECIPE BUILDER
-  // ─────────────────────────────────────────────────
-  let _selectedRecipeIngredients = [];
-
-  function openCreateRecipeModal() {
-    _selectedRecipeIngredients = [];
-    const titleInput = document.getElementById('recipeTitleInput');
-    const ingSearch = document.getElementById('recipeIngSearch');
-    const ingResults = document.getElementById('recipeIngSearchResults');
-    if (titleInput) titleInput.value = '';
-    if (ingSearch) ingSearch.value = '';
-    if (ingResults) ingResults.innerHTML = '';
-    _renderSelectedRecipeIngredients();
-    const modal = document.getElementById('recipeModal');
-    if (modal) {
-      modal.style.display = 'flex';
-      modal.classList.add('open');
-    }
-  }
-
-  function closeRecipeModal() {
-    const modal = document.getElementById('recipeModal');
-    if (modal) {
-      modal.style.display = 'none';
-      modal.classList.remove('open');
-    }
-  }
-
-  async function searchRecipeIngredients(query) {
-    const q = (query || '').toLowerCase().trim();
-    const resEl = document.getElementById('recipeIngSearchResults');
-    if (!q) { if (resEl) resEl.innerHTML = ''; return; }
-
-    try {
-      const res = await fetch(`${window._BACKEND_URL || ''}/api/foods/search?q=${encodeURIComponent(q)}&limit=5`);
-      const foods = await res.json();
-      if (!foods || foods.length === 0) {
-        if (resEl) resEl.innerHTML = `<div style="font-size:0.75rem; color:var(--mist); padding:4px;">No matching ingredients</div>`;
-        return;
-      }
-      if (resEl) {
-        resEl.innerHTML = foods.map((f, idx) => `
-        <div onclick="addIngredientToRecipe(${idx})" style="padding:6px 10px; background:rgba(255,255,255,0.05); border-radius:6px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; font-size:0.8rem; color:#fff;">
-          <span>🍽️ ${f.name}</span>
-          <span style="color:#F5A623; font-weight:700;">${f.cal} kcal</span>
-        </div>
-      `).join('');
-      }
-      window._tempRecipeSearch = foods;
-    } catch (e) { console.error('Recipe search err:', e); }
-  }
-
-  function addIngredientToRecipe(idx) {
-    const item = window._tempRecipeSearch && window._tempRecipeSearch[idx];
-    if (item) {
-      _selectedRecipeIngredients.push({ ...item, qty: 1 });
-      _renderSelectedRecipeIngredients();
-      const resEl = document.getElementById('recipeIngSearchResults');
-      const searchEl = document.getElementById('recipeIngSearch');
-      if (resEl) resEl.innerHTML = '';
-      if (searchEl) searchEl.value = '';
-    }
-  }
-
-  function removeIngredientFromRecipe(idx) {
-    _selectedRecipeIngredients.splice(idx, 1);
-    _renderSelectedRecipeIngredients();
-  }
-
-  function updateRecipeIngredientQty(idx, value) {
-    const qty = parseFloat(value);
-    _selectedRecipeIngredients[idx].qty = (isNaN(qty) || qty <= 0) ? 1 : qty;
-    _renderSelectedRecipeIngredients();
-  }
-
-  function _renderSelectedRecipeIngredients() {
-    const listEl = document.getElementById('recipeSelectedList');
-    if (!listEl) return;
-    if (_selectedRecipeIngredients.length === 0) {
-      listEl.innerHTML = `No ingredients added yet. Search above to add foods!`;
-    } else {
-      listEl.innerHTML = _selectedRecipeIngredients.map((item, idx) => `
-      <div style="display:flex; justify-content:space-between; align-items:center; padding:4px 8px; background:rgba(255,255,255,0.06); border-radius:6px; margin-bottom:4px; font-size:0.8rem; color:#fff; gap:6px;">
-        <span style="flex:1;">🍽️ ${item.name} (${item.cal} kcal each)</span>
-        <input type="number" min="0.1" step="0.1" value="${item.qty || 1}"
-               onchange="updateRecipeIngredientQty(${idx}, this.value)"
-               style="width:48px; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); border-radius:4px; color:#fff; text-align:center; font-size:0.75rem;" />
-        <span style="font-size:0.7rem; color:var(--mist);">x</span>
-        <button type="button" onclick="removeIngredientFromRecipe(${idx})" style="background:none; border:none; color:#F4613A; font-size:0.9rem; cursor:pointer;">✕</button>
-      </div>
-    `).join('');
-    }
-
-    const totals = _selectedRecipeIngredients.reduce((acc, item) => {
-      const q = item.qty || 1;
-      return {
-        cal: acc.cal + (item.cal || 0) * q,
-        pro: acc.pro + (item.pro || 0) * q,
-        carb: acc.carb + (item.carb || 0) * q,
-        fat: acc.fat + (item.fat || 0) * q,
-      };
-    }, { cal: 0, pro: 0, carb: 0, fat: 0 });
-
-    const calEl = document.getElementById('recTotalCal');
-    const proEl = document.getElementById('recTotalPro');
-    const carbEl = document.getElementById('recTotalCarb');
-    const fatEl = document.getElementById('recTotalFat');
-    if (calEl) calEl.textContent = Math.round(totals.cal);
-    if (proEl) proEl.textContent = totals.pro.toFixed(1);
-    if (carbEl) carbEl.textContent = totals.carb.toFixed(1);
-    if (fatEl) fatEl.textContent = totals.fat.toFixed(1);
-  }
-
-  function saveCustomRecipe() {
-    const titleEl = document.getElementById('recipeTitleInput');
-    const title = (titleEl ? titleEl.value : '').trim();
-    if (!title) { showToast('Please enter a recipe name', 'error'); return; }
-    if (_selectedRecipeIngredients.length === 0) { showToast('Add at least one ingredient', 'error'); return; }
-
-    const totals = _selectedRecipeIngredients.reduce((acc, item) => {
-      const q = item.qty || 1;
-      return {
-        cal: acc.cal + (item.cal || 0) * q,
-        pro: acc.pro + (item.pro || 0) * q,
-        carb: acc.carb + (item.carb || 0) * q,
-        fat: acc.fat + (item.fat || 0) * q,
-        fiber: acc.fiber + (item.fiber || 0) * q,
-        sugar: acc.sugar + (item.sugar || 0) * q,
-        sodium: acc.sodium + (item.sodium || 0) * q,
-        chol: acc.chol + (item.chol || 0) * q,
-      };
-    }, { cal: 0, pro: 0, carb: 0, fat: 0, fiber: 0, sugar: 0, sodium: 0, chol: 0 });
-
-    const newRecipe = {
-      id: 'recipe_' + Date.now(),
-      name: '🍲 ' + title,
-      emoji: '🍲',
-      cal: Math.round(totals.cal),
-      pro: +totals.pro.toFixed(1),
-      carb: +totals.carb.toFixed(1),
-      fat: +totals.fat.toFixed(1),
-      fiber: +totals.fiber.toFixed(1),
-      sugar: +totals.sugar.toFixed(1),
-      sodium: Math.round(totals.sodium),
-      chol: Math.round(totals.chol),
-    };
-
-    closeRecipeModal();
-    showToast(`✓ Custom Recipe "${title}" saved!`, 'success');
-    triggerCelebration('goal');
-    addFoodToLog(newRecipe);
-  }
-
-  // Explicit global window exports for Custom Recipe Builder
-  window.openCreateRecipeModal = openCreateRecipeModal;
-  window.closeRecipeModal = closeRecipeModal;
-  window.searchRecipeIngredients = searchRecipeIngredients;
-  window.addIngredientToRecipe = addIngredientToRecipe;
-  window.removeIngredientFromRecipe = removeIngredientFromRecipe;
-  window.updateRecipeIngredientQty = updateRecipeIngredientQty;
-  window.saveCustomRecipe = saveCustomRecipe;
 
   window.dpSwitchTab = typeof dpSwitchTab !== 'undefined' ? dpSwitchTab : window.dpSwitchTab;
   window.exportLogsCSV = typeof exportLogsCSV !== 'undefined' ? exportLogsCSV : window.exportLogsCSV;
