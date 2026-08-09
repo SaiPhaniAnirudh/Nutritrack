@@ -61,6 +61,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script>
     window._BACKEND_URL = window.location.hostname.includes('localhost') || window.location.hostname.includes('127.0.0.1')
       ? 'http://127.0.0.1:5000'
@@ -109,6 +110,26 @@
       </div>
       <!-- FIX: added type="button" -->
       <button type="button" class="modal-btn" onclick="closeNonFoodModal()">Try Again</button>
+    </div>
+  </div>
+
+  <!-- LIVE CAMERA BARCODE SCANNER MODAL -->
+  <div id="barcodeScannerModal" class="modal-overlay" style="display:none">
+    <div class="modal-box" style="max-width:440px; text-align:center; padding:20px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h3 class="modal-title" style="margin:0;">📸 Scan Product Barcode</h3>
+        <button type="button" class="dp-close" onclick="closeBarcodeScannerModal()">✕</button>
+      </div>
+      <p style="font-size:0.85rem; color:#888; margin-bottom:14px;">Point camera at any packaged food or drink UPC code</p>
+      
+      <div id="barcodeCameraContainer" style="width:100%; min-height:220px; background:#000; border-radius:12px; overflow:hidden; position:relative;">
+        <div id="barcodeReader" style="width:100%;"></div>
+      </div>
+      
+      <div style="margin-top:16px; display:flex; gap:8px;">
+        <button type="button" class="modal-btn" style="background:var(--surface2, #2a2a2a); color:#fff;" onclick="manualBarcodePrompt()">⌨️ Manual Code</button>
+        <button type="button" class="modal-btn" onclick="closeBarcodeScannerModal()">Cancel</button>
+      </div>
     </div>
   </div>
 
@@ -886,9 +907,12 @@
           <h2>Your <span>History</span></h2>
           <p>Past 30 days of nutrition data</p>
         </div>
-        <button type="button" onclick="exportLogsCSV()" class="water-quick-btn"
-          style="font-size:0.82rem; padding:8px 16px; background:#3ecf8e; color:#0a0f0d; border:none; border-radius:10px; font-weight:700; cursor:pointer;">📥
-          Export CSV</button>
+        <div style="display:flex; gap:8px;">
+          <button type="button" onclick="exportHealthData()" class="water-quick-btn"
+            style="font-size:0.82rem; padding:8px 14px; background:#1c1c1e; color:#3ecf8e; border:1px solid #3ecf8e; border-radius:10px; font-weight:700; cursor:pointer;">🍎 Health Sync</button>
+          <button type="button" onclick="exportLogsCSV()" class="water-quick-btn"
+            style="font-size:0.82rem; padding:8px 16px; background:#3ecf8e; color:#0a0f0d; border:none; border-radius:10px; font-weight:700; cursor:pointer;">📥 Export CSV</button>
+        </div>
       </div>
 
       <!-- Weekly Insights Card -->

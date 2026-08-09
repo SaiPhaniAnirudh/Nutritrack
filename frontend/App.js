@@ -2269,30 +2269,120 @@ async function loadPopularFoodsFromCloud() {
 }
 
 // ─────────────────────────────────────────────────
-//  BARCODE SCANNER
+//  BARCODE SCANNER & HAPTICS & HEALTH SYNC
 // ─────────────────────────────────────────────────
+let _html5QrCode = null;
+
+function playHaptic(pattern = 50) {
+  try {
+    if ('vibrate' in navigator) {
+      navigator.vibrate(pattern);
+    }
+  } catch (e) {}
+}
+
 async function startBarcodeScan() {
-  let barcode = prompt('Scan or enter product barcode number:');
-  if (!barcode) return;
-  barcode = barcode.trim();
-  showLoader('Looking up barcode…');
-  const backendUrl = "https://nutritrack-k96f.onrender.com";
+  playHaptic(30);
+  const modal = document.getElementById('barcodeScannerModal');
+  if (!modal) return manualBarcodePrompt();
+  modal.style.display = 'flex';
+
+  if (typeof Html5Qrcode === 'undefined') {
+    return manualBarcodePrompt();
+  }
+
+  try {
+    if (_html5QrCode) {
+      try { await _html5QrCode.stop(); } catch(e){}
+    }
+    _html5QrCode = new Html5Qrcode("barcodeReader");
+    const config = { fps: 10, qrbox: { width: 250, height: 150 } };
+    
+    await _html5QrCode.start(
+      { facingMode: "environment" },
+      config,
+      async (decodedText) => {
+        playHaptic([50, 50, 50]);
+        closeBarcodeScannerModal();
+        await processScannedBarcode(decodedText);
+      },
+      (errorMessage) => {
+        // Scanning frame noise, ignore
+      }
+    );
+  } catch (err) {
+    console.warn('Camera barcode scanner error:', err);
+    closeBarcodeScannerModal();
+    manualBarcodePrompt();
+  }
+}
+
+async function closeBarcodeScannerModal() {
+  const modal = document.getElementById('barcodeScannerModal');
+  if (modal) modal.style.display = 'none';
+  if (_html5QrCode) {
+    try {
+      await _html5QrCode.stop();
+      _html5QrCode = null;
+    } catch(e) {}
+  }
+}
+
+function manualBarcodePrompt() {
+  closeBarcodeScannerModal();
+  let barcode = prompt('Enter product barcode (UPC / EAN):');
+  if (barcode && barcode.trim()) {
+    processScannedBarcode(barcode.trim());
+  }
+}
+
+async function processScannedBarcode(barcode) {
+  showLoader('Looking up product barcode…');
+  const backendUrl = window._BACKEND_URL || '';
   try {
     const res = await fetch(`${backendUrl}/api/foods/barcode/${encodeURIComponent(barcode)}`);
     hideLoader();
     if (res.ok) {
       const data = await res.json();
       if (data.found && data.item) {
+        playHaptic(100);
+        showToast(`Found: ${data.item.name}`, 'success');
         await addFoodToLog(data.item);
       } else {
-        showToast('Product not found for barcode', 'error');
+        showToast('Product not found in global database', 'error');
       }
     } else {
-      showToast('Product not found', 'error');
+      showToast('Product barcode lookup failed', 'error');
     }
   } catch (e) {
     hideLoader();
-    showToast('Barcode lookup failed', 'error');
+    showToast('Barcode server error', 'error');
+  }
+}
+
+async function exportHealthData() {
+  playHaptic(40);
+  showLoader('Preparing Apple Health / Health Connect data…');
+  const backendUrl = window._BACKEND_URL || '';
+  try {
+    const res = await _authFetch(`${backendUrl}/api/export/health`);
+    hideLoader();
+    if (res.ok) {
+      const data = await res.json();
+      const jsonStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", jsonStr);
+      downloadAnchor.setAttribute("download", `nutritrack_health_export_${new Date().toISOString().slice(0,10)}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      showToast(`Exported ${data.total_records || 0} nutrition logs for Health Sync`, 'success');
+    } else {
+      showToast('Could not export health data', 'error');
+    }
+  } catch (e) {
+    hideLoader();
+    showToast('Health data export failed', 'error');
   }
 }
 

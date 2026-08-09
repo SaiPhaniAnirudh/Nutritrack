@@ -912,58 +912,103 @@ def logs_summary():
 @app.route('/api/foods/search', methods=['GET'])
 def search_foods():
     """
-    Search the full base_foods table in Supabase (no JWT needed — public read).
+    Search base_foods table + Open Food Facts fallback.
     GET /api/foods/search?q=<query>&limit=20
-    Returns items normalized to the same shape as the frontend FOODS array
-    so the client can merge them without any transformation.
+    Returns items normalized to the FOODS shape.
     """
-    if not supabase:
-        return jsonify([])
-
     q = (request.args.get('q') or '').strip()
     limit = min(int(request.args.get('limit', 20)), 50)
 
     if len(q) < 2:
         return jsonify([])
 
-    # All matching/ranking now lives in the Postgres function
-    # search_foods_ranked() (word-boundary matching, trigram similarity,
-    # data-quality tiering, and legacy-unit deprioritization) — see
-    # migration 'search_foods_word_match_plus_trgm_rank'. Keeping this in
-    # the DB instead of Python means it's testable directly in SQL and one
-    # source of truth instead of duplicated logic.
-    try:
-        res = supabase.rpc('search_foods_ranked', {
-            'search_query': q,
-            'result_limit': limit,
-        }).execute()
-        rows = res.data or []
+    results = []
+    
+    # 1. Search local DB / Supabase base_foods first
+    if supabase:
+        try:
+            res = supabase.rpc('search_foods_ranked', {
+                'search_query': q,
+                'result_limit': limit,
+            }).execute()
+            rows = res.data or []
 
-        # Normalize to the FOODS shape the frontend expects
-        def normalize(row):
-            return {
-                'id':     f"db_{row.get('id', '')}",
-                'name':   (row.get('name') or '').title(),
-                'emoji':  '🍽️',                         # base_foods has no emoji
-                'cal':    round(float(row.get('calories') or 0), 1),
-                'pro':    round(float(row.get('protein')  or 0), 1),
-                'carb':   round(float(row.get('carbs')    or 0), 1),
-                'fat':    round(float(row.get('fat')      or 0), 1),
-                'fiber':  round(float(row.get('fiber')    or 0), 1),
-                'sugar':  round(float(row.get('sugar')    or 0), 1),
-                'sodium': round(float(row.get('sodium')   or 0), 1),
-                'chol':   round(float(row.get('chol')     or 0), 1),
-                'vit_d':  round(float(row.get('vit_d')  or 0), 1),
-                'iron':   round(float(row.get('iron')   or 0), 1),
-                'folate': round(float(row.get('folate') or 0), 1),
-                'cat':    'other',
-                'source': 'db',  # flag so frontend can label these "From Database"
-            }
+            def normalize_local(row):
+                return {
+                    'id':     f"db_{row.get('id', '')}",
+                    'name':   (row.get('name') or '').title(),
+                    'emoji':  '🍽️',
+                    'cal':    round(float(row.get('calories') or 0), 1),
+                    'pro':    round(float(row.get('protein')  or 0), 1),
+                    'carb':   round(float(row.get('carbs')    or 0), 1),
+                    'fat':    round(float(row.get('fat')      or 0), 1),
+                    'fiber':  round(float(row.get('fiber')    or 0), 1),
+                    'sugar':  round(float(row.get('sugar')    or 0), 1),
+                    'sodium': round(float(row.get('sodium')   or 0), 1),
+                    'chol':   round(float(row.get('chol')     or 0), 1),
+                    'vit_d':  round(float(row.get('vit_d')  or 0), 1),
+                    'iron':   round(float(row.get('iron')   or 0), 1),
+                    'folate': round(float(row.get('folate') or 0), 1),
+                    'cat':    'other',
+                    'source': 'db',
+                }
+            results.extend([normalize_local(r) for r in rows])
+        except Exception as e:
+            print(f"⚠️ local food search notice: {e}")
 
-        return jsonify([normalize(r) for r in rows])
-    except Exception as e:
-        print(f"⚠️ food search error: {e}")
-        return jsonify([])
+    # 2. If fewer than 3 local matches, query Open Food Facts Global API
+    if len(results) < 5:
+        try:
+            off_url = f"https://world.openfoodfacts.org/cgi/search.pl?search_terms={requests.utils.quote(q)}&search_simple=1&action=process&json=1&page_size=10"
+            off_res = requests.get(off_url, timeout=4, headers={'User-Agent': 'NutriTrack - PWA - Version 2.5'})
+            if off_res.status_code == 200:
+                off_data = off_res.json()
+                products = off_data.get('products', [])
+                for prod in products:
+                    pname = prod.get('product_name') or prod.get('product_name_en')
+                    if not pname:
+                        continue
+                    brand = prod.get('brands', '')
+                    full_title = f"{pname} ({brand})" if brand else pname
+                    nutriments = prod.get('nutriments', {})
+                    
+                    cal = float(nutriments.get('energy-kcal_100g') or nutriments.get('energy-kcal_serving') or 0)
+                    pro = float(nutriments.get('proteins_100g') or nutriments.get('proteins_serving') or 0)
+                    carb = float(nutriments.get('carbohydrates_100g') or nutriments.get('carbohydrates_serving') or 0)
+                    fat = float(nutriments.get('fat_100g') or nutriments.get('fat_serving') or 0)
+                    fiber = float(nutriments.get('fiber_100g') or nutriments.get('fiber_serving') or 0)
+                    sugar = float(nutriments.get('sugars_100g') or nutriments.get('sugars_serving') or 0)
+                    sodium = float(nutriments.get('sodium_100g') or nutriments.get('sodium_serving') or 0) * 1000
+
+                    # Skip zero-calorie empty stubs
+                    if cal == 0 and pro == 0 and carb == 0:
+                        continue
+
+                    barcode_id = prod.get('code') or prod.get('_id') or f"off_{len(results)}"
+                    results.append({
+                        'id': f"barcode_{barcode_id}",
+                        'name': full_title.title(),
+                        'emoji': '📦',
+                        'cal': round(cal, 1),
+                        'pro': round(pro, 1),
+                        'carb': round(carb, 1),
+                        'fat': round(fat, 1),
+                        'fiber': round(fiber, 1),
+                        'sugar': round(sugar, 1),
+                        'sodium': round(sodium, 1),
+                        'chol': 0.0,
+                        'vit_d': 0.0,
+                        'iron': 0.0,
+                        'folate': 0.0,
+                        'cat': 'packaged',
+                        'source': 'openfoodfacts',
+                    })
+                    if len(results) >= limit:
+                        break
+        except Exception as off_err:
+            print(f"⚠️ Open Food Facts search error: {off_err}")
+
+    return jsonify(results[:limit])
 
 
 @app.route('/api/foods/popular', methods=['GET'])
@@ -1034,16 +1079,19 @@ def lookup_food():
 
 @app.route('/api/foods/barcode/<string:barcode>', methods=['GET'])
 def barcode_food(barcode):
-    """Fetch product nutrition from Open Food Facts API by barcode."""
+    """Fetch product nutrition from Open Food Facts API by barcode with multi-tier fallback."""
     barcode = barcode.strip()
     if not barcode:
         return jsonify({'found': False, 'error': 'Barcode required'}), 400
 
     try:
-        url = f"https://world.openfoodfacts.org/api/v0/product/{barcode}.json"
-        res = requests.get(url, timeout=6, headers={'User-Agent': 'NutriTrack - WebApp - Version 2.0'})
+        url = f"https://world.openfoodfacts.org/api/v2/product/{barcode}.json"
+        res = requests.get(url, timeout=6, headers={'User-Agent': 'NutriTrack - PWA - Version 2.5'})
         if res.status_code != 200:
-            return jsonify({'found': False, 'error': 'Product lookup failed'}), 404
+            url_v0 = f"https://world.openfoodfacts.org/api/v0/product/{barcode}.json"
+            res = requests.get(url_v0, timeout=6, headers={'User-Agent': 'NutriTrack - PWA - Version 2.5'})
+            if res.status_code != 200:
+                return jsonify({'found': False, 'error': 'Product lookup failed'}), 404
 
         data = res.json()
         if data.get('status') != 1 or 'product' not in data:
@@ -1052,20 +1100,25 @@ def barcode_food(barcode):
         product = data['product']
         nutriments = product.get('nutriments', {})
 
-        name = product.get('product_name') or product.get('product_name_en') or f"Product #{barcode}"
+        pname = product.get('product_name') or product.get('product_name_en') or f"Product #{barcode}"
+        brand = product.get('brands') or ''
+        full_name = f"{pname} ({brand})" if brand else pname
         
-        # Open Food Facts nutrient values per 100g or per serving
         cal = float(nutriments.get('energy-kcal_100g') or nutriments.get('energy-kcal_serving') or 0)
         pro = float(nutriments.get('proteins_100g') or nutriments.get('proteins_serving') or 0)
         carb = float(nutriments.get('carbohydrates_100g') or nutriments.get('carbohydrates_serving') or 0)
         fat = float(nutriments.get('fat_100g') or nutriments.get('fat_serving') or 0)
         fiber = float(nutriments.get('fiber_100g') or nutriments.get('fiber_serving') or 0)
         sugar = float(nutriments.get('sugars_100g') or nutriments.get('sugars_serving') or 0)
-        sodium = float(nutriments.get('sodium_100g') or nutriments.get('sodium_serving') or 0) * 1000  # g to mg
+        sodium = float(nutriments.get('sodium_100g') or nutriments.get('sodium_serving') or 0) * 1000
+        chol = float(nutriments.get('cholesterol_100g') or nutriments.get('cholesterol_serving') or 0) * 1000
+
+        iron = float(nutriments.get('iron_100g') or nutriments.get('iron_serving') or 0) * 1000
+        vit_d = float(nutriments.get('vitamin-d_100g') or nutriments.get('vitamin-d_serving') or 0)
 
         item = {
             'id': f"barcode_{barcode}",
-            'name': name.title(),
+            'name': full_name.title(),
             'emoji': '📦',
             'cal': round(cal, 1),
             'pro': round(pro, 1),
@@ -1074,9 +1127,9 @@ def barcode_food(barcode):
             'fiber': round(fiber, 1),
             'sugar': round(sugar, 1),
             'sodium': round(sodium, 1),
-            'chol': 0.0,
-            'vit_d': 0.0,
-            'iron': 0.0,
+            'chol': round(chol, 1),
+            'vit_d': round(vit_d, 1),
+            'iron': round(iron, 1),
             'folate': 0.0,
             'cat': 'packaged',
             'source': 'barcode',
@@ -1085,6 +1138,46 @@ def barcode_food(barcode):
     except Exception as e:
         print(f"⚠️ Barcode lookup error: {e}")
         return jsonify({'found': False, 'error': str(e)}), 500
+
+
+@app.route('/api/export/health', methods=['GET'])
+@jwt_required()
+def export_health_data():
+    """Export user's food logs formatted for Apple Health & Google Health Connect sync."""
+    uid = get_jwt_identity()
+    try:
+        logs = FoodLog.query.filter_by(user_id=uid).order_by(FoodLog.date.desc()).all()
+        
+        exported_records = []
+        for l in logs:
+            exported_records.append({
+                'date': l.date,
+                'logged_at': l.logged_at.isoformat() if l.logged_at else l.date,
+                'food_name': l.name,
+                'meal_type': l.meal_type,
+                'metrics': {
+                    'energy_kcal': l.cal,
+                    'protein_g': l.pro,
+                    'carbohydrates_g': l.carb,
+                    'fat_total_g': l.fat,
+                    'dietary_fiber_g': l.fiber,
+                    'sugar_g': l.sugar,
+                    'sodium_mg': l.sodium,
+                    'cholesterol_mg': l.chol
+                }
+            })
+            
+        return jsonify({
+            'source': 'NutriTrack',
+            'version': '2.5.0',
+            'user_id': uid,
+            'exported_at': datetime.now(timezone.utc).isoformat(),
+            'total_records': len(exported_records),
+            'data': exported_records
+        })
+    except Exception as e:
+        print(f"⚠️ Health export error: {e}")
+        return jsonify({'error': 'Could not export health data'}), 500
 
 
 # ══════════════════════════════════════════════════
