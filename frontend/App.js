@@ -4663,35 +4663,48 @@ if (typeof window !== 'undefined') {
 
   function openCreateRecipeModal() {
     _selectedRecipeIngredients = [];
-    document.getElementById('recipeTitleInput').value = '';
-    document.getElementById('recipeIngSearch').value = '';
-    document.getElementById('recipeIngSearchResults').innerHTML = '';
+    const titleInput = document.getElementById('recipeTitleInput');
+    const ingSearch = document.getElementById('recipeIngSearch');
+    const ingResults = document.getElementById('recipeIngSearchResults');
+    if (titleInput) titleInput.value = '';
+    if (ingSearch) ingSearch.value = '';
+    if (ingResults) ingResults.innerHTML = '';
     _renderSelectedRecipeIngredients();
-    document.getElementById('recipeModal').style.display = 'flex';
+    const modal = document.getElementById('recipeModal');
+    if (modal) {
+      modal.style.display = 'flex';
+      modal.classList.add('open');
+    }
   }
 
   function closeRecipeModal() {
-    document.getElementById('recipeModal').style.display = 'none';
+    const modal = document.getElementById('recipeModal');
+    if (modal) {
+      modal.style.display = 'none';
+      modal.classList.remove('open');
+    }
   }
 
   async function searchRecipeIngredients(query) {
     const q = (query || '').toLowerCase().trim();
     const resEl = document.getElementById('recipeIngSearchResults');
-    if (!q) { resEl.innerHTML = ''; return; }
+    if (!q) { if (resEl) resEl.innerHTML = ''; return; }
 
     try {
       const res = await fetch(`${window._BACKEND_URL || ''}/api/foods/search?q=${encodeURIComponent(q)}&limit=5`);
       const foods = await res.json();
       if (!foods || foods.length === 0) {
-        resEl.innerHTML = `<div style="font-size:0.75rem; color:var(--mist); padding:4px;">No matching ingredients</div>`;
+        if (resEl) resEl.innerHTML = `<div style="font-size:0.75rem; color:var(--mist); padding:4px;">No matching ingredients</div>`;
         return;
       }
-      resEl.innerHTML = foods.map((f, idx) => `
-      <div onclick="addIngredientToRecipe(${idx})" style="padding:6px 10px; background:rgba(255,255,255,0.05); border-radius:6px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; font-size:0.8rem; color:#fff;">
-        <span>🍽️ ${f.name}</span>
-        <span style="color:#F5A623; font-weight:700;">${f.cal} kcal</span>
-      </div>
-    `).join('');
+      if (resEl) {
+        resEl.innerHTML = foods.map((f, idx) => `
+        <div onclick="addIngredientToRecipe(${idx})" style="padding:6px 10px; background:rgba(255,255,255,0.05); border-radius:6px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; font-size:0.8rem; color:#fff;">
+          <span>🍽️ ${f.name}</span>
+          <span style="color:#F5A623; font-weight:700;">${f.cal} kcal</span>
+        </div>
+      `).join('');
+      }
       window._tempRecipeSearch = foods;
     } catch (e) { console.error('Recipe search err:', e); }
   }
@@ -4699,14 +4712,12 @@ if (typeof window !== 'undefined') {
   function addIngredientToRecipe(idx) {
     const item = window._tempRecipeSearch && window._tempRecipeSearch[idx];
     if (item) {
-      // qty is a multiplier on this ingredient's base DB values (e.g. 1.5 =
-      // one and a half times the searched serving). Without this, every
-      // ingredient was silently counted as exactly 1x its raw database
-      // value, so recipe totals were wrong for any real-world portion size.
       _selectedRecipeIngredients.push({ ...item, qty: 1 });
       _renderSelectedRecipeIngredients();
-      document.getElementById('recipeIngSearchResults').innerHTML = '';
-      document.getElementById('recipeIngSearch').value = '';
+      const resEl = document.getElementById('recipeIngSearchResults');
+      const searchEl = document.getElementById('recipeIngSearch');
+      if (resEl) resEl.innerHTML = '';
+      if (searchEl) searchEl.value = '';
     }
   }
 
@@ -4723,6 +4734,7 @@ if (typeof window !== 'undefined') {
 
   function _renderSelectedRecipeIngredients() {
     const listEl = document.getElementById('recipeSelectedList');
+    if (!listEl) return;
     if (_selectedRecipeIngredients.length === 0) {
       listEl.innerHTML = `No ingredients added yet. Search above to add foods!`;
     } else {
@@ -4748,14 +4760,19 @@ if (typeof window !== 'undefined') {
       };
     }, { cal: 0, pro: 0, carb: 0, fat: 0 });
 
-    document.getElementById('recTotalCal').textContent = Math.round(totals.cal);
-    document.getElementById('recTotalPro').textContent = totals.pro.toFixed(1);
-    document.getElementById('recTotalCarb').textContent = totals.carb.toFixed(1);
-    document.getElementById('recTotalFat').textContent = totals.fat.toFixed(1);
+    const calEl = document.getElementById('recTotalCal');
+    const proEl = document.getElementById('recTotalPro');
+    const carbEl = document.getElementById('recTotalCarb');
+    const fatEl = document.getElementById('recTotalFat');
+    if (calEl) calEl.textContent = Math.round(totals.cal);
+    if (proEl) proEl.textContent = totals.pro.toFixed(1);
+    if (carbEl) carbEl.textContent = totals.carb.toFixed(1);
+    if (fatEl) fatEl.textContent = totals.fat.toFixed(1);
   }
 
   function saveCustomRecipe() {
-    const title = (document.getElementById('recipeTitleInput').value || '').trim();
+    const titleEl = document.getElementById('recipeTitleInput');
+    const title = (titleEl ? titleEl.value : '').trim();
     if (!title) { showToast('Please enter a recipe name', 'error'); return; }
     if (_selectedRecipeIngredients.length === 0) { showToast('Add at least one ingredient', 'error'); return; }
 
@@ -4793,7 +4810,7 @@ if (typeof window !== 'undefined') {
     addFoodToLog(newRecipe);
   }
 
-  // Window attachments
+  // Explicit global window exports for Custom Recipe Builder
   window.openCreateRecipeModal = openCreateRecipeModal;
   window.closeRecipeModal = closeRecipeModal;
   window.searchRecipeIngredients = searchRecipeIngredients;
