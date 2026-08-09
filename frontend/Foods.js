@@ -847,15 +847,22 @@ const FOODS = [
   {name:"Beetroot (boiled, 100g)",       cat:"veg",emoji:"🫚",cal:44, pro:2, carb:10,fat:0.2,fiber:2,  sugar:7,  sodium:77,  chol:0, vit_d:0.0, iron:0.3, folate:41.2},
   {name:"Artichoke (boiled, 100g)",      cat:"veg",emoji:"🌿",cal:53, pro:4, carb:12,fat:0.2,fiber:7,  sugar:1,  sodium:60,  chol:0, vit_d:0.0, iron:0.8, folate:43.2},
   {name:"Kale (100g)",                   cat:"veg",emoji:"🥬",cal:49, pro:4, carb:9, fat:1,  fiber:4,  sugar:2,  sodium:38,  chol:0, vit_d:0.0, iron:3.9, folate:124.2},
-  {name:"Sweet Corn (boiled, 100g)",     cat:"veg",emoji:"🌽",cal:96, pro:3, carb:21,fat:1,  fiber:2,  sugar:6,  sodium:15,  chol:0, vit_d:0.0, iron:0.4, folate:41.4},
-
+  // ── PACKAGED FOODS ──
+  {name:"Lay's Classic Potato Chips",    cat:"packaged",emoji:"📦",cal:536,pro:7,   carb:53,fat:35, fiber:4.3,sugar:1,  sodium:525, chol:0, vit_d:0.0, iron:0.5, folate:0},
+  {name:"Doritos Nacho Cheese Chips",    cat:"packaged",emoji:"📦",cal:535,pro:7.1, carb:57,fat:32, fiber:3.6,sugar:2,  sodium:535, chol:0, vit_d:0.0, iron:0.4, folate:0},
+  {name:"Oreo Sandwich Cookies",         cat:"packaged",emoji:"📦",cal:470,pro:4.5, carb:70,fat:20, fiber:2.5,sugar:38, sodium:430, chol:0, vit_d:0.0, iron:1.2, folate:0},
+  {name:"Pringles Original Chips",       cat:"packaged",emoji:"📦",cal:528,pro:4.2, carb:53,fat:33, fiber:3.1,sugar:1,  sodium:528, chol:0, vit_d:0.0, iron:0.3, folate:0},
+  {name:"Coca-Cola Classic Soda (330ml)",cat:"packaged",emoji:"🥤",cal:139,pro:0,   carb:35,fat:0,  fiber:0,  sugar:35, sodium:10,  chol:0, vit_d:0.0, iron:0.0, folate:0},
+  {name:"KitKat Chocolate Bar",          cat:"packaged",emoji:"🍫",cal:518,pro:6.5, carb:64,fat:26, fiber:2,  sugar:48, sodium:95,  chol:10,vit_d:0.0, iron:0.5, folate:0},
+  {name:"Snickers Chocolate Bar",        cat:"packaged",emoji:"🍫",cal:488,pro:8.6, carb:60,fat:24, fiber:2.3,sugar:51, sodium:235, chol:10,vit_d:0.0, iron:0.6, folate:0},
+  {name:"Nutella Hazelnut Spread",       cat:"packaged",emoji:"🫙",cal:539,pro:6.3, carb:57,fat:30, fiber:3,  sugar:56, sodium:42,  chol:5, vit_d:0.0, iron:0.8, folate:0},
 
 ];
 
 const CATEGORIES = [
   {key:'all',        label:'All'},
   {key:'packaged',   label:'📦 Packaged Foods'},
-  {key:'indian',     label:'🇮🇳 Indian'},
+  {key:'indian',     label:'🍛 Indian'},
   {key:'fruit',      label:'🍎 Fruits'},
   {key:'veg',        label:'🥦 Veggies'},
   {key:'protein',    label:'🍗 Protein'},
@@ -871,15 +878,15 @@ const CATEGORIES = [
   {key:'mexican',    label:'🌮 Mexican'},
   {key:'thai',       label:'🍜 Thai'},
   {key:'korean',     label:'🥢 Korean'},
-  {key:'middleeast', label:'🫓 Middle East'},
+  {key:'middleeast', label:'🥙 Middle East'},
   {key:'african',    label:'🌍 African'},
   {key:'american',   label:'🍔 American'},
-  {key:'spanish',    label:'🇪🇸 Spanish'},
-  {key:'greek',      label:'🇬🇷 Greek'},
-  {key:'vietnamese', label:'🇻🇳 Vietnamese'},
-  {key:'turkish',    label:'🇹🇷 Turkish'},
-  {key:'french',     label:'🇫🇷 French'},
-  {key:'brazilian',  label:'🇧🇷 Brazilian'},
+  {key:'spanish',    label:'🥘 Spanish'},
+  {key:'greek',      label:'🥗 Greek'},
+  {key:'vietnamese', label:'🍜 Vietnamese'},
+  {key:'turkish',    label:'🥙 Turkish'},
+  {key:'french',     label:'🥐 French'},
+  {key:'brazilian',  label:'🥩 Brazilian'},
 ];
 
 // Daily reference values for RDI % display

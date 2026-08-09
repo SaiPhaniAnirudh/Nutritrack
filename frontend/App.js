@@ -1910,7 +1910,7 @@ async function searchFoods(query = '', page = 0) {
   if (q) {
     localMatches = localMatches.filter(f => f.name.toLowerCase().includes(q));
   }
-  if (localMatches.length === 0) {
+  if (localMatches.length === 0 && currentCat === 'all' && !q) {
     localMatches = Array.isArray(FOODS) ? FOODS.slice(0, 24) : [];
   } else if (currentCat === 'all' && !q) {
     localMatches = localMatches.slice(0, 24);
