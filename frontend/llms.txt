@@ -1,0 +1,18 @@
+# NutriTrack — AI Food & Macro Intelligence
+
+> NutriTrack is a privacy-first, AI-powered nutrition and macro tracking web application with Open Food Facts integration, live camera barcode scanning, and multi-modal AI vision meal analysis.
+
+## Core Features & Capabilities
+
+- **AI Vision Meal Recognition:** Multi-modal VLM analysis for dish detection, macro estimation, and portion calculation.
+- **Open Food Facts Barcode Lookup:** Access to 3,000,000+ commercial packaged consumer foods with live UPC scanning.
+- **Custom Recipe Builder:** Combine multiple raw ingredients and automatically calculate total calories, protein, carbs, and fats.
+- **Wearable & Health Sync:** Background live auto-sync with Google Fit, Android Health Connect, and Apple Health exports.
+- **Restaurant Menu AI:** Photo OCR scanning for physical restaurant menus with database RAG nutrient enrichment.
+
+## API Endpoints & Resources
+
+- [NutriTrack Web App](https://nutritrack-rho-rust.vercel.app/)
+- [Health Data Export API](https://nutritrack-rho-rust.vercel.app/api/export/health)
+- [Open Food Facts Database](https://world.openfoodfacts.org/)
+- [Google Health Connect Docs](https://developer.android.com/health-and-fitness/guides/health-connect)

@@ -36,6 +36,8 @@
   <link rel="apple-touch-icon" href="/icons/icon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net">
+  <link rel="preconnect" href="https://unpkg.com">
   <link rel="stylesheet" href="/Style.css?v=19">
   <link
     href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;0,9..144,900;1,9..144,300&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
@@ -59,9 +61,9 @@
   }
   </script>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
-  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js" defer></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" defer></script>
   <script>
     window._BACKEND_URL = window.location.hostname.includes('localhost') || window.location.hostname.includes('127.0.0.1')
       ? 'http://127.0.0.1:5000'
@@ -490,10 +492,9 @@
     <nav class="topnav">
       <div class="nav-brand">
         <a href="/" style="display: flex; align-items: center; text-decoration: none;">
-          <img src="/logo-nav.png" alt="NutriTrack" style="height: 32px; width: auto;" />
+          <img src="/logo-nav.png" alt="NutriTrack Logo" width="36" height="32" style="height: 32px; width: auto;" />
         </a>
-        <!-- Brand name commented out because it is built into the logo image -->
-        <!-- <span class="nav-brand-name">NutriTrack</span> -->
+        <h1 style="position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); border:0;">NutriTrack — AI Food & Macro Intelligence</h1>
       </div>
       <div class="nav-center">
         <!-- FIX: added type="button" to all nav buttons -->
@@ -539,6 +540,9 @@
         <button type="button" class="logout-link" onclick="handleLogout()">Sign out</button>
       </div>
     </nav>
+
+    <!-- MAIN LANDMARK CONTENT -->
+    <main id="mainContent" role="main">
 
     <!-- ══════════════════════
        DASHBOARD
@@ -1161,12 +1165,13 @@
                 style="font-size:0.75rem; padding:4px 10px;">+ Log Weight</button>
             </div>
           </div>
-          <div class="chart-wrap" style="height:220px; margin-top:0.8rem;"><canvas id="weightChart"></canvas></div>
+            <div class="chart-wrap" style="height:220px; margin-top:0.8rem;"><canvas id="weightChart"></canvas></div>
         </div>
 
         <!-- Achievements moved to a navbar widget/modal (see #achievementsModal) -->
       </div>
-    </div>
+      </div>
+    </main>
 
     <!-- GLOBAL FOOTER -->
     <footer class="app-footer">
