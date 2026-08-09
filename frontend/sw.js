@@ -14,18 +14,15 @@
  *   - Images                           → Stale While Revalidate
  */
 
-const CACHE_NAME = 'nutritrack-v19';
-// Content responses (response.ok is true for 206 too, but the Cache API rejects it outright) —
-// this threw an uncaught promise rejection on every matching request. Now explicitly skipped.
-// does not exist (only logo-auth.svg does) — cache.addAll() is atomic, so that single 404 rejected the
-// whole install() call and silently killed precaching of the ENTIRE app shell, including logo-nav.png.
-// Bumping the version forces every client (even ones stuck on the broken SW) to re-run install() clean.
+const CACHE_NAME = 'nutritrack-v20';
 const APP_SHELL = [
   '/',
   '/index.html',
   '/Style.css',
   '/App.js',
   '/Foods.js',
+  '/i18n.js',
+  '/llms.txt',
   '/manifest.json',
   '/logo-nav.png',
   '/logo-auth.svg',
@@ -94,7 +91,15 @@ self.addEventListener('fetch', (event) => {
           }
           return response;
         })
-        .catch(() => caches.match(req))
+        .catch(() =>
+          caches.match(req).then((cached) => {
+            if (cached) return cached;
+            return new Response(
+              JSON.stringify({ offline: true, message: 'You are currently offline. Showing cached app data.' }),
+              { headers: { 'Content-Type': 'application/json' }, status: 200 }
+            );
+          })
+        )
     );
     return;
   }
