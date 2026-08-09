@@ -2,7 +2,7 @@
 
 > **AI-Powered Nutrition Tracker** — Scan any meal photo to instantly detect multiple food items, estimate calories/macros, and track daily nutrition goals against a verified USDA-backed food database.
 
-![AI](https://img.shields.io/badge/AI-Gemini%20%2B%20llava--phi3-brightgreen) ![Flask](https://img.shields.io/badge/Backend-Flask-blue) ![Postgres](https://img.shields.io/badge/DB-Supabase%20Postgres-3ecf8e) ![PWA](https://img.shields.io/badge/PWA-ready-purple) ![Accuracy](https://img.shields.io/badge/DB%20Accuracy-97%25%20verified-success)
+![AI](https://img.shields.io/badge/AI-Gemini%20%2B%20llava--phi3-brightgreen) ![Flask](https://img.shields.io/badge/Backend-Flask-blue) ![Postgres](https://img.shields.io/badge/DB-Supabase%20Postgres-3ecf8e) ![PWA](https://img.shields.io/badge/PWA-ready-purple) ![Accuracy](https://img.shields.io/badge/DB%20Accuracy-90%25%20verified-success)
 
 ---
 
@@ -53,7 +53,7 @@ is fixed; see the case study for how it was found.
 - 🍲 **Custom Recipe Builder** — combine searched ingredients with per-ingredient quantity scaling into a saved recipe with auto-calculated totals.
 - 🤖 **Dual AI Inference Path** — Gemini 1.5 Flash fast-path (when configured) with automatic fallback to a self-hosted `llava-phi3` / Moondream2 pipeline. See the engine comparison table below.
 - 🛡️ **SigLIP Food-Only Rejection Guard** — a zero-shot classifier filters out non-food uploads before they reach the LLM.
-- 🎯 **Verified Food Database Accuracy** — ~15,000 USDA FoodData Central entries, ranked via Postgres trigram search plus a hand-verified alias table, with a **reproducible, documented 97% accuracy audit** (see below) — not just an accuracy claim.
+- 🎯 **Verified Food Database Accuracy** — ~15,000 USDA FoodData Central entries, ranked via Postgres trigram search plus a hand-verified alias table, with a **reproducible, documented 90% accuracy audit** (see below) — not just an accuracy claim.
 - 🍛 **Deep Indian Cuisine Coverage** — 100+ regional dishes (Biryani, Dosa, Dal, Paratha, Poha, and more), each individually verified against reference values, not auto-matched.
 - 🧮 **Full Nutrient Tracking** — Calories, Protein, Carbs, Fat, Fiber, Sugar, Sodium, Cholesterol, plus Iron, Folate, and Vitamin D.
 - 📊 **Progress History & Streaks** — daily calorie budget bars, weekly macro breakdowns, and consecutive-day logging streaks.
@@ -70,7 +70,7 @@ NutriTrack's nutrition data is backed by ~15,000 USDA FoodData Central entries (
 
 To make that claim verifiable rather than just asserted, the repo includes a reproducible accuracy audit (`scripts/accuracy_audit.py`): 30 generic foods, checked against USDA reference calorie values, using the same "% within 5% of reference" methodology used in public comparisons of MyFitnessPal and Cronometer.
 
-**Result: 29/30 (97%) within 5% of USDA reference values** — see [`ACCURACY_AUDIT.md`](./ACCURACY_AUDIT.md) for the full breakdown.
+**Result: 27/30 (90%) within 5% of USDA reference values** — see [`ACCURACY_AUDIT.md`](./ACCURACY_AUDIT.md) for the full breakdown.
 
 Getting there wasn't a straight line — a seeding bug, three ranking-algorithm iterations, a two-unit-system data collision, and a bad batch of auto-generated corrections all had to be found and fixed. Full debugging log: [`CASE_STUDY.md`](./CASE_STUDY.md).
 

@@ -124,10 +124,14 @@ ingredient.
 
 ## Final result
 
-**Documented accuracy: 26/30 (87%) on first re-audit, effectively 29/30
-(97%) once one bad reference value in my own audit script — not the
-app — was corrected.** Full methodology and raw results in
-[`ACCURACY_AUDIT.md`](./ACCURACY_AUDIT.md).
+**Documented accuracy: 27/30 (90%)** on the current committed audit —
+see [`ACCURACY_AUDIT.md`](./ACCURACY_AUDIT.md) for the full breakdown.
+The 3 remaining misses (peanut butter, cottage cheese, walnuts) are each
+matched to the *correct* food — the gap is real brand/cultivar nutrition
+variance exceeding the audit's strict 5% bar, not a wrong-food bug. An
+earlier draft of this document claimed "effectively 29/30" by treating
+two of those as close enough to round away; that was editorializing a
+number that should just be reported as what the audit actually says.
 
 ## What this actually demonstrates
 
