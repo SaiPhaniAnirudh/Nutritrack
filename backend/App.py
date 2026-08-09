@@ -956,22 +956,43 @@ def search_foods():
         except Exception as e:
             print(f"⚠️ local food search notice: {e}")
 
-    # 2. If fewer than 3 local matches, query Open Food Facts Global API
+    # 2. If fewer than 5 local matches, query Open Food Facts Global API
     if len(results) < 5:
         try:
-            off_url = f"https://world.openfoodfacts.org/cgi/search.pl?search_terms={requests.utils.quote(q)}&search_simple=1&action=process&json=1&page_size=10"
-            off_res = requests.get(off_url, timeout=4, headers={'User-Agent': 'NutriTrack - PWA - Version 2.5'})
-            if off_res.status_code == 200:
-                off_data = off_res.json()
+            # Replace spaces with '+' for clean query parameters (prevents 503 HTML errors on multi-word searches)
+            q_param = requests.utils.quote(q.replace(' ', '+')).replace('%2B', '+')
+            headers = {'User-Agent': 'NutriTrack - WebApp - Version 2.5 (contact: support@nutritrack.app)'}
+            
+            # Prefer US/EN endpoint for clean English product names; fall back to World endpoint
+            off_url = f"https://us.openfoodfacts.org/cgi/search.pl?search_terms={q_param}&search_simple=1&action=process&json=1&page_size=15&lc=en"
+            off_res = None
+            try:
+                off_res = requests.get(off_url, timeout=4, headers=headers)
+            except Exception:
+                off_res = None
+
+            if not off_res or off_res.status_code != 200:
+                world_url = f"https://world.openfoodfacts.org/cgi/search.pl?search_terms={q_param}&search_simple=1&action=process&json=1&page_size=15&lc=en&sort_by=unique_scans_n"
+                off_res = requests.get(world_url, timeout=4, headers=headers)
+
+            if off_res and off_res.status_code == 200:
+                try:
+                    off_data = off_res.json()
+                except Exception:
+                    off_data = {}
                 products = off_data.get('products', [])
                 for prod in products:
-                    pname = prod.get('product_name') or prod.get('product_name_en')
+                    pname = (prod.get('product_name_en') or prod.get('product_name') or '').strip()
                     if not pname:
                         continue
-                    brand = prod.get('brands', '')
-                    full_title = f"{pname} ({brand})" if brand else pname
-                    nutriments = prod.get('nutriments', {})
                     
+                    brand = (prod.get('brands') or '').split(',')[0].strip()
+                    if brand and brand.lower() not in pname.lower():
+                        full_title = f"{brand} - {pname}"
+                    else:
+                        full_title = pname
+
+                    nutriments = prod.get('nutriments', {})
                     cal = float(nutriments.get('energy-kcal_100g') or nutriments.get('energy-kcal_serving') or 0)
                     pro = float(nutriments.get('proteins_100g') or nutriments.get('proteins_serving') or 0)
                     carb = float(nutriments.get('carbohydrates_100g') or nutriments.get('carbohydrates_serving') or 0)
@@ -980,7 +1001,7 @@ def search_foods():
                     sugar = float(nutriments.get('sugars_100g') or nutriments.get('sugars_serving') or 0)
                     sodium = float(nutriments.get('sodium_100g') or nutriments.get('sodium_serving') or 0) * 1000
 
-                    # Skip zero-calorie empty stubs
+                    # Skip zero-calorie empty stubs or incomplete products
                     if cal == 0 and pro == 0 and carb == 0:
                         continue
 
