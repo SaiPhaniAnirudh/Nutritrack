@@ -854,6 +854,7 @@ const FOODS = [
 
 const CATEGORIES = [
   {key:'all',        label:'All'},
+  {key:'packaged',   label:'📦 Packaged Foods'},
   {key:'indian',     label:'🇮🇳 Indian'},
   {key:'fruit',      label:'🍎 Fruits'},
   {key:'veg',        label:'🥦 Veggies'},

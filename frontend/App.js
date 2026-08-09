@@ -1926,7 +1926,22 @@ async function searchFoods(query = '', page = 0) {
 
   try {
     let dbFetched = [];
-    if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+    
+    // If packaged category or query typed, query backend search API (which connects to Open Food Facts)
+    const effectiveQuery = q || (currentCat === 'packaged' ? 'chips' : '');
+    if (effectiveQuery || currentCat === 'packaged') {
+      try {
+        const backendUrl = window._BACKEND_URL || '';
+        const apiRes = await fetch(`${backendUrl}/api/foods/search?q=${encodeURIComponent(effectiveQuery || 'snack')}&limit=30`);
+        if (apiRes.ok) {
+          dbFetched = await apiRes.json();
+        }
+      } catch (apiErr) {
+        console.warn('Backend search API notice:', apiErr);
+      }
+    }
+
+    if (dbFetched.length === 0 && typeof supabaseClient !== 'undefined' && supabaseClient) {
       let qBuilder = supabaseClient.from('base_foods').select('*', { count: 'exact' });
 
       if (currentCat !== 'all') {
@@ -1935,7 +1950,7 @@ async function searchFoods(query = '', page = 0) {
           'protein': 'protein', 'grain': 'grain', 'grains': 'grain', 'dairy': 'dairy',
           'snack': 'snack', 'snacks': 'snack', 'legume': 'legume', 'legumes': 'legume',
           'drink': 'drink', 'drinks': 'drink', 'fastfood': 'fastfood', 'fast food': 'fastfood',
-          'indian': 'indian'
+          'indian': 'indian', 'packaged': 'packaged'
         };
         const dbCat = catMap[currentCat] || currentCat;
         qBuilder = qBuilder.eq('category', dbCat);
