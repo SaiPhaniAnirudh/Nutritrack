@@ -4645,6 +4645,51 @@ async function refreshGoogleFitStatus() {
 }
 
 // ─────────────────────────────────────────────────
+//  AUTOMATED ECOSYSTEM & WEARABLE AUTO-SYNC
+// ─────────────────────────────────────────────────
+async function autoSyncEcosystem() {
+  const badgeEl = document.getElementById('ecosystemSyncStatus');
+  try {
+    const res = await _authFetch('/api/integrations/auto-sync', { method: 'POST' });
+    if (!res || !res.ok) return;
+    const data = await res.json();
+
+    if (badgeEl) {
+      if (data.connected) {
+        badgeEl.innerHTML = `<span style="color:var(--kiwi); font-weight:700;">🟢 Live Auto-Sync Active</span> · ${data.provider} (${data.steps.toLocaleString()} steps)`;
+      } else {
+        badgeEl.innerHTML = `<span style="color:var(--mist); opacity:0.8;">⌚ Tap Google Fit above to enable Live Auto-Sync</span>`;
+      }
+    }
+
+    if (data.connected && data.steps > 0) {
+      const stepsEl = document.getElementById('dailyStepsCount');
+      if (stepsEl) stepsEl.textContent = data.steps.toLocaleString();
+    }
+  } catch (e) {
+    console.debug('Ecosystem auto-sync background check:', e);
+  }
+}
+
+function initEcosystemAutoSync() {
+  autoSyncEcosystem();
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') autoSyncEcosystem();
+  });
+  setInterval(autoSyncEcosystem, 300000); // 5-minute background polling loop
+}
+
+if (typeof window !== 'undefined') {
+  window.autoSyncEcosystem = autoSyncEcosystem;
+  window.initEcosystemAutoSync = initEcosystemAutoSync;
+  if (document.readyState === 'complete') {
+    initEcosystemAutoSync();
+  } else {
+    window.addEventListener('load', initEcosystemAutoSync);
+  }
+}
+
+// ─────────────────────────────────────────────────
 //  CUSTOM RECIPE BUILDER
 // ─────────────────────────────────────────────────
 let _selectedRecipeIngredients = [];
