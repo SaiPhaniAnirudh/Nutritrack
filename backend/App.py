@@ -62,6 +62,27 @@ from flask import Flask, request, jsonify, send_from_directory
 from flask_compress import Compress
 from flask_cors import CORS
 
+# Error tracking — catches exceptions in production instead of them only
+# showing up in Render logs (which nobody watches in real time). No-ops
+# cleanly if the SDK isn't installed or SENTRY_DSN isn't configured, so
+# local dev and any environment without it keep working unchanged.
+_sentry_dsn = os.getenv('SENTRY_DSN')
+if _sentry_dsn:
+    try:
+        import sentry_sdk
+        from sentry_sdk.integrations.flask import FlaskIntegration
+        sentry_sdk.init(
+            dsn=_sentry_dsn,
+            integrations=[FlaskIntegration()],
+            traces_sample_rate=0.1,  # 10% perf tracing is enough signal without burning quota
+            environment=os.getenv('ENVIRONMENT', 'production'),
+        )
+        print("  Sentry error tracking active")
+    except ImportError:
+        print("  SENTRY_DSN set but sentry-sdk not installed — skipping")
+else:
+    print("  Sentry error tracking inactive (no SENTRY_DSN set)")
+
 # Rate limiting — prevent abuse
 try:
     from flask_limiter import Limiter
@@ -1751,7 +1772,7 @@ def analyze_menu():
 
 
 @app.route('/api/ai/analyze', methods=['POST'])
-@limiter.limit('10 per minute')
+@limiter.limit('10 per minute;300 per day')
 @jwt_required(optional=True)
 def ai_analyze():
     """
@@ -1772,7 +1793,7 @@ def ai_analyze():
             payload = {
                 "contents": [{
                     "parts": [
-                        {"text": """Analyze this food image. Identify all food items. Return ONLY JSON: {"items":[{"food_name":"...","serving_size":"1 serving","confidence":90,"calories":200,"protein_g":10,"carbs_g":25,"fat_g":6,"fiber_g":2,"sugar_g":1,"sodium_mg":300,"cholesterol_mg":0}]}. If not food return {"not_food": true}."""},
+                        {"text": """Analyze this food image and identify all food items. For each item, assess your ACTUAL certainty of the identification as a number 0-100 (do not default to any fixed value - a clearly identifiable food should score high, an ambiguous or partially-obscured one should score lower). Return ONLY JSON in this exact shape: {"items":[{"food_name":"<name>","serving_size":"<e.g. 1 cup>","confidence":<your real 0-100 certainty>,"calories":<number>,"protein_g":<number>,"carbs_g":<number>,"fat_g":<number>,"fiber_g":<number>,"sugar_g":<number>,"sodium_mg":<number>,"cholesterol_mg":<number>}]}. If the image contains no food, return {"not_food": true}."""},
                         {"inline_data": {"mime_type": "image/jpeg", "data": image}}
                     ]
                 }]
@@ -1808,28 +1829,34 @@ def ai_analyze():
                 _enrich_with_rag(result)
             return jsonify(result)
     except Exception as e:
-        print(f"⚠️ LLM Server timeout/error ({e}). Using RAG Database Fallback.")
+        print(f"⚠️ LLM Server timeout/error ({e}). AI scan failed.")
 
-    # 3. Fallback: Return standard generic food match so user NEVER experiences hanging scans
-    fallback_item = {
-        'food_name': 'Scanned Meal Plate',
-        'serving_size': '1 plate',
-        'confidence': 85,
-        'calories': 350,
-        'protein_g': 18.0,
-        'carbs_g': 42.0,
-        'fat_g': 12.0,
-        'fiber_g': 4.0,
-        'sugar_g': 3.0,
-        'sodium_mg': 450,
-        'cholesterol_mg': 25,
-        'source': 'NutriTrack Database Estimate'
-    }
-    _enrich_with_rag(fallback_item, 'balanced meal')
-    return jsonify({'items': [fallback_item]})
+    # 3. Both Gemini and the LLM server failed. Previously this returned
+    # fabricated numbers (350 kcal, 85% "confidence") labeled as a real
+    # result, which silently gave users made-up nutrition data with no way
+    # to tell it wasn't a real scan. Instead, return an honest zero-
+    # confidence result so the UI shows the scan failed and the user can
+    # log the meal manually with real numbers.
+    return jsonify({
+        'items': [{
+            'food_name': 'Scan unavailable — please log manually',
+            'serving_size': '',
+            'confidence': 0,
+            'calories': 0,
+            'protein_g': 0,
+            'carbs_g': 0,
+            'fat_g': 0,
+            'fiber_g': 0,
+            'sugar_g': 0,
+            'sodium_mg': 0,
+            'cholesterol_mg': 0,
+            'source': '⚠️ AI scan failed — search for this food instead'
+        }],
+        'scan_failed': True
+    }), 200
 
 @app.route('/api/ai/analyze/stream', methods=['POST'])
-@limiter.limit('10 per minute')
+@limiter.limit('10 per minute;300 per day')
 @jwt_required(optional=True)
 def ai_analyze_stream():
     """Proxy streaming endpoint for the LLM."""

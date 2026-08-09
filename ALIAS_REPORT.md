@@ -6,6 +6,40 @@
 **Flagged (review):** 60
 **Skipped (no match):** 29
 
+## ⚠️ Post-generation manual correction (2026-08-08)
+
+A manual review of the "auto-accepted" batch found the acceptance heuristic
+was too permissive: it accepted a match whenever the query word appeared
+literally in the food name, without checking whether the *rest* of the name
+changed the food into something else. This let ~30 wrong matches through
+with high confidence, including some very common foods:
+
+| Query | Was wrongly matched to | Corrected to |
+|---|---|---|
+| potato | Sweet potato leaves, raw | Potatoes, raw, skin |
+| skim milk | Yogurt, plain, skim milk | Milk, nonfat, fluid |
+| cashews | Granola Bar With Cashews And Almonds | Nuts, cashew nuts, raw |
+| vodka | Vodka Pasta Sauce | Alcoholic beverage, distilled, vodka |
+| cranberry | Beans, cranberry (roman) | Cranberries, raw |
+| coconut water | Nuts, coconut milk | Nuts, coconut water |
+| half and half | Pork, fresh leg (ham), rump half | Cream, half and half, lowfat |
+| soda | Bread, Irish soda | *(removed — no reliable USDA match)* |
+| dal | branded soup product (51 kcal) | Dal Tadka (130 kcal) |
+| poha | Groundcherries (also colloquially "poha") | Poha (flattened rice) |
+| *(+ ~20 more — see migration `fix_bad_auto_accepted_aliases` and `fix_dal_and_poha_aliases`)* | | |
+
+9 further aliases (soda, vermicelli, dragon fruit, milkshake, donut, gobi
+paratha, aloo gobi, egg roll indian, penne arrabbiata) were removed
+entirely rather than force a match, since no clean single-food USDA entry
+existed — these now fall back to the algorithmic search instead of being
+pinned to a wrong answer.
+
+**Lesson for future batches:** "query word present in name" is not
+sufficient for auto-accept. A stricter check (e.g. requiring the *first*
+comma-segment of the name to consist mostly of query words, or a manual
+spot-check of a random sample before trusting "accepted") would have
+caught these before they went live.
+
 ## Accepted Aliases
 
 | Query | Matched To | Calories | Source |
@@ -573,4 +607,4 @@
 - **shepherds pie**: no_results 
 - **gyro**: no_results 
 - **yakitori**: no_results 
-- **tonkatsu**: no_results 
+- **tonkatsu**: no_results

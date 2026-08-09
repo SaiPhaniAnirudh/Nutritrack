@@ -10,6 +10,7 @@ requests==2.32.3
 Pillow>=10.0.0
 gunicorn>=22.0.0
 psycopg2-binary>=2.9.9
+sentry-sdk[flask]>=2.0.0
 
 # ── Moondream2 fallback (optional — only needed if Ollama is not running) ───
 # Uncomment these lines ONLY if you want the local Moondream2 fallback.
