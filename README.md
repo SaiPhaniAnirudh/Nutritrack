@@ -6,6 +6,16 @@
 
 ---
 
+## 🎨 UI/UX Visual Experience
+
+NutriTrack features a modern **3D Parallax Split-Screen Auth Experience** and a **Spacious Dark Obsidian Glassmorphism Dashboard** (`#0A0F0D` / `#0F1712`).
+
+| 3D Parallax Split-Screen Auth | Spacious Dark Obsidian Dashboard |
+| :---: | :---: |
+| ![3D Auth Page](C:/Users/pc/.gemini/antigravity-ide/brain/5a0664a7-4f86-451d-9d3c-c3abcf92eebe/auth_page_3d_mockup_1786287659820.png) | ![Spacious Dashboard](C:/Users/pc/.gemini/antigravity-ide/brain/5a0664a7-4f86-451d-9d3c-c3abcf92eebe/spacious_dashboard_mockup_1786287679122.png) |
+
+---
+
 ## How this project evolved
 
 NutriTrack didn't start where it is now — the architecture went through several
