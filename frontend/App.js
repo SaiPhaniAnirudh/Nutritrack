@@ -19,6 +19,86 @@
 // Was called 22+ times (search normalization, addFoodToLog, cloud-log
 // merge) but never defined — every call threw "floatVal is not defined",
 // which silently aborted food logging before Supabase/UI ever ran.
+function init3DAuthVisual() {
+  const canvas = document.getElementById('auth3dCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = (rect.width || 380) * (window.devicePixelRatio || 1);
+  canvas.height = (rect.height || 380) * (window.devicePixelRatio || 1);
+
+  const particles = [];
+  for (let i = 0; i < 45; i++) {
+    particles.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      radius: Math.random() * 3 + 1.5,
+      color: i % 2 === 0 ? 'rgba(62, 207, 142, 0.5)' : 'rgba(245, 166, 35, 0.4)',
+      vx: (Math.random() - 0.5) * 0.8,
+      vy: (Math.random() - 0.5) * 0.8,
+    });
+  }
+
+  let angle = 0;
+  function render() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const coreRadius = Math.min(canvas.width, canvas.height) * 0.22;
+
+    const gradient = ctx.createRadialGradient(centerX, centerY, coreRadius * 0.2, centerX, centerY, coreRadius * 1.8);
+    gradient.addColorStop(0, 'rgba(62, 207, 142, 0.45)');
+    gradient.addColorStop(0.5, 'rgba(45, 158, 107, 0.18)');
+    gradient.addColorStop(1, 'rgba(10, 15, 13, 0)');
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, coreRadius * 1.8, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.save();
+    ctx.translate(centerX, centerY);
+    ctx.rotate(angle);
+
+    ctx.beginPath();
+    ctx.arc(0, 0, coreRadius, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(62, 207, 142, 0.12)';
+    ctx.strokeStyle = '#3ECF8E';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+    ctx.fill();
+
+    ctx.restore();
+
+    particles.forEach(p => {
+      p.x += p.vx;
+      p.y += p.vy;
+      if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+      if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+      ctx.fillStyle = p.color;
+      ctx.fill();
+    });
+
+    angle += 0.008;
+    requestAnimationFrame(render);
+  }
+
+  render();
+}
+
+if (typeof window !== 'undefined') {
+  window.init3DAuthVisual = init3DAuthVisual;
+  if (document.readyState === 'complete') {
+    init3DAuthVisual();
+  } else {
+    window.addEventListener('load', init3DAuthVisual);
+  }
+}
+
 function floatVal(v) {
   const n = parseFloat(v);
   return isNaN(n) ? 0 : n;

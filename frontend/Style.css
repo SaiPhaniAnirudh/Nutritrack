@@ -277,15 +277,74 @@ body {
   padding: 2rem;
 }
 
+/* ── 3D SPLIT-SCREEN AUTH ── */
+.auth-split-wrapper {
+  display: flex;
+  width: 100%;
+  min-height: 100vh;
+  background: #0a0f0d;
+}
+
+.auth-split-left {
+  flex: 1.1;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  background: radial-gradient(circle at center, rgba(62, 207, 142, 0.12) 0%, rgba(10, 15, 13, 0.95) 75%);
+  overflow: hidden;
+  border-right: 1px solid rgba(62, 207, 142, 0.15);
+}
+
+.auth-3d-canvas-wrap {
+  width: 100%;
+  max-width: 440px;
+  height: 440px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#auth3dCanvas {
+  width: 100%;
+  height: 100%;
+}
+
+.auth-split-right {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 4rem;
+  background: #0f1712;
+}
+
 .auth-card {
-  background: var(--white);
-  border: 1px solid var(--border-soft);
-  border-radius: var(--radius-xl);
-  padding: 3rem 3.5rem;
+  background: rgba(15, 23, 18, 0.85);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(62, 207, 142, 0.25);
+  border-radius: 28px;
+  padding: 2.8rem 3.2rem;
   width: 100%;
   max-width: 480px;
-  box-shadow: var(--shadow-xl);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
   animation: cardReveal 0.2s ease both;
+}
+
+/* Dark Obsidian Logo Container */
+.logo-mark-dark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 18px;
+  background: #0a0f0d;
+  border-radius: 18px;
+  border: 1px solid rgba(62, 207, 142, 0.25);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), inset 0 0 15px rgba(62, 207, 142, 0.1);
+  margin-bottom: 1rem;
 }
 
 @keyframes cardReveal {
@@ -302,21 +361,19 @@ body {
 
 .auth-logo {
   text-align: center;
-  margin-bottom: 2rem;
+  margin-bottom: 1.8rem;
 }
 
 .logo-mark {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 88px;
-  height: 88px;
-  background: var(--white);
-  border-radius: 26px;
+  padding: 10px 18px;
+  background: #0a0f0d;
+  border-radius: 20px;
   margin-bottom: 0.9rem;
   box-shadow: var(--shadow-lg);
-  animation: none;
-  border: 1px solid var(--border-soft);
+  border: 1px solid rgba(62, 207, 142, 0.2);
 }
 
 .auth-logo h1 {
