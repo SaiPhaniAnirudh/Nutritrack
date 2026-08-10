@@ -122,14 +122,17 @@
         <h3 class="modal-title" style="margin:0;">📸 Scan Product Barcode</h3>
         <button type="button" class="dp-close" onclick="closeBarcodeScannerModal()">✕</button>
       </div>
-      <p style="font-size:0.85rem; color:#888; margin-bottom:14px;">Point camera at any packaged food or drink UPC code</p>
-      
-      <div id="barcodeCameraContainer" style="width:100%; min-height:220px; background:#000; border-radius:12px; overflow:hidden; position:relative;">
+      <p style="font-size:0.85rem; color:#888; margin-bottom:14px;">Point camera at any packaged food or drink UPC code
+      </p>
+
+      <div id="barcodeCameraContainer"
+        style="width:100%; min-height:220px; background:#000; border-radius:12px; overflow:hidden; position:relative;">
         <div id="barcodeReader" style="width:100%;"></div>
       </div>
-      
+
       <div style="margin-top:16px; display:flex; gap:8px;">
-        <button type="button" class="modal-btn" style="background:var(--surface2, #2a2a2a); color:#fff;" onclick="manualBarcodePrompt()">⌨️ Manual Code</button>
+        <button type="button" class="modal-btn" style="background:var(--surface2, #2a2a2a); color:#fff;"
+          onclick="manualBarcodePrompt()">⌨️ Manual Code</button>
         <button type="button" class="modal-btn" onclick="closeBarcodeScannerModal()">Cancel</button>
       </div>
     </div>
@@ -227,8 +230,10 @@
         <canvas id="auth3dCanvas"></canvas>
       </div>
       <div style="text-align:center; z-index:2; margin-top:1.5rem;">
-        <h2 style="font-family:'Fraunces',serif; font-size:1.8rem; color:#fff; font-weight:800; margin-bottom:6px;">NutriTrack AI</h2>
-        <p style="font-size:0.88rem; color:var(--mist); max-width:320px; margin:0 auto; line-height:1.5;">Multi-modal food intelligence, live camera barcode scanning & instant macro logging.</p>
+        <h2 style="font-family:'Fraunces',serif; font-size:1.8rem; color:#fff; font-weight:800; margin-bottom:6px;">
+          NutriTrack AI</h2>
+        <p style="font-size:0.88rem; color:var(--mist); max-width:320px; margin:0 auto; line-height:1.5;">Multi-modal
+          food intelligence, live camera barcode scanning & instant macro logging.</p>
       </div>
     </div>
 
@@ -237,12 +242,14 @@
       <div class="auth-card">
         <div class="auth-logo">
           <div class="logo-mark-dark">
-            <img src="/logo-nav.png" alt="NutriTrack Logo" style="height: 38px; width: auto;" />
+            <img src="/logo-auth.svg" alt="NutriTrack Logo" style="height: 38px; width: auto;" />
           </div>
         </div>
 
-        <h1 class="auth-headline" style="font-size:1.6rem; text-align:center; margin-bottom:6px;">Know what's on your plate.</h1>
-        <p class="auth-subhead" style="text-align:center; margin-bottom:1.5rem;">AI meal analysis, barcode lookup & wearable auto-sync.</p>
+        <h1 class="auth-headline" style="font-size:1.6rem; text-align:center; margin-bottom:6px;">Know what's on your
+          plate.</h1>
+        <p class="auth-subhead" style="text-align:center; margin-bottom:1.5rem;">AI meal analysis, barcode lookup &
+          wearable auto-sync.</p>
 
         <div id="authError" class="auth-error"></div>
         <div id="authSuccess" class="auth-error auth-success"></div>
@@ -278,19 +285,29 @@
             </div>
           </div>
           <button type="button" class="submit-btn auth-submit" onclick="handleEmailLogin(event)">Sign In &rarr;</button>
-          
-          <div style="margin:1.2rem 0; text-align:center; font-size:0.78rem; color:var(--mist); display:flex; align-items:center; gap:10px;">
+
+          <div
+            style="margin:1.2rem 0; text-align:center; font-size:0.78rem; color:var(--mist); display:flex; align-items:center; gap:10px;">
             <div style="flex:1; height:1px; background:rgba(255,255,255,0.1);"></div>
             <span>OR</span>
             <div style="flex:1; height:1px; background:rgba(255,255,255,0.1);"></div>
           </div>
 
-          <button type="button" class="google-btn" onclick="handleGoogleLogin()" style="width:100%; display:flex; align-items:center; justify-content:center; gap:10px; padding:10px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); border-radius:12px; color:#fff; font-weight:600; cursor:pointer;">
+          <button type="button" class="google-btn" onclick="handleGoogleLogin()"
+            style="width:100%; display:flex; align-items:center; justify-content:center; gap:10px; padding:10px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); border-radius:12px; color:#fff; font-weight:600; cursor:pointer;">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
-              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
-              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+              <path
+                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                fill="#4285F4" />
+              <path
+                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                fill="#34A853" />
+              <path
+                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                fill="#FBBC05" />
+              <path
+                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                fill="#EA4335" />
             </svg>
             Continue with Google
           </button>
@@ -339,7 +356,8 @@
               <input type="password" id="regPassword" placeholder="••••••••" autocomplete="new-password">
             </div>
           </div>
-          <button type="button" class="submit-btn auth-submit" onclick="handleEmailRegister(event)">Create Account &rarr;</button>
+          <button type="button" class="submit-btn auth-submit" onclick="handleEmailRegister(event)">Create Account
+            &rarr;</button>
           <p class="auth-switch-text" style="margin-top:1.2rem; text-align:center;">
             Already have an account? <a href="#" onclick="showLoginForm()">Sign In</a>
           </p>
@@ -467,7 +485,9 @@
         <a href="/" style="display: flex; align-items: center; text-decoration: none;">
           <img src="/logo-nav.png" alt="NutriTrack Logo" width="36" height="32" style="height: 32px; width: auto;" />
         </a>
-        <h1 style="position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); border:0;">NutriTrack — AI Food & Macro Intelligence</h1>
+        <h1
+          style="position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); border:0;">
+          NutriTrack — AI Food & Macro Intelligence</h1>
       </div>
       <div class="nav-center">
         <!-- FIX: added type="button" to all nav buttons -->
@@ -517,632 +537,643 @@
     <!-- MAIN LANDMARK CONTENT -->
     <main id="mainContent" role="main">
 
-    <!-- ══════════════════════
+      <!-- ══════════════════════
        DASHBOARD
   ══════════════════════ -->
-    <div class="page active" id="page-dashboard">
-      <div class="greeting">
-        <h2>Good <span id="timeGreet">morning</span>, <span id="greetName">there</span> 👋</h2>
-        <p id="greetDate"></p>
-      </div>
+      <div class="page active" id="page-dashboard">
+        <div class="greeting">
+          <h2>Good <span id="timeGreet">morning</span>, <span id="greetName">there</span> 👋</h2>
+          <p id="greetDate"></p>
+        </div>
 
-      <!-- MOBILE DIET PLAN BANNER (Visible on mobile/tablet only) -->
-      <div class="mobile-diet-banner" onclick="openDietModal()">
-        <div class="mdb-icon">🥗</div>
-        <div class="mdb-content">
-          <h3>Plan My Diet</h3>
-          <p id="mobDietWidgetTag">Personalised meal plans & targets</p>
+        <!-- MOBILE DIET PLAN BANNER (Visible on mobile/tablet only) -->
+        <div class="mobile-diet-banner" onclick="openDietModal()">
+          <div class="mdb-icon">🥗</div>
+          <div class="mdb-content">
+            <h3>Plan My Diet</h3>
+            <p id="mobDietWidgetTag">Personalised meal plans & targets</p>
+          </div>
+          <div class="mdb-arrow">→</div>
         </div>
-        <div class="mdb-arrow">→</div>
-      </div>
 
 
-      <div class="stats-row">
-        <div class="stat-card" style="--accent: #F5A623">
-          <div class="icon">🔥</div>
-          <div><span class="val" id="dashCals">0</span><span class="unit"> kcal</span></div>
-          <div class="label">Calories Today</div>
-          <div class="goal-bar-wrap">
-            <div class="goal-bar-bg">
-              <div class="goal-bar-fill" id="calBar" style="width:0%;background:#F5A623"></div>
-            </div>
-          </div>
-        </div>
-        <div class="stat-card" style="--accent: #7fb8d4">
-          <div class="icon">💪</div>
-          <div><span class="val" id="dashProtein">0</span><span class="unit">g</span></div>
-          <div class="label">Protein</div>
-          <div class="goal-bar-wrap">
-            <div class="goal-bar-bg">
-              <div class="goal-bar-fill" id="protBar" style="width:0%;background:#7fb8d4"></div>
-            </div>
-          </div>
-        </div>
-        <div class="stat-card" style="--accent: #c4a87f">
-          <div class="icon">🌾</div>
-          <div><span class="val" id="dashCarbs">0</span><span class="unit">g</span></div>
-          <div class="label">Carbohydrates</div>
-          <div class="goal-bar-wrap">
-            <div class="goal-bar-bg">
-              <div class="goal-bar-fill" id="carbBar" style="width:0%;background:#c4a87f"></div>
-            </div>
-          </div>
-        </div>
-        <div class="stat-card" style="--accent: #F4613A">
-          <div class="icon">🥑</div>
-          <div><span class="val" id="dashFat">0</span><span class="unit">g</span></div>
-          <div class="label">Healthy Fats</div>
-          <div class="goal-bar-wrap">
-            <div class="goal-bar-bg">
-              <div class="goal-bar-fill" id="fatBar" style="width:0%;background:#F4613A"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="stats-row-secondary">
-        <div class="stat-card" id="fiber-card" style="--accent: var(--fiber-color)">
-          <div class="icon">🌿</div>
-          <div><span class="val" id="dashFiber">0</span><span class="unit">g</span></div>
-          <div class="label">Fiber</div>
-          <div class="goal-bar-wrap">
-            <div class="goal-bar-bg">
-              <div class="goal-bar-fill" id="fiberBar" style="width:0%;background:var(--fiber-color)"></div>
-            </div>
-          </div>
-        </div>
-        <div class="stat-card" id="sugar-card" style="--accent: var(--sugar-color)">
-          <div class="icon">🍬</div>
-          <div><span class="val" id="dashSugar">0</span><span class="unit">g</span></div>
-          <div class="label">Sugar</div>
-          <div class="goal-bar-wrap">
-            <div class="goal-bar-bg">
-              <div class="goal-bar-fill" id="sugarBar" style="width:0%;background:var(--sugar-color)"></div>
-            </div>
-          </div>
-        </div>
-        <div class="stat-card" id="sodium-card" style="--accent: var(--sodium-color)">
-          <div class="icon">🧂</div>
-          <div><span class="val" id="dashSodium">0</span><span class="unit">mg</span></div>
-          <div class="label">Salt</div>
-          <div class="goal-bar-wrap">
-            <div class="goal-bar-bg">
-              <div class="goal-bar-fill" id="sodiumBar" style="width:0%;background:var(--sodium-color)"></div>
-            </div>
-          </div>
-        </div>
-        <div class="stat-card" id="chol-card" style="--accent: var(--chol-color)">
-          <div class="icon">❤️</div>
-          <div><span class="val" id="dashChol">0</span><span class="unit">mg</span></div>
-          <div class="label">Cholesterol</div>
-          <div class="goal-bar-wrap">
-            <div class="goal-bar-bg">
-              <div class="goal-bar-fill" id="cholBar" style="width:0%;background:var(--chol-color)"></div>
-            </div>
-          </div>
-        </div>
-        <div class="stat-card" id="vitD-card" style="--accent: #F5A623">
-          <div class="icon">☀️</div>
-          <div><span class="val" id="dashVitD">0</span><span class="unit">mcg</span></div>
-          <div class="label">Vit D</div>
-          <div class="goal-bar-wrap">
-            <div class="goal-bar-bg">
-              <div class="goal-bar-fill" id="vitDBar" style="width:0%;background:#F5A623"></div>
-            </div>
-          </div>
-        </div>
-        <div class="stat-card" id="iron-card" style="--accent: #D0021B">
-          <div class="icon">🥩</div>
-          <div><span class="val" id="dashIron">0</span><span class="unit">mg</span></div>
-          <div class="label">Iron</div>
-          <div class="goal-bar-wrap">
-            <div class="goal-bar-bg">
-              <div class="goal-bar-fill" id="ironBar" style="width:0%;background:#D0021B"></div>
-            </div>
-          </div>
-        </div>
-        <div class="stat-card" id="folate-card" style="--accent: #7ED321">
-          <div class="icon">🥬</div>
-          <div><span class="val" id="dashFolate">0</span><span class="unit">mcg</span></div>
-          <div class="label">Folate</div>
-          <div class="goal-bar-wrap">
-            <div class="goal-bar-bg">
-              <div class="goal-bar-fill" id="folateBar" style="width:0%;background:#7ED321"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="glass-card" id="waterCard" style="margin-bottom: 1.5rem;">
-        <div class="card-title">
-          <div class="dot"></div>💧 Water Intake
-        </div>
-        <div style="display:flex; align-items:center; gap:1.5rem; flex-wrap:wrap;">
-          <div style="flex:1; min-width:180px;">
-            <div style="display:flex; align-items:baseline; gap:6px; margin-bottom:6px;">
-              <span style="font-size:1.6rem; font-weight:800; color:var(--ink);" id="waterTotal">0</span>
-              <span style="color:var(--ink-50); font-size:0.9rem;">/ <span id="waterGoalDisplay">2000</span> ml</span>
-            </div>
+        <div class="stats-row">
+          <div class="stat-card" style="--accent: #F5A623">
+            <div class="icon">🔥</div>
+            <div><span class="val" id="dashCals">0</span><span class="unit"> kcal</span></div>
+            <div class="label">Calories Today</div>
             <div class="goal-bar-wrap">
               <div class="goal-bar-bg">
-                <div class="goal-bar-fill" id="waterBar" style="width:0%;background:#4FC3F7"></div>
+                <div class="goal-bar-fill" id="calBar" style="width:0%;background:#F5A623"></div>
               </div>
             </div>
           </div>
-          <div style="display:flex; gap:8px; flex-wrap:wrap;">
-            <button type="button" class="water-quick-btn" onclick="logWater(150)">🥃 +150ml</button>
-            <button type="button" class="water-quick-btn" onclick="logWater(250)">🥤 +250ml</button>
-            <button type="button" class="water-quick-btn" onclick="logWater(500)">🍶 +500ml</button>
+          <div class="stat-card" style="--accent: #7fb8d4">
+            <div class="icon">💪</div>
+            <div><span class="val" id="dashProtein">0</span><span class="unit">g</span></div>
+            <div class="label">Protein</div>
+            <div class="goal-bar-wrap">
+              <div class="goal-bar-bg">
+                <div class="goal-bar-fill" id="protBar" style="width:0%;background:#7fb8d4"></div>
+              </div>
+            </div>
+          </div>
+          <div class="stat-card" style="--accent: #c4a87f">
+            <div class="icon">🌾</div>
+            <div><span class="val" id="dashCarbs">0</span><span class="unit">g</span></div>
+            <div class="label">Carbohydrates</div>
+            <div class="goal-bar-wrap">
+              <div class="goal-bar-bg">
+                <div class="goal-bar-fill" id="carbBar" style="width:0%;background:#c4a87f"></div>
+              </div>
+            </div>
+          </div>
+          <div class="stat-card" style="--accent: #F4613A">
+            <div class="icon">🥑</div>
+            <div><span class="val" id="dashFat">0</span><span class="unit">g</span></div>
+            <div class="label">Healthy Fats</div>
+            <div class="goal-bar-wrap">
+              <div class="goal-bar-bg">
+                <div class="goal-bar-fill" id="fatBar" style="width:0%;background:#F4613A"></div>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- WORKOUT & EXERCISE CARD -->
-      <div class="glass-card" style="margin-bottom:1.4rem">
-        <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
-          <div>
-            <div class="dot"></div>🏋️ Workout & Activity Tracker
+        <div class="stats-row-secondary">
+          <div class="stat-card" id="fiber-card" style="--accent: var(--fiber-color)">
+            <div class="icon">🌿</div>
+            <div><span class="val" id="dashFiber">0</span><span class="unit">g</span></div>
+            <div class="label">Fiber</div>
+            <div class="goal-bar-wrap">
+              <div class="goal-bar-bg">
+                <div class="goal-bar-fill" id="fiberBar" style="width:0%;background:var(--fiber-color)"></div>
+              </div>
+            </div>
           </div>
-          <div style="font-size:0.85rem; font-weight:700; color:var(--kiwi);">Burned Today: <span
-              id="dashWorkoutBurn">0</span> kcal</div>
+          <div class="stat-card" id="sugar-card" style="--accent: var(--sugar-color)">
+            <div class="icon">🍬</div>
+            <div><span class="val" id="dashSugar">0</span><span class="unit">g</span></div>
+            <div class="label">Sugar</div>
+            <div class="goal-bar-wrap">
+              <div class="goal-bar-bg">
+                <div class="goal-bar-fill" id="sugarBar" style="width:0%;background:var(--sugar-color)"></div>
+              </div>
+            </div>
+          </div>
+          <div class="stat-card" id="sodium-card" style="--accent: var(--sodium-color)">
+            <div class="icon">🧂</div>
+            <div><span class="val" id="dashSodium">0</span><span class="unit">mg</span></div>
+            <div class="label">Salt</div>
+            <div class="goal-bar-wrap">
+              <div class="goal-bar-bg">
+                <div class="goal-bar-fill" id="sodiumBar" style="width:0%;background:var(--sodium-color)"></div>
+              </div>
+            </div>
+          </div>
+          <div class="stat-card" id="chol-card" style="--accent: var(--chol-color)">
+            <div class="icon">❤️</div>
+            <div><span class="val" id="dashChol">0</span><span class="unit">mg</span></div>
+            <div class="label">Cholesterol</div>
+            <div class="goal-bar-wrap">
+              <div class="goal-bar-bg">
+                <div class="goal-bar-fill" id="cholBar" style="width:0%;background:var(--chol-color)"></div>
+              </div>
+            </div>
+          </div>
+          <div class="stat-card" id="vitD-card" style="--accent: #F5A623">
+            <div class="icon">☀️</div>
+            <div><span class="val" id="dashVitD">0</span><span class="unit">mcg</span></div>
+            <div class="label">Vit D</div>
+            <div class="goal-bar-wrap">
+              <div class="goal-bar-bg">
+                <div class="goal-bar-fill" id="vitDBar" style="width:0%;background:#F5A623"></div>
+              </div>
+            </div>
+          </div>
+          <div class="stat-card" id="iron-card" style="--accent: #D0021B">
+            <div class="icon">🥩</div>
+            <div><span class="val" id="dashIron">0</span><span class="unit">mg</span></div>
+            <div class="label">Iron</div>
+            <div class="goal-bar-wrap">
+              <div class="goal-bar-bg">
+                <div class="goal-bar-fill" id="ironBar" style="width:0%;background:#D0021B"></div>
+              </div>
+            </div>
+          </div>
+          <div class="stat-card" id="folate-card" style="--accent: #7ED321">
+            <div class="icon">🥬</div>
+            <div><span class="val" id="dashFolate">0</span><span class="unit">mcg</span></div>
+            <div class="label">Folate</div>
+            <div class="goal-bar-wrap">
+              <div class="goal-bar-bg">
+                <div class="goal-bar-fill" id="folateBar" style="width:0%;background:#7ED321"></div>
+              </div>
+            </div>
+          </div>
         </div>
-        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:0.8rem; align-items:center;">
-          <input type="text" id="workoutName" placeholder="e.g. Running, Weightlifting"
-            style="flex:2; min-width:140px; padding:8px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.15); background:rgba(0,0,0,0.2); color:#fff; font-size:0.82rem;">
-          <input type="number" id="workoutMin" placeholder="30 min"
-            style="width:90px; padding:8px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.15); background:rgba(0,0,0,0.2); color:#fff; font-size:0.82rem;">
-          <input type="number" id="workoutBurned" placeholder="Calories"
-            style="width:100px; padding:8px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.15); background:rgba(0,0,0,0.2); color:#fff; font-size:0.82rem;">
-          <button type="button" onclick="logWorkoutEntry()" class="save-goals-btn"
-            style="width:auto; padding:8px 16px; margin-top:0; font-size:0.82rem;">+ Log Workout</button>
-          <button type="button" onclick="syncGoogleFit()" class="water-quick-btn"
-            style="font-size:0.82rem; background:rgba(62,207,142,0.15); color:#3ecf8e; border:1px solid rgba(62,207,142,0.3);">⌚
-            Google Fit</button>
-          <span id="googleFitStatus" style="font-size:0.75rem; align-self:center;"></span>
-        </div>
-        <div id="workoutLogsList" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:0.8rem;"></div>
-      </div>
 
-      <div class="main-grid">
-        <div class="glass-card">
+        <div class="glass-card" id="waterCard" style="margin-bottom: 1.5rem;">
           <div class="card-title">
-            <div class="dot"></div>Today's Food Log
+            <div class="dot"></div>💧 Water Intake
           </div>
-          <div class="food-log-list" id="dashFoodLog">
-            <div class="empty-log">
-              <div class="empty-icon">🍽️</div>
-              <p>No meals logged today.<br>Head to Track Food to get started.</p>
+          <div style="display:flex; align-items:center; gap:1.5rem; flex-wrap:wrap;">
+            <div style="flex:1; min-width:180px;">
+              <div style="display:flex; align-items:baseline; gap:6px; margin-bottom:6px;">
+                <span style="font-size:1.6rem; font-weight:800; color:var(--ink);" id="waterTotal">0</span>
+                <span style="color:var(--ink-50); font-size:0.9rem;">/ <span id="waterGoalDisplay">2000</span> ml</span>
+              </div>
+              <div class="goal-bar-wrap">
+                <div class="goal-bar-bg">
+                  <div class="goal-bar-fill" id="waterBar" style="width:0%;background:#4FC3F7"></div>
+                </div>
+              </div>
+            </div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <button type="button" class="water-quick-btn" onclick="logWater(150)">🥃 +150ml</button>
+              <button type="button" class="water-quick-btn" onclick="logWater(250)">🥤 +250ml</button>
+              <button type="button" class="water-quick-btn" onclick="logWater(500)">🍶 +500ml</button>
             </div>
           </div>
         </div>
-        <div class="glass-card">
-          <div class="card-title">
-            <div class="dot"></div>Macro Split
-          </div>
-          <div class="chart-wrap"><canvas id="macroChart"></canvas></div>
-        </div>
-      </div>
 
-      <!-- AI Meal Recommendations & Community Challenges Row -->
-      <div class="main-grid" style="margin-top:1.4rem">
-        <div class="glass-card">
-          <div class="card-title">
-            <div class="dot"></div>💡 AI Meal Recommendations
-          </div>
-          <div id="aiRecommendationsList" style="display:flex; flex-direction:column; gap:8px; margin-top:0.6rem;">
-            <div style="font-size:0.8rem; color:var(--mist); opacity:0.7;">Loading personalized meal suggestions…</div>
-          </div>
-        </div>
-
-        <div class="glass-card">
-          <div class="card-title">
-            <div class="dot"></div>🏆 Community Challenges
-          </div>
-          <div id="communityChallengesList" style="display:flex; flex-direction:column; gap:8px; margin-top:0.6rem;">
-            <div style="font-size:0.8rem; color:var(--mist); opacity:0.7;">Loading community challenges…</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ══════════════════════
-       TRACK FOOD
-  ══════════════════════ -->
-    <div class="page" id="page-track">
-      <div class="greeting" style="margin-bottom:1.4rem">
-        <h2>Track <span>Your Food</span></h2>
-        <p>Scan food with AI camera, or search from 15,000+ verified foods</p>
-      </div>
-
-      <div class="glass-card" style="margin-bottom:1.2rem;padding:0.9rem 1.3rem;">
-        <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
-          <span
-            style="font-size:0.7rem;color:var(--mist);text-transform:uppercase;letter-spacing:0.08em;font-weight:600;white-space:nowrap">Meal</span>
-          <div class="meal-type-row" style="margin-bottom:0;flex:1">
-            <!-- FIX: added type="button" to all meal chips -->
-            <button type="button" class="meal-chip" onclick="setMeal('breakfast',this)">🌅 Breakfast</button>
-            <button type="button" class="meal-chip" onclick="setMeal('lunch',    this)">☀️ Lunch</button>
-            <button type="button" class="meal-chip" onclick="setMeal('dinner',   this)">🌙 Dinner</button>
-            <button type="button" class="meal-chip" onclick="setMeal('snack',    this)">🍎 Snack</button>
-            <span id="mealTimeHint"
-              style="font-size:0.65rem;color:rgba(184,201,186,0.4);margin-left:0.3rem;align-self:center;white-space:nowrap"></span>
-          </div>
-        </div>
-      </div>
-
-      <div class="scan-grid">
-        <div class="glass-card">
-          <div class="card-title">
-            <div class="dot"></div>✨ Scan Food with AI
-          </div>
-
-          <div class="cam-area" id="camArea">
-            <div class="cam-placeholder" id="camPlaceholder">
-              <div class="cam-icon">📷</div>
-              <p>Take a photo or upload one<br>AI will identify the food</p>
-            </div>
-            <video id="camVideo" autoplay playsinline muted></video>
-            <img id="scanPreview" alt="Food to scan">
-          </div>
-
-          <div class="scan-btn-row" id="scanActionRow">
-            <!-- FIX: added type="button" to all scan buttons -->
-            <button type="button" class="scan-btn green" onclick="startScanCamera()">📷 Camera</button>
-            <button type="button" class="scan-btn orange" onclick="pickScanPhoto()">🖼️ Choose Photo</button>
-            <button type="button" class="scan-btn blue" onclick="startBarcodeScan()">📦 Barcode</button>
-            <button type="button" class="scan-btn purple" onclick="startVoiceLog()">🎙️ Voice Log</button>
-          </div>
-          <div id="voiceStatusRow"
-            style="display:none; padding:0.6rem; background:rgba(62,207,142,0.1); border-radius:10px; margin-top:0.6rem; text-align:center; font-size:0.85rem; color:var(--kiwi);">
-            <span class="voice-pulse">🔴</span> <span id="voiceStatusText">Listening… Speak your meal!</span>
-            <button type="button" onclick="stopVoiceLog()"
-              style="margin-left:0.6rem; background:rgba(255,255,255,0.15); border:none; color:#fff; border-radius:6px; padding:2px 8px; cursor:pointer; font-size:0.75rem;">Done</button>
-          </div>
-          <div class="scan-btn-row" id="scanCamRow" style="display:none">
-            <button type="button" class="scan-btn gold" onclick="takeScanPhoto()">📸 Take Photo</button>
-            <button type="button" class="scan-btn muted" onclick="stopScanCamera()">✕ Stop</button>
-          </div>
-          <div class="scan-btn-row" id="scanReadyRow" style="display:none">
-            <button type="button" class="scan-btn gold" id="scanNowBtn" onclick="scanWithAI('food')">✨ Scan
-              Food</button>
-            <button type="button" class="scan-btn purple" id="scanMenuBtn" onclick="scanWithAI('menu')">📋 Scan
-              Menu</button>
-            <button type="button" class="scan-btn muted" onclick="clearScan()">✕ Clear</button>
-          </div>
-
-          <canvas id="scanCanvas" style="display:none"></canvas>
-          <div id="scanStatus" class="scan-status"></div>
-        </div>
-
-        <!-- RIGHT: AI result -->
-        <div class="glass-card">
-          <div class="card-title">
-            <div class="dot"></div>⚡ AI Result
-          </div>
-          <div id="scanResult">
-            <div class="scan-result-placeholder">
-              <div style="font-size:2.5rem;opacity:0.2">⚡</div>
-              <div style="font-size:0.85rem;font-weight:500;opacity:0.5">No scan yet</div>
-              <div style="font-size:0.72rem;opacity:0.35;line-height:1.6;margin-top:0.3rem">
-                Take or upload a food photo,<br>then click <strong>Scan with AI</strong>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Search & Add Food -->
-      <div class="glass-card" style="margin-top:1.2rem">
-        <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
-          <div><div class="dot"></div>Search &amp; Add Food</div>
-          <button type="button" onclick="openCreateRecipeModal()" class="water-quick-btn"
-            style="font-size:0.75rem; padding:6px 12px; background:linear-gradient(135deg,#3b82f6,#1d4ed8); color:#fff; border:none; border-radius:8px; font-weight:600; cursor:pointer;">+ Custom Recipe</button>
-        </div>
-        <div style="display:flex;align-items:center;gap:0.8rem;flex-wrap:wrap;margin-bottom:1rem;">
-          <div class="search-wrap" style="flex:1;min-width:220px;margin-bottom:0">
-            <span class="search-icon">🔍</span>
-            <input type="text" id="foodSearch"
-              placeholder="Search 15,000+ foods — biryani, dosa, dal, sushi, pasta, apple…"
-              oninput="searchFoods(this.value)">
-          </div>
-          <div class="search-count" id="searchCount" style="white-space:nowrap;font-size:0.78rem;color:var(--mist)">
-          </div>
-        </div>
-        <div class="cat-filter-row" id="catFilters" style="margin-bottom:0.8rem"></div>
-        <div class="food-results food-results-wide" id="foodResults"></div>
-      </div>
-
-      <!-- Meal Templates Card -->
-      <div class="glass-card" style="margin-top:1.2rem">
-        <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
-          <div>
-            <div class="dot"></div>🍱 Saved Meal Templates
-          </div>
-          <div style="display:flex; gap:8px;">
-            <button type="button" onclick="openSaveTemplateModal()" class="water-quick-btn"
-              style="font-size:0.75rem; padding:4px 10px;">+ Save Today's Meal</button>
-          </div>
-        </div>
-        <div id="mealTemplatesList"
-          style="display:flex; gap:10px; overflow-x:auto; padding-bottom:6px; margin-top:0.6rem;">
-          <div style="font-size:0.8rem; color:var(--mist); opacity:0.7;">No saved meal templates yet. Click "+ Save
-            Today's Meal" to create one-tap combos!</div>
-        </div>
-      </div>
-
-
-    </div>
-
-    <!-- ══════════════════════
-       HISTORY
-  ══════════════════════ -->
-    <div class="page" id="page-history">
-      <div class="greeting"
-        style="margin-bottom:1.5rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
-        <div>
-          <h2>Your <span>History</span></h2>
-          <p>Past 30 days of nutrition data</p>
-        </div>
-        <div style="display:flex; gap:8px;">
-          <button type="button" onclick="exportHealthData()" class="water-quick-btn"
-            style="font-size:0.82rem; padding:8px 14px; background:#1c1c1e; color:#3ecf8e; border:1px solid #3ecf8e; border-radius:10px; font-weight:700; cursor:pointer;">🍎 Health Sync</button>
-          <button type="button" onclick="exportLogsCSV()" class="water-quick-btn"
-            style="font-size:0.82rem; padding:8px 16px; background:#3ecf8e; color:#0a0f0d; border:none; border-radius:10px; font-weight:700; cursor:pointer;">📥 Export CSV</button>
-        </div>
-      </div>
-
-      <!-- Weekly Insights Card -->
-      <div class="glass-card" style="margin-bottom:1.2rem;">
-        <div class="card-title">
-          <div class="dot"></div>📊 Weekly Nutrition Insights
-        </div>
-        <div id="weeklyInsightsCard" style="display:flex; flex-direction:column; gap:6px; margin-top:0.5rem;">
-          <div style="font-size:0.8rem; color:var(--mist); opacity:0.7;">Calculating weekly progress & recommendations…
-          </div>
-        </div>
-      </div>
-      <div class="history-grid">
-        <div class="glass-card">
-          <div class="card-title">
-            <div class="dot"></div>Monthly Calories
-          </div>
-          <div class="chart-wrap"><canvas id="weekChart"></canvas></div>
-          <table class="history-table" id="historyTable" style="margin-top:1.5rem">
-            <thead>
-              <tr>
-                <th scope="col">Food</th>
-                <th scope="col">Meal</th>
-                <th scope="col">Calories</th>
-                <th scope="col">Fiber · Salt</th>
-                <th scope="col">Date</th>
-              </tr>
-            </thead>
-            <tbody id="historyBody"></tbody>
-          </table>
-        </div>
-        <div class="glass-card">
-          <div class="card-title">
-            <div class="dot"></div>Totals This Month
-          </div>
-          <div id="weeklyStats"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ══════════════════════
-       PROFILE
-  ══════════════════════ -->
-    <div class="page" id="page-profile">
-      <div class="greeting" style="margin-bottom:1.5rem">
-        <h2>Your <span>Profile</span></h2>
-        <p>Manage your goals and account</p>
-      </div>
-      <div class="profile-grid">
-        <div class="glass-card">
-          <div class="profile-avatar-section">
-            <div class="big-avatar" id="profileAvatar">A</div>
-            <div class="profile-name" id="profileName">User</div>
-            <div class="profile-email" id="profileEmail"></div>
-            <div id="profileBodyStats" class="body-stats-chips"></div>
-
-            <!-- Install PWA Card in Profile -->
-            <div id="pwaProfileInstallCard"
-              style="display:none; margin: 1rem 0; padding: 1.2rem; background: var(--kiwi-light); border: 1.5px dashed rgba(45,158,107,0.3); border-radius: var(--radius-md); text-align: center;">
-              <div style="font-size: 1.5rem; margin-bottom: 0.4rem;">📲</div>
-              <div style="font-weight: 700; font-size: 0.9rem; color: var(--kiwi-deep); margin-bottom: 0.2rem;">Run
-                NutriTrack as an App</div>
-              <div style="font-size: 0.72rem; color: var(--ink-50); margin-bottom: 0.8rem; line-height: 1.45;">Install
-                on your home screen for quick, offline-capable diet tracking.</div>
-              <button type="button" id="pwaProfileInstallBtn" class="save-goals-btn"
-                style="padding: 8px 16px; font-size: 0.82rem; width: auto; background: linear-gradient(135deg,var(--kiwi),var(--kiwi-deep)); margin: 0 auto; display: block;">Install
-                Now</button>
-            </div>
-
-            <div class="profile-stats">
-              <div class="profile-stat">
-                <div class="n" id="totalMeals">0</div>
-                <div class="l">Meals Logged</div>
-              </div>
-              <div class="profile-stat">
-                <div class="n" id="totalDays">0</div>
-                <div class="l">Days Tracked</div>
-              </div>
-              <div class="profile-stat">
-                <div class="n" id="avgCals">0</div>
-                <div class="l">Avg Cal/Day</div>
-              </div>
-              <div class="profile-stat">
-                <div class="n" id="streakDays">0</div>
-                <div class="l">Day Streak</div>
-              </div>
-            </div>
-            <button type="button" class="profile-logout-btn" onclick="handleLogout()">Sign Out</button>
-          </div>
-        </div>
-
-        <!-- Ecosystem & Wearables Live Auto-Sync Card -->
-        <div class="glass-card" style="margin-bottom:1.2rem;">
-          <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
-            <div><div class="dot"></div>⌚ Wearable & Ecosystem Auto-Sync</div>
-            <button type="button" onclick="autoSyncEcosystem()" class="water-quick-btn" style="font-size:0.75rem; padding:4px 10px;">⚡ Sync Now</button>
-          </div>
-          <div id="ecosystemSyncStatus" style="font-size:0.82rem; color:var(--mist); margin-top:0.4rem;">
-            <span style="color:var(--kiwi); font-weight:700;">🟢 Live Background Auto-Sync Active</span> · Google Fit / Health Connect
-          </div>
-        </div>
-
-        <div class="glass-card">
-          <div class="card-title">
-            <div class="dot"></div>Daily Goals
-          </div>
-          <div class="goal-editor">
-            <div class="goal-row">
-              <div>
-                <div class="goal-label">🔥 Calories</div>
-                <div class="goal-sub">kcal per day</div>
-              </div>
-              <input class="goal-input" type="number" id="editCalGoal" value="2000">
-            </div>
-            <div class="goal-row">
-              <div>
-                <div class="goal-label">💪 Protein</div>
-                <div class="goal-sub">grams per day</div>
-              </div>
-              <input class="goal-input" type="number" id="editProtGoal" value="150">
-            </div>
-            <div class="goal-row">
-              <div>
-                <div class="goal-label">🌾 Carbs</div>
-                <div class="goal-sub">grams per day</div>
-              </div>
-              <input class="goal-input" type="number" id="editCarbGoal" value="275">
-            </div>
-            <div class="goal-row">
-              <div>
-                <div class="goal-label">🥑 Fat</div>
-                <div class="goal-sub">grams per day</div>
-              </div>
-              <input class="goal-input" type="number" id="editFatGoal" value="78">
-            </div>
-            <div class="goal-row">
-              <div>
-                <div class="goal-label">🌿 Fiber</div>
-                <div class="goal-sub">grams per day · aim high</div>
-              </div>
-              <input class="goal-input" type="number" id="editFiberGoal" value="28">
-            </div>
-            <div class="goal-row">
-              <div>
-                <div class="goal-label">🍬 Sugar</div>
-                <div class="goal-sub">grams per day · limit</div>
-              </div>
-              <input class="goal-input" type="number" id="editSugarGoal" value="50">
-            </div>
-            <div class="goal-row">
-              <div>
-                <div class="goal-label">🧂 Salt</div>
-                <div class="goal-sub">mg sodium · limit</div>
-              </div>
-              <input class="goal-input" type="number" id="editSodiumGoal" value="2300">
-            </div>
-            <div class="goal-row">
-              <div>
-                <div class="goal-label">❤️ Cholesterol</div>
-                <div class="goal-sub">mg per day · limit</div>
-              </div>
-              <input class="goal-input" type="number" id="editCholGoal" value="300">
-            </div>
-            <div class="goal-row">
-              <div>
-                <div class="goal-label">☀️ Vitamin D</div>
-                <div class="goal-sub">mcg per day</div>
-              </div>
-              <input class="goal-input" type="number" id="editVitDGoal" value="15">
-            </div>
-            <div class="goal-row">
-              <div>
-                <div class="goal-label">🥩 Iron</div>
-                <div class="goal-sub">mg per day</div>
-              </div>
-              <input class="goal-input" type="number" id="editIronGoal" value="18">
-            </div>
-            <div class="goal-row">
-              <div>
-                <div class="goal-label">🥬 Folate</div>
-                <div class="goal-sub">mcg per day</div>
-              </div>
-              <input class="goal-input" type="number" id="editFolateGoal" value="400">
-            </div>
-            <div class="goal-row">
-              <div>
-                <div class="goal-label">🌱 Diet Type</div>
-                <div class="goal-sub">affects meal plan & recommendations</div>
-              </div>
-              <select class="goal-input" id="editDietType" style="width:130px;font-size:0.82rem;padding:6px 8px">
-                <option value="nonveg">🍖 Non-Veg</option>
-                <option value="veg">🌱 Pure Veg</option>
-                <option value="eggetarian">🥚 Eggetarian</option>
-                <option value="vegan">🌿 Vegan</option>
-              </select>
-            </div>
-            <!-- FIX: added type="button" -->
-            <button type="button" class="save-goals-btn" onclick="saveGoals()">Save Goals</button>
-          </div>
-        </div>
-
-        <div class="glass-card">
-          <div class="card-title">
-            <div class="dot"></div>Body Stats
-          </div>
-          <div class="goal-editor">
-            <div class="goal-row">
-              <div>
-                <div class="goal-label">⚖️ Weight</div>
-                <div class="goal-sub">current body weight</div>
-              </div>
-              <div style="display:flex; gap:6px; align-items:center;">
-                <input class="goal-input" type="number" step="0.1" id="editWeight" style="width:90px" value="70">
-                <select class="goal-input" id="editWeightUnit" style="width:70px;font-size:0.82rem;padding:6px 8px">
-                  <option value="kg">kg</option>
-                  <option value="lbs">lbs</option>
-                </select>
-              </div>
-            </div>
-            <div class="goal-row">
-              <div>
-                <div class="goal-label">📏 Height</div>
-                <div class="goal-sub">current height</div>
-              </div>
-              <div style="display:flex; gap:6px; align-items:center;">
-                <input class="goal-input" type="number" step="0.1" id="editHeight" style="width:90px" value="175">
-                <select class="goal-input" id="editHeightUnit" style="width:70px;font-size:0.82rem;padding:6px 8px">
-                  <option value="cm">cm</option>
-                  <option value="ft">ft</option>
-                </select>
-              </div>
-            </div>
-            <button type="button" class="save-goals-btn" onclick="saveBodyStats()">Save Body Stats</button>
-          </div>
-        </div>
-
-        <!-- Body Weight Progress Tracker Card -->
-        <div class="glass-card" style="grid-column: 1 / -1;">
+        <!-- WORKOUT & EXERCISE CARD -->
+        <div class="glass-card" style="margin-bottom:1.4rem">
           <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
             <div>
-              <div class="dot"></div>📈 Body Weight Progress
+              <div class="dot"></div>🏋️ Workout & Activity Tracker
             </div>
-            <div style="display:flex; gap:8px; align-items:center;">
-              <input type="number" step="0.1" id="quickWeightInput" placeholder="70.5"
-                style="width:80px; padding:4px 8px; border-radius:6px; border:1px solid rgba(255,255,255,0.15); background:rgba(0,0,0,0.2); color:#fff; font-size:0.8rem;">
-              <button type="button" onclick="logWeightEntry()" class="water-quick-btn"
-                style="font-size:0.75rem; padding:4px 10px;">+ Log Weight</button>
-            </div>
+            <div style="font-size:0.85rem; font-weight:700; color:var(--kiwi);">Burned Today: <span
+                id="dashWorkoutBurn">0</span> kcal</div>
           </div>
-            <div class="chart-wrap" style="height:220px; margin-top:0.8rem;"><canvas id="weightChart"></canvas></div>
+          <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:0.8rem; align-items:center;">
+            <input type="text" id="workoutName" placeholder="e.g. Running, Weightlifting"
+              style="flex:2; min-width:140px; padding:8px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.15); background:rgba(0,0,0,0.2); color:#fff; font-size:0.82rem;">
+            <input type="number" id="workoutMin" placeholder="30 min"
+              style="width:90px; padding:8px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.15); background:rgba(0,0,0,0.2); color:#fff; font-size:0.82rem;">
+            <input type="number" id="workoutBurned" placeholder="Calories"
+              style="width:100px; padding:8px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.15); background:rgba(0,0,0,0.2); color:#fff; font-size:0.82rem;">
+            <button type="button" onclick="logWorkoutEntry()" class="save-goals-btn"
+              style="width:auto; padding:8px 16px; margin-top:0; font-size:0.82rem;">+ Log Workout</button>
+            <button type="button" onclick="syncGoogleFit()" class="water-quick-btn"
+              style="font-size:0.82rem; background:rgba(62,207,142,0.15); color:#3ecf8e; border:1px solid rgba(62,207,142,0.3);">⌚
+              Google Fit</button>
+            <span id="googleFitStatus" style="font-size:0.75rem; align-self:center;"></span>
+          </div>
+          <div id="workoutLogsList" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:0.8rem;"></div>
         </div>
 
-        <!-- Achievements moved to a navbar widget/modal (see #achievementsModal) -->
+        <div class="main-grid">
+          <div class="glass-card">
+            <div class="card-title">
+              <div class="dot"></div>Today's Food Log
+            </div>
+            <div class="food-log-list" id="dashFoodLog">
+              <div class="empty-log">
+                <div class="empty-icon">🍽️</div>
+                <p>No meals logged today.<br>Head to Track Food to get started.</p>
+              </div>
+            </div>
+          </div>
+          <div class="glass-card">
+            <div class="card-title">
+              <div class="dot"></div>Macro Split
+            </div>
+            <div class="chart-wrap"><canvas id="macroChart"></canvas></div>
+          </div>
+        </div>
+
+        <!-- AI Meal Recommendations & Community Challenges Row -->
+        <div class="main-grid" style="margin-top:1.4rem">
+          <div class="glass-card">
+            <div class="card-title">
+              <div class="dot"></div>💡 AI Meal Recommendations
+            </div>
+            <div id="aiRecommendationsList" style="display:flex; flex-direction:column; gap:8px; margin-top:0.6rem;">
+              <div style="font-size:0.8rem; color:var(--mist); opacity:0.7;">Loading personalized meal suggestions…
+              </div>
+            </div>
+          </div>
+
+          <div class="glass-card">
+            <div class="card-title">
+              <div class="dot"></div>🏆 Community Challenges
+            </div>
+            <div id="communityChallengesList" style="display:flex; flex-direction:column; gap:8px; margin-top:0.6rem;">
+              <div style="font-size:0.8rem; color:var(--mist); opacity:0.7;">Loading community challenges…</div>
+            </div>
+          </div>
+        </div>
       </div>
+
+      <!-- ══════════════════════
+       TRACK FOOD
+  ══════════════════════ -->
+      <div class="page" id="page-track">
+        <div class="greeting" style="margin-bottom:1.4rem">
+          <h2>Track <span>Your Food</span></h2>
+          <p>Scan food with AI camera, or search from 15,000+ verified foods</p>
+        </div>
+
+        <div class="glass-card" style="margin-bottom:1.2rem;padding:0.9rem 1.3rem;">
+          <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+            <span
+              style="font-size:0.7rem;color:var(--mist);text-transform:uppercase;letter-spacing:0.08em;font-weight:600;white-space:nowrap">Meal</span>
+            <div class="meal-type-row" style="margin-bottom:0;flex:1">
+              <!-- FIX: added type="button" to all meal chips -->
+              <button type="button" class="meal-chip" onclick="setMeal('breakfast',this)">🌅 Breakfast</button>
+              <button type="button" class="meal-chip" onclick="setMeal('lunch',    this)">☀️ Lunch</button>
+              <button type="button" class="meal-chip" onclick="setMeal('dinner',   this)">🌙 Dinner</button>
+              <button type="button" class="meal-chip" onclick="setMeal('snack',    this)">🍎 Snack</button>
+              <span id="mealTimeHint"
+                style="font-size:0.65rem;color:rgba(184,201,186,0.4);margin-left:0.3rem;align-self:center;white-space:nowrap"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="scan-grid">
+          <div class="glass-card">
+            <div class="card-title">
+              <div class="dot"></div>✨ Scan Food with AI
+            </div>
+
+            <div class="cam-area" id="camArea">
+              <div class="cam-placeholder" id="camPlaceholder">
+                <div class="cam-icon">📷</div>
+                <p>Take a photo or upload one<br>AI will identify the food</p>
+              </div>
+              <video id="camVideo" autoplay playsinline muted></video>
+              <img id="scanPreview" alt="Food to scan">
+            </div>
+
+            <div class="scan-btn-row" id="scanActionRow">
+              <!-- FIX: added type="button" to all scan buttons -->
+              <button type="button" class="scan-btn green" onclick="startScanCamera()">📷 Camera</button>
+              <button type="button" class="scan-btn orange" onclick="pickScanPhoto()">🖼️ Choose Photo</button>
+              <button type="button" class="scan-btn blue" onclick="startBarcodeScan()">📦 Barcode</button>
+              <button type="button" class="scan-btn purple" onclick="startVoiceLog()">🎙️ Voice Log</button>
+            </div>
+            <div id="voiceStatusRow"
+              style="display:none; padding:0.6rem; background:rgba(62,207,142,0.1); border-radius:10px; margin-top:0.6rem; text-align:center; font-size:0.85rem; color:var(--kiwi);">
+              <span class="voice-pulse">🔴</span> <span id="voiceStatusText">Listening… Speak your meal!</span>
+              <button type="button" onclick="stopVoiceLog()"
+                style="margin-left:0.6rem; background:rgba(255,255,255,0.15); border:none; color:#fff; border-radius:6px; padding:2px 8px; cursor:pointer; font-size:0.75rem;">Done</button>
+            </div>
+            <div class="scan-btn-row" id="scanCamRow" style="display:none">
+              <button type="button" class="scan-btn gold" onclick="takeScanPhoto()">📸 Take Photo</button>
+              <button type="button" class="scan-btn muted" onclick="stopScanCamera()">✕ Stop</button>
+            </div>
+            <div class="scan-btn-row" id="scanReadyRow" style="display:none">
+              <button type="button" class="scan-btn gold" id="scanNowBtn" onclick="scanWithAI('food')">✨ Scan
+                Food</button>
+              <button type="button" class="scan-btn purple" id="scanMenuBtn" onclick="scanWithAI('menu')">📋 Scan
+                Menu</button>
+              <button type="button" class="scan-btn muted" onclick="clearScan()">✕ Clear</button>
+            </div>
+
+            <canvas id="scanCanvas" style="display:none"></canvas>
+            <div id="scanStatus" class="scan-status"></div>
+          </div>
+
+          <!-- RIGHT: AI result -->
+          <div class="glass-card">
+            <div class="card-title">
+              <div class="dot"></div>⚡ AI Result
+            </div>
+            <div id="scanResult">
+              <div class="scan-result-placeholder">
+                <div style="font-size:2.5rem;opacity:0.2">⚡</div>
+                <div style="font-size:0.85rem;font-weight:500;opacity:0.5">No scan yet</div>
+                <div style="font-size:0.72rem;opacity:0.35;line-height:1.6;margin-top:0.3rem">
+                  Take or upload a food photo,<br>then click <strong>Scan with AI</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Search & Add Food -->
+        <div class="glass-card" style="margin-top:1.2rem">
+          <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <div class="dot"></div>Search &amp; Add Food
+            </div>
+            <button type="button" onclick="openCreateRecipeModal()" class="water-quick-btn"
+              style="font-size:0.75rem; padding:6px 12px; background:linear-gradient(135deg,#3b82f6,#1d4ed8); color:#fff; border:none; border-radius:8px; font-weight:600; cursor:pointer;">+
+              Custom Recipe</button>
+          </div>
+          <div style="display:flex;align-items:center;gap:0.8rem;flex-wrap:wrap;margin-bottom:1rem;">
+            <div class="search-wrap" style="flex:1;min-width:220px;margin-bottom:0">
+              <span class="search-icon">🔍</span>
+              <input type="text" id="foodSearch"
+                placeholder="Search 15,000+ foods — biryani, dosa, dal, sushi, pasta, apple…"
+                oninput="searchFoods(this.value)">
+            </div>
+            <div class="search-count" id="searchCount" style="white-space:nowrap;font-size:0.78rem;color:var(--mist)">
+            </div>
+          </div>
+          <div class="cat-filter-row" id="catFilters" style="margin-bottom:0.8rem"></div>
+          <div class="food-results food-results-wide" id="foodResults"></div>
+        </div>
+
+        <!-- Meal Templates Card -->
+        <div class="glass-card" style="margin-top:1.2rem">
+          <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <div class="dot"></div>🍱 Saved Meal Templates
+            </div>
+            <div style="display:flex; gap:8px;">
+              <button type="button" onclick="openSaveTemplateModal()" class="water-quick-btn"
+                style="font-size:0.75rem; padding:4px 10px;">+ Save Today's Meal</button>
+            </div>
+          </div>
+          <div id="mealTemplatesList"
+            style="display:flex; gap:10px; overflow-x:auto; padding-bottom:6px; margin-top:0.6rem;">
+            <div style="font-size:0.8rem; color:var(--mist); opacity:0.7;">No saved meal templates yet. Click "+ Save
+              Today's Meal" to create one-tap combos!</div>
+          </div>
+        </div>
+
+
+      </div>
+
+      <!-- ══════════════════════
+       HISTORY
+  ══════════════════════ -->
+      <div class="page" id="page-history">
+        <div class="greeting"
+          style="margin-bottom:1.5rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+          <div>
+            <h2>Your <span>History</span></h2>
+            <p>Past 30 days of nutrition data</p>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button type="button" onclick="exportHealthData()" class="water-quick-btn"
+              style="font-size:0.82rem; padding:8px 14px; background:#1c1c1e; color:#3ecf8e; border:1px solid #3ecf8e; border-radius:10px; font-weight:700; cursor:pointer;">🍎
+              Health Sync</button>
+            <button type="button" onclick="exportLogsCSV()" class="water-quick-btn"
+              style="font-size:0.82rem; padding:8px 16px; background:#3ecf8e; color:#0a0f0d; border:none; border-radius:10px; font-weight:700; cursor:pointer;">📥
+              Export CSV</button>
+          </div>
+        </div>
+
+        <!-- Weekly Insights Card -->
+        <div class="glass-card" style="margin-bottom:1.2rem;">
+          <div class="card-title">
+            <div class="dot"></div>📊 Weekly Nutrition Insights
+          </div>
+          <div id="weeklyInsightsCard" style="display:flex; flex-direction:column; gap:6px; margin-top:0.5rem;">
+            <div style="font-size:0.8rem; color:var(--mist); opacity:0.7;">Calculating weekly progress &
+              recommendations…
+            </div>
+          </div>
+        </div>
+        <div class="history-grid">
+          <div class="glass-card">
+            <div class="card-title">
+              <div class="dot"></div>Monthly Calories
+            </div>
+            <div class="chart-wrap"><canvas id="weekChart"></canvas></div>
+            <table class="history-table" id="historyTable" style="margin-top:1.5rem">
+              <thead>
+                <tr>
+                  <th scope="col">Food</th>
+                  <th scope="col">Meal</th>
+                  <th scope="col">Calories</th>
+                  <th scope="col">Fiber · Salt</th>
+                  <th scope="col">Date</th>
+                </tr>
+              </thead>
+              <tbody id="historyBody"></tbody>
+            </table>
+          </div>
+          <div class="glass-card">
+            <div class="card-title">
+              <div class="dot"></div>Totals This Month
+            </div>
+            <div id="weeklyStats"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════
+       PROFILE
+  ══════════════════════ -->
+      <div class="page" id="page-profile">
+        <div class="greeting" style="margin-bottom:1.5rem">
+          <h2>Your <span>Profile</span></h2>
+          <p>Manage your goals and account</p>
+        </div>
+        <div class="profile-grid">
+          <div class="glass-card">
+            <div class="profile-avatar-section">
+              <div class="big-avatar" id="profileAvatar">A</div>
+              <div class="profile-name" id="profileName">User</div>
+              <div class="profile-email" id="profileEmail"></div>
+              <div id="profileBodyStats" class="body-stats-chips"></div>
+
+              <!-- Install PWA Card in Profile -->
+              <div id="pwaProfileInstallCard"
+                style="display:none; margin: 1rem 0; padding: 1.2rem; background: var(--kiwi-light); border: 1.5px dashed rgba(45,158,107,0.3); border-radius: var(--radius-md); text-align: center;">
+                <div style="font-size: 1.5rem; margin-bottom: 0.4rem;">📲</div>
+                <div style="font-weight: 700; font-size: 0.9rem; color: var(--kiwi-deep); margin-bottom: 0.2rem;">Run
+                  NutriTrack as an App</div>
+                <div style="font-size: 0.72rem; color: var(--ink-50); margin-bottom: 0.8rem; line-height: 1.45;">Install
+                  on your home screen for quick, offline-capable diet tracking.</div>
+                <button type="button" id="pwaProfileInstallBtn" class="save-goals-btn"
+                  style="padding: 8px 16px; font-size: 0.82rem; width: auto; background: linear-gradient(135deg,var(--kiwi),var(--kiwi-deep)); margin: 0 auto; display: block;">Install
+                  Now</button>
+              </div>
+
+              <div class="profile-stats">
+                <div class="profile-stat">
+                  <div class="n" id="totalMeals">0</div>
+                  <div class="l">Meals Logged</div>
+                </div>
+                <div class="profile-stat">
+                  <div class="n" id="totalDays">0</div>
+                  <div class="l">Days Tracked</div>
+                </div>
+                <div class="profile-stat">
+                  <div class="n" id="avgCals">0</div>
+                  <div class="l">Avg Cal/Day</div>
+                </div>
+                <div class="profile-stat">
+                  <div class="n" id="streakDays">0</div>
+                  <div class="l">Day Streak</div>
+                </div>
+              </div>
+              <button type="button" class="profile-logout-btn" onclick="handleLogout()">Sign Out</button>
+            </div>
+          </div>
+
+          <!-- Ecosystem & Wearables Live Auto-Sync Card -->
+          <div class="glass-card" style="margin-bottom:1.2rem;">
+            <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <div class="dot"></div>⌚ Wearable & Ecosystem Auto-Sync
+              </div>
+              <button type="button" onclick="autoSyncEcosystem()" class="water-quick-btn"
+                style="font-size:0.75rem; padding:4px 10px;">⚡ Sync Now</button>
+            </div>
+            <div id="ecosystemSyncStatus" style="font-size:0.82rem; color:var(--mist); margin-top:0.4rem;">
+              <span style="color:var(--kiwi); font-weight:700;">🟢 Live Background Auto-Sync Active</span> · Google Fit
+              / Health Connect
+            </div>
+          </div>
+
+          <div class="glass-card">
+            <div class="card-title">
+              <div class="dot"></div>Daily Goals
+            </div>
+            <div class="goal-editor">
+              <div class="goal-row">
+                <div>
+                  <div class="goal-label">🔥 Calories</div>
+                  <div class="goal-sub">kcal per day</div>
+                </div>
+                <input class="goal-input" type="number" id="editCalGoal" value="2000">
+              </div>
+              <div class="goal-row">
+                <div>
+                  <div class="goal-label">💪 Protein</div>
+                  <div class="goal-sub">grams per day</div>
+                </div>
+                <input class="goal-input" type="number" id="editProtGoal" value="150">
+              </div>
+              <div class="goal-row">
+                <div>
+                  <div class="goal-label">🌾 Carbs</div>
+                  <div class="goal-sub">grams per day</div>
+                </div>
+                <input class="goal-input" type="number" id="editCarbGoal" value="275">
+              </div>
+              <div class="goal-row">
+                <div>
+                  <div class="goal-label">🥑 Fat</div>
+                  <div class="goal-sub">grams per day</div>
+                </div>
+                <input class="goal-input" type="number" id="editFatGoal" value="78">
+              </div>
+              <div class="goal-row">
+                <div>
+                  <div class="goal-label">🌿 Fiber</div>
+                  <div class="goal-sub">grams per day · aim high</div>
+                </div>
+                <input class="goal-input" type="number" id="editFiberGoal" value="28">
+              </div>
+              <div class="goal-row">
+                <div>
+                  <div class="goal-label">🍬 Sugar</div>
+                  <div class="goal-sub">grams per day · limit</div>
+                </div>
+                <input class="goal-input" type="number" id="editSugarGoal" value="50">
+              </div>
+              <div class="goal-row">
+                <div>
+                  <div class="goal-label">🧂 Salt</div>
+                  <div class="goal-sub">mg sodium · limit</div>
+                </div>
+                <input class="goal-input" type="number" id="editSodiumGoal" value="2300">
+              </div>
+              <div class="goal-row">
+                <div>
+                  <div class="goal-label">❤️ Cholesterol</div>
+                  <div class="goal-sub">mg per day · limit</div>
+                </div>
+                <input class="goal-input" type="number" id="editCholGoal" value="300">
+              </div>
+              <div class="goal-row">
+                <div>
+                  <div class="goal-label">☀️ Vitamin D</div>
+                  <div class="goal-sub">mcg per day</div>
+                </div>
+                <input class="goal-input" type="number" id="editVitDGoal" value="15">
+              </div>
+              <div class="goal-row">
+                <div>
+                  <div class="goal-label">🥩 Iron</div>
+                  <div class="goal-sub">mg per day</div>
+                </div>
+                <input class="goal-input" type="number" id="editIronGoal" value="18">
+              </div>
+              <div class="goal-row">
+                <div>
+                  <div class="goal-label">🥬 Folate</div>
+                  <div class="goal-sub">mcg per day</div>
+                </div>
+                <input class="goal-input" type="number" id="editFolateGoal" value="400">
+              </div>
+              <div class="goal-row">
+                <div>
+                  <div class="goal-label">🌱 Diet Type</div>
+                  <div class="goal-sub">affects meal plan & recommendations</div>
+                </div>
+                <select class="goal-input" id="editDietType" style="width:130px;font-size:0.82rem;padding:6px 8px">
+                  <option value="nonveg">🍖 Non-Veg</option>
+                  <option value="veg">🌱 Pure Veg</option>
+                  <option value="eggetarian">🥚 Eggetarian</option>
+                  <option value="vegan">🌿 Vegan</option>
+                </select>
+              </div>
+              <!-- FIX: added type="button" -->
+              <button type="button" class="save-goals-btn" onclick="saveGoals()">Save Goals</button>
+            </div>
+          </div>
+
+          <div class="glass-card">
+            <div class="card-title">
+              <div class="dot"></div>Body Stats
+            </div>
+            <div class="goal-editor">
+              <div class="goal-row">
+                <div>
+                  <div class="goal-label">⚖️ Weight</div>
+                  <div class="goal-sub">current body weight</div>
+                </div>
+                <div style="display:flex; gap:6px; align-items:center;">
+                  <input class="goal-input" type="number" step="0.1" id="editWeight" style="width:90px" value="70">
+                  <select class="goal-input" id="editWeightUnit" style="width:70px;font-size:0.82rem;padding:6px 8px">
+                    <option value="kg">kg</option>
+                    <option value="lbs">lbs</option>
+                  </select>
+                </div>
+              </div>
+              <div class="goal-row">
+                <div>
+                  <div class="goal-label">📏 Height</div>
+                  <div class="goal-sub">current height</div>
+                </div>
+                <div style="display:flex; gap:6px; align-items:center;">
+                  <input class="goal-input" type="number" step="0.1" id="editHeight" style="width:90px" value="175">
+                  <select class="goal-input" id="editHeightUnit" style="width:70px;font-size:0.82rem;padding:6px 8px">
+                    <option value="cm">cm</option>
+                    <option value="ft">ft</option>
+                  </select>
+                </div>
+              </div>
+              <button type="button" class="save-goals-btn" onclick="saveBodyStats()">Save Body Stats</button>
+            </div>
+          </div>
+
+          <!-- Body Weight Progress Tracker Card -->
+          <div class="glass-card" style="grid-column: 1 / -1;">
+            <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <div class="dot"></div>📈 Body Weight Progress
+              </div>
+              <div style="display:flex; gap:8px; align-items:center;">
+                <input type="number" step="0.1" id="quickWeightInput" placeholder="70.5"
+                  style="width:80px; padding:4px 8px; border-radius:6px; border:1px solid rgba(255,255,255,0.15); background:rgba(0,0,0,0.2); color:#fff; font-size:0.8rem;">
+                <button type="button" onclick="logWeightEntry()" class="water-quick-btn"
+                  style="font-size:0.75rem; padding:4px 10px;">+ Log Weight</button>
+              </div>
+            </div>
+            <div class="chart-wrap" style="height:220px; margin-top:0.8rem;"><canvas id="weightChart"></canvas></div>
+          </div>
+
+          <!-- Achievements moved to a navbar widget/modal (see #achievementsModal) -->
+        </div>
       </div>
     </main>
 
@@ -1425,64 +1456,64 @@
   <div id="recipeModal" class="modal-overlay" style="display:none">
     <div class="modal-box"
       style="max-width:540px; width:92%; max-height:88vh; overflow-y:auto; padding:1.5rem; text-align:left;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
-          <h3 style="color:#fff; font-size:1.1rem; margin:0; display:flex; align-items:center; gap:8px;">🍲 Create
-            Custom Recipe / Combo</h3>
-          <button type="button" onclick="closeRecipeModal()"
-            style="background:none; border:none; color:var(--mist); font-size:1.2rem; cursor:pointer;">✕</button>
-        </div>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+        <h3 style="color:#fff; font-size:1.1rem; margin:0; display:flex; align-items:center; gap:8px;">🍲 Create
+          Custom Recipe / Combo</h3>
+        <button type="button" onclick="closeRecipeModal()"
+          style="background:none; border:none; color:var(--mist); font-size:1.2rem; cursor:pointer;">✕</button>
+      </div>
 
-        <div style="margin-bottom:1rem;">
-          <label style="display:block; font-size:0.78rem; color:var(--mist); margin-bottom:4px;">Recipe / Combo
-            Name</label>
-          <input type="text" id="recipeTitleInput" placeholder="e.g. Morning Protein Power Smoothie"
-            style="width:100%; padding:0.6rem 0.8rem; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); border-radius:8px; color:#fff; font-size:0.88rem;">
-        </div>
+      <div style="margin-bottom:1rem;">
+        <label style="display:block; font-size:0.78rem; color:var(--mist); margin-bottom:4px;">Recipe / Combo
+          Name</label>
+        <input type="text" id="recipeTitleInput" placeholder="e.g. Morning Protein Power Smoothie"
+          style="width:100%; padding:0.6rem 0.8rem; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); border-radius:8px; color:#fff; font-size:0.88rem;">
+      </div>
 
-        <div style="margin-bottom:1rem;">
-          <label style="display:block; font-size:0.78rem; color:var(--mist); margin-bottom:4px;">Search & Add
-            Ingredients</label>
-          <div style="display:flex; gap:8px;">
-            <input type="text" id="recipeIngSearch" placeholder="Search ingredient (e.g. oats, milk, banana)..."
-              oninput="searchRecipeIngredients(this.value)"
-              style="flex:1; padding:0.6rem 0.8rem; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); border-radius:8px; color:#fff; font-size:0.85rem;">
-          </div>
-          <div id="recipeIngSearchResults"
-            style="max-height:160px; overflow-y:auto; margin-top:6px; display:flex; flex-direction:column; gap:4px;">
-          </div>
+      <div style="margin-bottom:1rem;">
+        <label style="display:block; font-size:0.78rem; color:var(--mist); margin-bottom:4px;">Search & Add
+          Ingredients</label>
+        <div style="display:flex; gap:8px;">
+          <input type="text" id="recipeIngSearch" placeholder="Search ingredient (e.g. oats, milk, banana)..."
+            oninput="searchRecipeIngredients(this.value)"
+            style="flex:1; padding:0.6rem 0.8rem; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); border-radius:8px; color:#fff; font-size:0.85rem;">
         </div>
-
-        <div style="margin-bottom:1rem;">
-          <label style="display:block; font-size:0.78rem; color:var(--mist); margin-bottom:4px;">Selected
-            Ingredients</label>
-          <div id="recipeSelectedList"
-            style="min-height:60px; background:rgba(255,255,255,0.03); border:1px dashed rgba(255,255,255,0.12); border-radius:10px; padding:8px; font-size:0.8rem; color:var(--mist);">
-            No ingredients added yet. Search above to add foods!
-          </div>
-        </div>
-
-        <!-- Live Auto-Calculated Totals -->
-        <div
-          style="background:rgba(62,207,142,0.08); border:1px solid rgba(62,207,142,0.25); border-radius:12px; padding:0.8rem; margin-bottom:1.2rem;">
-          <div style="font-size:0.75rem; color:var(--kiwi); font-weight:700; margin-bottom:4px;">TOTAL NUTRITION
-            (AUTO-CALCULATED)</div>
-          <div id="recipeTotalMacros"
-            style="display:grid; grid-template-columns:repeat(4, 1fr); gap:6px; font-size:0.75rem; color:#fff;">
-            <div>🔥 <span id="recTotalCal">0</span> kcal</div>
-            <div>💪 <span id="recTotalPro">0</span>g P</div>
-            <div>🌾 <span id="recTotalCarb">0</span>g C</div>
-            <div>🥑 <span id="recTotalFat">0</span>g F</div>
-          </div>
-        </div>
-
-        <div style="display:flex; gap:10px; justify-content:flex-end;">
-          <button type="button" onclick="closeRecipeModal()" class="scan-btn muted"
-            style="width:auto; padding:8px 16px;">Cancel</button>
-          <button type="button" onclick="saveCustomRecipe()" class="scan-btn green"
-            style="width:auto; padding:8px 20px;">Save Custom Recipe</button>
+        <div id="recipeIngSearchResults"
+          style="max-height:160px; overflow-y:auto; margin-top:6px; display:flex; flex-direction:column; gap:4px;">
         </div>
       </div>
+
+      <div style="margin-bottom:1rem;">
+        <label style="display:block; font-size:0.78rem; color:var(--mist); margin-bottom:4px;">Selected
+          Ingredients</label>
+        <div id="recipeSelectedList"
+          style="min-height:60px; background:rgba(255,255,255,0.03); border:1px dashed rgba(255,255,255,0.12); border-radius:10px; padding:8px; font-size:0.8rem; color:var(--mist);">
+          No ingredients added yet. Search above to add foods!
+        </div>
+      </div>
+
+      <!-- Live Auto-Calculated Totals -->
+      <div
+        style="background:rgba(62,207,142,0.08); border:1px solid rgba(62,207,142,0.25); border-radius:12px; padding:0.8rem; margin-bottom:1.2rem;">
+        <div style="font-size:0.75rem; color:var(--kiwi); font-weight:700; margin-bottom:4px;">TOTAL NUTRITION
+          (AUTO-CALCULATED)</div>
+        <div id="recipeTotalMacros"
+          style="display:grid; grid-template-columns:repeat(4, 1fr); gap:6px; font-size:0.75rem; color:#fff;">
+          <div>🔥 <span id="recTotalCal">0</span> kcal</div>
+          <div>💪 <span id="recTotalPro">0</span>g P</div>
+          <div>🌾 <span id="recTotalCarb">0</span>g C</div>
+          <div>🥑 <span id="recTotalFat">0</span>g F</div>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:10px; justify-content:flex-end;">
+        <button type="button" onclick="closeRecipeModal()" class="scan-btn muted"
+          style="width:auto; padding:8px 16px;">Cancel</button>
+        <button type="button" onclick="saveCustomRecipe()" class="scan-btn green"
+          style="width:auto; padding:8px 20px;">Save Custom Recipe</button>
+      </div>
     </div>
+  </div>
 
 </body>
 

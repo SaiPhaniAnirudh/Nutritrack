@@ -893,15 +893,15 @@ body {
 .stats-row {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 1.2rem;
-  margin-bottom: 1.2rem;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
 }
 
 .stats-row-secondary {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 1.2rem;
-  margin-bottom: 2rem;
+  gap: 1.5rem;
+  margin-bottom: 2.4rem;
 }
 
 .stat-card {
@@ -910,7 +910,7 @@ body {
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.09);
   border-radius: var(--radius-lg);
-  padding: 1.4rem;
+  padding: 1.8rem;
   position: relative;
   overflow: hidden;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
@@ -955,7 +955,7 @@ body {
 .stat-card .icon {
   font-size: 1.5rem;
   margin-bottom: 0.7rem;
-  filter: drop-shadow(0 2px 6px rgba(0,0,0,0.3));
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.3));
 }
 
 .stat-card .val {
@@ -2329,6 +2329,11 @@ body {
   .stats-row,
   .stats-row-secondary {
     grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .stat-card {
+    padding: 1.3rem;
   }
 
   .auth-card {
@@ -3840,6 +3845,7 @@ body {
     padding: 4px 8px;
     gap: 6px;
   }
+
   .assistant-bar-btn {
     width: 38px;
     height: 38px;
@@ -4502,7 +4508,7 @@ body {
 .scan-emoji {
   font-size: 1.7rem;
   flex-shrink: 0;
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
 }
 
 .scan-info {
@@ -5157,20 +5163,70 @@ body {
   align-items: center;
   gap: 6px;
 }
-.scan-btn:hover { transform: translateY(-2px); filter: brightness(1.1); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3); }
-.scan-btn:active { transform: translateY(0) scale(0.98); }
-.scan-btn.green { background: linear-gradient(135deg, #3ecf8e, #2d9e6b); color: #0a0f0d; box-shadow: 0 4px 14px rgba(62, 207, 142, 0.25); }
-.scan-btn.orange { background: linear-gradient(135deg, #f5a623, #d48806); color: #0a0f0d; box-shadow: 0 4px 14px rgba(245, 166, 35, 0.25); }
-.scan-btn.blue { background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: #ffffff; box-shadow: 0 4px 14px rgba(59, 130, 246, 0.25); }
-.scan-btn.purple { background: linear-gradient(135deg, #8b5cf6, #6d28d9); color: #ffffff; box-shadow: 0 4px 14px rgba(139, 92, 246, 0.25); }
-.scan-btn.gold { background: linear-gradient(135deg, #eab308, #ca8a04); color: #0a0f0d; box-shadow: 0 4px 14px rgba(234, 179, 8, 0.25); }
-.scan-btn.muted { background: rgba(255,255,255,0.08); color: #ffffff; border: 1px solid rgba(255,255,255,0.15); }
+
+.scan-btn:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.1);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
+}
+
+.scan-btn:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.scan-btn.green {
+  background: linear-gradient(135deg, #3ecf8e, #2d9e6b);
+  color: #0a0f0d;
+  box-shadow: 0 4px 14px rgba(62, 207, 142, 0.25);
+}
+
+.scan-btn.orange {
+  background: linear-gradient(135deg, #f5a623, #d48806);
+  color: #0a0f0d;
+  box-shadow: 0 4px 14px rgba(245, 166, 35, 0.25);
+}
+
+.scan-btn.blue {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.25);
+}
+
+.scan-btn.purple {
+  background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(139, 92, 246, 0.25);
+}
+
+.scan-btn.gold {
+  background: linear-gradient(135deg, #eab308, #ca8a04);
+  color: #0a0f0d;
+  box-shadow: 0 4px 14px rgba(234, 179, 8, 0.25);
+}
+
+.scan-btn.muted {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
 
 @keyframes voicePulse {
-  0% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.4; transform: scale(1.15); }
-  100% { opacity: 1; transform: scale(1); }
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.4;
+    transform: scale(1.15);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
+
 .voice-pulse {
   display: inline-block;
   animation: voicePulse 1.2s infinite;
@@ -5185,9 +5241,20 @@ body {
   cursor: pointer;
   transition: background 0.2s, border-color 0.2s;
 }
+
 .tpl-card:hover {
   background: rgba(62, 207, 142, 0.12);
   border-color: rgba(62, 207, 142, 0.3);
 }
-.tpl-title { font-weight: 700; font-size: 0.85rem; color: #fff; margin-bottom: 3px; }
-.tpl-sub { font-size: 0.72rem; color: var(--mist, #a0aec0); }
+
+.tpl-title {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #fff;
+  margin-bottom: 3px;
+}
+
+.tpl-sub {
+  font-size: 0.72rem;
+  color: var(--mist, #a0aec0);
+}

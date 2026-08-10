@@ -26,48 +26,65 @@ function init3DAuthVisual() {
   if (!ctx) return;
 
   const rect = canvas.getBoundingClientRect();
-  canvas.width = (rect.width || 380) * (window.devicePixelRatio || 1);
-  canvas.height = (rect.height || 380) * (window.devicePixelRatio || 1);
+  canvas.width = (rect.width || 440) * (window.devicePixelRatio || 1);
+  canvas.height = (rect.height || 440) * (window.devicePixelRatio || 1);
 
   const particles = [];
-  for (let i = 0; i < 45; i++) {
+  for (let i = 0; i < 60; i++) {
     particles.push({
       x: Math.random() * canvas.width,
       y: Math.random() * canvas.height,
-      radius: Math.random() * 3 + 1.5,
-      color: i % 2 === 0 ? 'rgba(62, 207, 142, 0.5)' : 'rgba(245, 166, 35, 0.4)',
-      vx: (Math.random() - 0.5) * 0.8,
-      vy: (Math.random() - 0.5) * 0.8,
+      radius: Math.random() * 2.5 + 1,
+      color: i % 3 === 0 ? 'rgba(62, 207, 142, 0.6)' : (i % 3 === 1 ? 'rgba(245, 166, 35, 0.5)' : 'rgba(244, 97, 58, 0.4)'),
+      vx: (Math.random() - 0.5) * 0.6,
+      vy: (Math.random() - 0.5) * 0.6,
     });
   }
 
-  let angle = 0;
+  let angleX = 0;
+  let angleY = 0;
+
   function render() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     const centerX = canvas.width / 2;
     const centerY = canvas.height / 2;
-    const coreRadius = Math.min(canvas.width, canvas.height) * 0.22;
+    const coreRadius = Math.min(canvas.width, canvas.height) * 0.24;
 
-    const gradient = ctx.createRadialGradient(centerX, centerY, coreRadius * 0.2, centerX, centerY, coreRadius * 1.8);
-    gradient.addColorStop(0, 'rgba(62, 207, 142, 0.45)');
-    gradient.addColorStop(0.5, 'rgba(45, 158, 107, 0.18)');
+    const gradient = ctx.createRadialGradient(centerX, centerY, coreRadius * 0.1, centerX, centerY, coreRadius * 1.9);
+    gradient.addColorStop(0, 'rgba(62, 207, 142, 0.35)');
+    gradient.addColorStop(0.4, 'rgba(45, 158, 107, 0.15)');
     gradient.addColorStop(1, 'rgba(10, 15, 13, 0)');
     ctx.fillStyle = gradient;
     ctx.beginPath();
-    ctx.arc(centerX, centerY, coreRadius * 1.8, 0, Math.PI * 2);
+    ctx.arc(centerX, centerY, coreRadius * 1.9, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.save();
     ctx.translate(centerX, centerY);
-    ctx.rotate(angle);
+
+    for (let r = 0; r < 5; r++) {
+      const ringAngle = angleX + (r * Math.PI) / 5;
+      const rx = coreRadius * Math.cos(ringAngle);
+      const ry = coreRadius;
+
+      ctx.beginPath();
+      ctx.ellipse(0, 0, Math.abs(rx), ry, angleY, 0, Math.PI * 2);
+      ctx.strokeStyle = r % 2 === 0 ? 'rgba(62, 207, 142, 0.45)' : 'rgba(245, 166, 35, 0.4)';
+      ctx.lineWidth = 1.6;
+      ctx.stroke();
+    }
 
     ctx.beginPath();
-    ctx.arc(0, 0, coreRadius, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(62, 207, 142, 0.12)';
-    ctx.strokeStyle = '#3ECF8E';
-    ctx.lineWidth = 2.5;
-    ctx.stroke();
+    ctx.arc(0, 0, coreRadius * 0.75, 0, Math.PI * 2);
+    const coreGrad = ctx.createRadialGradient(-coreRadius * 0.2, -coreRadius * 0.2, 5, 0, 0, coreRadius * 0.75);
+    coreGrad.addColorStop(0, '#50e3a4');
+    coreGrad.addColorStop(0.6, '#3ECF8E');
+    coreGrad.addColorStop(1, '#0f1712');
+    ctx.fillStyle = coreGrad;
     ctx.fill();
+    ctx.strokeStyle = 'rgba(62, 207, 142, 0.85)';
+    ctx.lineWidth = 2.2;
+    ctx.stroke();
 
     ctx.restore();
 
@@ -83,7 +100,8 @@ function init3DAuthVisual() {
       ctx.fill();
     });
 
-    angle += 0.008;
+    angleX += 0.012;
+    angleY += 0.006;
     requestAnimationFrame(render);
   }
 
@@ -1167,6 +1185,33 @@ function refreshDashboard() {
     const el = document.getElementById(vId); if (el) el.textContent = Math.round(val);
     const bar = document.getElementById(bId); if (bar) bar.style.width = Math.min(100, (val / (goal || 1)) * 100) + '%';
   });
+
+  // Update Circular Progress Rings (Matches Expectation UI 1:1)
+  const setRing = (valId, goalId, pctId, circleId, val, goal, circumference) => {
+    const vEl = document.getElementById(valId);
+    const gEl = document.getElementById(goalId);
+    const pEl = document.getElementById(pctId);
+    const cEl = document.getElementById(circleId);
+
+    const roundedVal = Math.round(val);
+    const roundedGoal = Math.round(goal || 1);
+    const pct = Math.min(100, Math.round((val / roundedGoal) * 100));
+
+    if (vEl) vEl.textContent = roundedVal;
+    if (gEl) gEl.textContent = roundedGoal;
+    if (pEl) pEl.textContent = pct + '%';
+
+    if (cEl) {
+      const offset = circumference - (pct / 100) * circumference;
+      cEl.style.strokeDasharray = circumference;
+      cEl.style.strokeDashoffset = offset;
+    }
+  };
+
+  setRing('ringCalVal', 'ringCalGoal', 'ringCalPct', 'ringCalCircle', totals.cal, goals.calories, 427);
+  setRing('ringProtVal', 'ringProtGoal', 'ringProtPct', 'ringProtCircle', totals.pro, goals.protein, 364);
+  setRing('ringCarbVal', 'ringCarbGoal', 'ringCarbPct', 'ringCarbCircle', totals.carb, goals.carbs, 364);
+  setRing('ringFatVal', 'ringFatGoal', 'ringFatPct', 'ringFatCircle', totals.fat, goals.fat, 364);
 
   [['dashFiber', 'fiberBar', totals.fiber, goals.fiber || 28, false, 'fiber-card'],
   ['dashSugar', 'sugarBar', totals.sugar, goals.sugar || 50, true, 'sugar-card'],
