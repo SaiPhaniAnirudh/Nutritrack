@@ -964,7 +964,7 @@ def search_foods():
             headers = {'User-Agent': 'NutriTrack - WebApp - Version 2.5 (contact: support@nutritrack.app)'}
             
             # Prefer US/EN endpoint for clean English product names; fall back to World endpoint
-            off_url = f"https://us.openfoodfacts.org/cgi/search.pl?search_terms={q_param}&search_simple=1&action=process&json=1&page_size=15&lc=en"
+            off_url = f"https://us.openfoodfacts.org/cgi/search.pl?search_terms={q_param}&search_simple=1&action=process&json=1&page_size=25&lc=en"
             off_res = None
             try:
                 off_res = requests.get(off_url, timeout=4, headers=headers)
@@ -972,7 +972,7 @@ def search_foods():
                 off_res = None
 
             if not off_res or off_res.status_code != 200:
-                world_url = f"https://world.openfoodfacts.org/cgi/search.pl?search_terms={q_param}&search_simple=1&action=process&json=1&page_size=15&lc=en&sort_by=unique_scans_n"
+                world_url = f"https://world.openfoodfacts.org/cgi/search.pl?search_terms={q_param}&search_simple=1&action=process&json=1&page_size=25&lc=en&sort_by=unique_scans_n"
                 off_res = requests.get(world_url, timeout=4, headers=headers)
 
             if off_res and off_res.status_code == 200:

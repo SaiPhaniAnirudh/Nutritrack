@@ -1916,9 +1916,12 @@ let _lastSearchQuery = '';
 
 function _buildFoodCard(f) {
   const isDb = f.source === 'db';
+  const isOFF = f.source === 'openfoodfacts';
   const desc = isDb
     ? '<span style="font-size:0.68rem;opacity:0.5;letter-spacing:0.03em">📦 From Database</span>'
-    : (f.desc || FOOD_DESCRIPTIONS[f.cat] || '');
+    : isOFF
+      ? '<span style="font-size:0.68rem;opacity:0.6;letter-spacing:0.03em">🌍 Data from <a href="https://world.openfoodfacts.org" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:inherit;text-decoration:underline">Open Food Facts</a> (ODbL)</span>'
+      : (f.desc || FOOD_DESCRIPTIONS[f.cat] || '');
 
   const safeId = 'food_' + String(f.id || f.name).replace(/[^a-zA-Z0-9_]/g, '_');
   if (!window._foodCardMap) window._foodCardMap = {};
