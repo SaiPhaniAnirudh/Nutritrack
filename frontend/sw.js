@@ -14,7 +14,7 @@
  *   - Images                           → Stale While Revalidate
  */
 
-const CACHE_NAME = 'nutritrack-v22';
+const CACHE_NAME = 'nutritrack-v23';
 const APP_SHELL = [
   '/',
   '/index.html',
