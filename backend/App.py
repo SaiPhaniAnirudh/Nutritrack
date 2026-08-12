@@ -335,7 +335,7 @@ class User(db.Model):
             'id':         self.id,
             'name':       self.name,
             'email':      self.email,
-            'created_at': self.created_at.isoformat(),
+            'created_at': self.created_at.isoformat() if self.created_at else None,
             'body_stats': {
                 'age':         self.current_age,
                 'dob':         self.dob,
@@ -409,7 +409,7 @@ class FoodLog(db.Model):
             'vit_d':     self.vit_d,
             'iron':      self.iron,
             'folate':    self.folate,
-            'logged_at': self.logged_at.isoformat(),
+            'logged_at': self.logged_at.isoformat() if self.logged_at else None,
         }
 
 
@@ -430,7 +430,7 @@ class WaterLog(db.Model):
             'userId':    self.user_id,
             'date':      self.date,
             'amountMl':  self.amount_ml,
-            'logged_at': self.logged_at.isoformat(),
+            'logged_at': self.logged_at.isoformat() if self.logged_at else None,
         }
 
 
@@ -452,7 +452,7 @@ class WeightLog(db.Model):
             'date':      self.date,
             'weight_kg': self.weight_kg,
             'note':      self.note,
-            'logged_at': self.logged_at.isoformat(),
+            'logged_at': self.logged_at.isoformat() if self.logged_at else None,
         }
 
 
@@ -485,7 +485,7 @@ class MealTemplate(db.Model):
             'total_pro':  self.total_pro,
             'total_carb': self.total_carb,
             'total_fat':  self.total_fat,
-            'created_at': self.created_at.isoformat(),
+            'created_at': self.created_at.isoformat() if self.created_at else None,
         }
 
 
@@ -511,7 +511,7 @@ class Challenge(db.Model):
             'targetVal':     self.target_val,
             'durationDays':  self.duration_days,
             'badgeEmoji':    self.badge_emoji,
-            'created_at':    self.created_at.isoformat(),
+            'created_at':    self.created_at.isoformat() if self.created_at else None,
         }
 
 
@@ -534,7 +534,7 @@ class ChallengeParticipant(db.Model):
             'userId':      self.user_id,
             'userName':    user.name if user else 'User',
             'currentVal':  self.current_val,
-            'joined_at':   self.joined_at.isoformat(),
+            'joined_at':   self.joined_at.isoformat() if self.joined_at else None,
         }
 
 
@@ -558,7 +558,7 @@ class WorkoutLog(db.Model):
             'name':        self.name,
             'durationMin': self.duration_min,
             'calBurned':   self.cal_burned,
-            'logged_at':   self.logged_at.isoformat(),
+            'logged_at':   self.logged_at.isoformat() if self.logged_at else None,
         }
 
 
