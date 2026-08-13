@@ -22,10 +22,10 @@ We have successfully implemented and deployed NutriTrack's **Modern 3D Split-Scr
 ### 3. 🎨 Logo Obsidian Dark Theme Integration ([frontend/Style.css](frontend/Style.css#L310-L330))
 - Styled `.logo-mark-dark` background container (`#0a0f0d`) with subtle kiwi glow (`rgba(62,207,142,0.25)`), eliminating any white borders or light square outlines so the logo blends seamlessly into the dark obsidian header.
 
-### 4. 📊 Circular Progress Rings on Dashboard ([frontend/App.js](frontend/App.js#L1177-L1185) | [frontend/index.html](frontend/index.html#L560-L600))
-- Replaced flat linear progress bars for the 4 primary macros (Calories, Protein, Carbs, Fat) with **animated SVG circular rings** using the `_dpRing()` helper.
-- Each ring has its own accent color and animates with a smooth `stroke-dasharray` transition.
-- Stats now use a side-by-side layout (`.stat-ring-row`) with text on the left and the ring on the right.
+### 4. 📊 Circular Progress Rings Across ALL 11 Nutrition Stats ([frontend/App.js](frontend/App.js#L1177-L1199) | [frontend/index.html](frontend/index.html#L560-L675))
+- Replaced flat linear progress bars for **ALL 11 nutrition stats** (Calories, Protein, Carbs, Fat, Fiber, Sugar, Salt, Cholesterol, Vit D, Iron, Folate) with **animated SVG circular progress rings** rendered by `_dpRing()`.
+- Each ring features a custom HSL/HEX accent color, background track, rounded stroke caps, and smooth `stroke-dasharray` transition.
+- All stat cards use the clean side-by-side `.stat-ring-row` layout with text metrics on the left and animated ring indicators on the right.
 
 ![Dashboard with Progress Rings](screenshots/dashboard_rings.png)
 
@@ -39,8 +39,8 @@ We have successfully implemented and deployed NutriTrack's **Modern 3D Split-Scr
 
 - **Live Deployment:** [https://nutritrack-rho-rust.vercel.app/](https://nutritrack-rho-rust.vercel.app/) — auto-deployed via Vercel
 - **Auth Tab Switcher:** Sign In ↔ Sign Up tabs work with smooth sliding indicator
-- **Progress Rings:** All 4 primary macro stats display animated circular rings
-- **Service Worker:** Cache bumped to `nutritrack-v25`
+- **Universal Progress Rings:** All 11 primary & secondary nutrition stats display animated circular rings
+- **Service Worker:** Cache bumped to `nutritrack-v27`
 - **All features preserved:** Dashboard, Track Food, History, Profile, AI Scanner, Barcode Camera, Water Tracker, Workout Tracker, Achievements, Diet Planner — all working
 
 ---
