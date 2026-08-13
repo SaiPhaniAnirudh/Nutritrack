@@ -508,6 +508,12 @@ function showRegisterForm() {
   document.getElementById('registerForm').style.display = 'block';
   document.getElementById('authError').style.display = 'none';
   document.getElementById('authSuccess').style.display = 'none';
+  const tabLogin = document.getElementById('authTabLogin');
+  const tabRegister = document.getElementById('authTabRegister');
+  const indicator = document.getElementById('authTabIndicator');
+  if (tabLogin) tabLogin.classList.remove('active');
+  if (tabRegister) tabRegister.classList.add('active');
+  if (indicator) indicator.classList.add('to-register');
 }
 
 function showLoginForm() {
@@ -515,6 +521,12 @@ function showLoginForm() {
   document.getElementById('loginForm').style.display = 'block';
   document.getElementById('authError').style.display = 'none';
   document.getElementById('authSuccess').style.display = 'none';
+  const tabLogin = document.getElementById('authTabLogin');
+  const tabRegister = document.getElementById('authTabRegister');
+  const indicator = document.getElementById('authTabIndicator');
+  if (tabRegister) tabRegister.classList.remove('active');
+  if (tabLogin) tabLogin.classList.add('active');
+  if (indicator) indicator.classList.remove('to-register');
 }
 
 async function handleForgotPassword() {
@@ -1162,13 +1174,14 @@ function refreshDashboard() {
   const dashBurnEl = document.getElementById('dashWorkoutBurn');
   if (dashBurnEl) dashBurnEl.textContent = Math.round(workoutBurn);
 
-  [['dashCals', 'calBar', totals.cal, goals.calories, false],
-  ['dashProtein', 'protBar', totals.pro, goals.protein, false],
-  ['dashCarbs', 'carbBar', totals.carb, goals.carbs, false],
-  ['dashFat', 'fatBar', totals.fat, goals.fat, false],
-  ].forEach(([vId, bId, val, goal]) => {
+  [['dashCals', 'calBar', totals.cal, goals.calories, '#F5A623'],
+  ['dashProtein', 'protBar', totals.pro, goals.protein, '#7fb8d4'],
+  ['dashCarbs', 'carbBar', totals.carb, goals.carbs, '#c4a87f'],
+  ['dashFat', 'fatBar', totals.fat, goals.fat, '#F4613A'],
+  ].forEach(([vId, ringId, val, goal, color]) => {
     const el = document.getElementById(vId); if (el) el.textContent = Math.round(val);
-    const bar = document.getElementById(bId); if (bar) bar.style.width = Math.min(100, (val / (goal || 1)) * 100) + '%';
+    const ring = document.getElementById(ringId);
+    if (ring) ring.innerHTML = _dpRing(Math.min(100, (val / (goal || 1)) * 100), color, 56, 6);
   });
 
   [['dashFiber', 'fiberBar', totals.fiber, goals.fiber || 28, false, 'fiber-card'],

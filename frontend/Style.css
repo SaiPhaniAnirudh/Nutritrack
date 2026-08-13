@@ -334,6 +334,53 @@ body {
   animation: cardReveal 0.2s ease both;
 }
 
+/* Auth Login/Signup Tab Switcher */
+.auth-tabs {
+  position: relative;
+  display: flex;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 4px;
+  margin-bottom: 1.4rem;
+}
+
+.auth-tab {
+  position: relative;
+  z-index: 2;
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--mist);
+  font-weight: 600;
+  font-size: 0.92rem;
+  padding: 10px 0;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: color 0.25s ease;
+}
+
+.auth-tab.active {
+  color: #0a0f0d;
+}
+
+.auth-tab-indicator {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: calc(50% - 4px);
+  height: calc(100% - 8px);
+  background: linear-gradient(135deg, #3ecf8e, #2fb87d);
+  border-radius: 10px;
+  box-shadow: 0 4px 14px rgba(62, 207, 142, 0.35);
+  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 1;
+}
+
+.auth-tab-indicator.to-register {
+  transform: translateX(100%);
+}
+
 /* Dark Obsidian Logo Container */
 .logo-mark-dark {
   display: inline-flex;
@@ -899,6 +946,20 @@ body {
   grid-template-columns: repeat(4, 1fr);
   gap: 1.5rem;
   margin-bottom: 2.4rem;
+}
+
+.stat-ring-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.goal-ring-wrap {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .stat-card {

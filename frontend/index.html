@@ -251,6 +251,12 @@
         <p class="auth-subhead" style="text-align:center; margin-bottom:1.5rem;">AI meal analysis, barcode lookup &
           wearable auto-sync.</p>
 
+        <div class="auth-tabs">
+          <button type="button" class="auth-tab active" id="authTabLogin" onclick="showLoginForm()">Sign In</button>
+          <button type="button" class="auth-tab" id="authTabRegister" onclick="showRegisterForm()">Sign Up</button>
+          <div class="auth-tab-indicator" id="authTabIndicator"></div>
+        </div>
+
         <div id="authError" class="auth-error"></div>
         <div id="authSuccess" class="auth-error auth-success"></div>
 
@@ -312,9 +318,6 @@
             Continue with Google
           </button>
 
-          <p class="auth-switch-text" style="margin-top:1.2rem; text-align:center;">
-            Don't have an account? <a href="#" onclick="showRegisterForm()">Sign Up</a>
-          </p>
         </div>
 
         <!-- REGISTER FORM (Hidden by default) -->
@@ -358,9 +361,6 @@
           </div>
           <button type="button" class="submit-btn auth-submit" onclick="handleEmailRegister(event)">Create Account
             &rarr;</button>
-          <p class="auth-switch-text" style="margin-top:1.2rem; text-align:center;">
-            Already have an account? <a href="#" onclick="showLoginForm()">Sign In</a>
-          </p>
         </div>
       </div>
     </div>
@@ -558,44 +558,44 @@
 
 
         <div class="stats-row">
-          <div class="stat-card" style="--accent: #F5A623">
-            <div class="icon">🔥</div>
-            <div><span class="val" id="dashCals">0</span><span class="unit"> kcal</span></div>
-            <div class="label">Calories Today</div>
-            <div class="goal-bar-wrap">
-              <div class="goal-bar-bg">
-                <div class="goal-bar-fill" id="calBar" style="width:0%;background:#F5A623"></div>
+          <div class="stat-card stat-card-ring" style="--accent: #F5A623">
+            <div class="stat-ring-row">
+              <div>
+                <div class="icon">🔥</div>
+                <div><span class="val" id="dashCals">0</span><span class="unit"> kcal</span></div>
+                <div class="label">Calories Today</div>
               </div>
+              <div class="goal-ring-wrap" id="calBar"></div>
             </div>
           </div>
-          <div class="stat-card" style="--accent: #7fb8d4">
-            <div class="icon">💪</div>
-            <div><span class="val" id="dashProtein">0</span><span class="unit">g</span></div>
-            <div class="label">Protein</div>
-            <div class="goal-bar-wrap">
-              <div class="goal-bar-bg">
-                <div class="goal-bar-fill" id="protBar" style="width:0%;background:#7fb8d4"></div>
+          <div class="stat-card stat-card-ring" style="--accent: #7fb8d4">
+            <div class="stat-ring-row">
+              <div>
+                <div class="icon">💪</div>
+                <div><span class="val" id="dashProtein">0</span><span class="unit">g</span></div>
+                <div class="label">Protein</div>
               </div>
+              <div class="goal-ring-wrap" id="protBar"></div>
             </div>
           </div>
-          <div class="stat-card" style="--accent: #c4a87f">
-            <div class="icon">🌾</div>
-            <div><span class="val" id="dashCarbs">0</span><span class="unit">g</span></div>
-            <div class="label">Carbohydrates</div>
-            <div class="goal-bar-wrap">
-              <div class="goal-bar-bg">
-                <div class="goal-bar-fill" id="carbBar" style="width:0%;background:#c4a87f"></div>
+          <div class="stat-card stat-card-ring" style="--accent: #c4a87f">
+            <div class="stat-ring-row">
+              <div>
+                <div class="icon">🌾</div>
+                <div><span class="val" id="dashCarbs">0</span><span class="unit">g</span></div>
+                <div class="label">Carbohydrates</div>
               </div>
+              <div class="goal-ring-wrap" id="carbBar"></div>
             </div>
           </div>
-          <div class="stat-card" style="--accent: #F4613A">
-            <div class="icon">🥑</div>
-            <div><span class="val" id="dashFat">0</span><span class="unit">g</span></div>
-            <div class="label">Healthy Fats</div>
-            <div class="goal-bar-wrap">
-              <div class="goal-bar-bg">
-                <div class="goal-bar-fill" id="fatBar" style="width:0%;background:#F4613A"></div>
+          <div class="stat-card stat-card-ring" style="--accent: #F4613A">
+            <div class="stat-ring-row">
+              <div>
+                <div class="icon">🥑</div>
+                <div><span class="val" id="dashFat">0</span><span class="unit">g</span></div>
+                <div class="label">Healthy Fats</div>
               </div>
+              <div class="goal-ring-wrap" id="fatBar"></div>
             </div>
           </div>
         </div>
