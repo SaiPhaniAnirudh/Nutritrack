@@ -8,11 +8,11 @@
 
 ## 🎨 UI/UX Visual Experience
 
-NutriTrack features a modern **3D Parallax Split-Screen Auth Experience** with a sliding **Sign In / Sign Up tab switcher**, and a **Spacious Dark Obsidian Glassmorphism Dashboard** (`#0A0F0D` / `#0F1712`) with **circular SVG progress rings** for macro tracking.
+NutriTrack features an interactive **3D Holographic Molecular Core Auth Experience** (with dual geodesic 3D rotating lattice, tilted orbital macro badges, depth particles, and interactive mouse parallax & click energy ripples), alongside a sliding **Sign In / Sign Up tab switcher** and a **Spacious Dark Obsidian Glassmorphism Dashboard** (`#0A0F0D` / `#0F1712`) with **universal circular SVG progress rings** across all 11 nutrition stats.
 
-| Sign In (Tab Switcher) | Sign Up (Sliding Indicator) | Dashboard (Progress Rings) |
+| 3D Holographic Auth Page | Sign Up (Sliding Indicator) | Dashboard (11 Progress Rings) |
 | :---: | :---: | :---: |
-| ![Sign In](screenshots/auth_signin.png) | ![Sign Up](screenshots/auth_signup.png) | ![Dashboard](screenshots/dashboard_rings.png) |
+| ![3D Holographic Auth Page](screenshots/auth_signin.png) | ![Sign Up](screenshots/auth_signup.png) | ![Dashboard Rings](screenshots/dashboard_rings.png) |
 
 ---
 

@@ -6,13 +6,17 @@ We have successfully implemented and deployed NutriTrack's **Modern 3D Split-Scr
 
 ## 🛠️ Changes Accomplished
 
-### 1. 🔑 3D Parallax Split-Screen Auth Page ([frontend/index.html](frontend/index.html#L220-L280))
-- **Left 50% Visual Hero:** Interactive 3D particle orbit and glowing nutrition sphere canvas (`#auth3dCanvas`) with dynamic radial gradients (`rgba(62,207,142,0.45)`).
-- **Right 50% Form Panel:** Spacious glassmorphism card (`backdrop-filter: blur(20px)`), 1-click Google OAuth button, clean inputs, and smooth login/signup tab switcher.
+### 1. 🔑 3D Holographic Molecular Engine ([frontend/App.js](frontend/App.js#L22-L330))
+- **Left 50% Visual Hero (`#auth3dCanvas`):** Completely transformed into an interactive 3D Holographic Molecular Engine featuring:
+  - **Dual Geodesic 3D Lattice:** Rotating inner and outer icosahedron molecular structures connected by dynamic neon green & gold energy lines (`#3ECF8E` & `#F5A623`).
+  - **Multi-Axis Orbiting Macro Badges:** Tilted 3D orbits carrying glowing badges (**🔥 Cals**, **💪 Protein**, **🌾 Carbs**, **🥑 Fats**) in true 3D depth.
+  - **Interactive Mouse Parallax & Click Energy Ripples:** Responds dynamically to mouse movements with smooth 3D tilt rotation and spawns expanding energy shockwaves on click.
+  - **Depth-of-Field Ambient Dust:** 90+ floating 3D ambient particles with z-depth alpha fading.
+- **Right 50% Form Panel:** Glassmorphism obsidian card (`backdrop-filter: blur(20px)`), 1-click Google OAuth button, clean inputs, and smooth sliding pill tab switcher.
 
-| Sign In | Sign Up |
+| 3D Holographic Auth Page | Sign Up Tab Switcher |
 | :---: | :---: |
-| ![Sign In Tab](screenshots/auth_signin.png) | ![Sign Up Tab](screenshots/auth_signup.png) |
+| ![3D Holographic Auth Page](screenshots/auth_signin.png) | ![Sign Up Tab](screenshots/auth_signup.png) |
 
 ### 2. 🔀 Auth Tab Switcher ([frontend/App.js](frontend/App.js#L508-L530) | [frontend/Style.css](frontend/Style.css#L336-L380))
 - Replaced the old "Don't have an account?" / "Already have an account?" text links with a **polished sliding pill tab switcher**.
