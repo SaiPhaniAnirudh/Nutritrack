@@ -174,6 +174,7 @@ nutritrack/
 │   └── batch_alias_generator.py ← Batch alias-table generator + confidence heuristic
 ├── tests/
 │   └── test_search_aliases.py   ← Integration test for common food search queries
+├── screenshots/                 ← Production screenshots (auth tabs, dashboard rings)
 ├── foods_seed.sql
 ├── requirements.txt
 ├── Procfile
@@ -181,6 +182,7 @@ nutritrack/
 ├── ACCURACY_AUDIT.md            ← Latest accuracy audit results
 ├── ALIAS_REPORT.md              ← Alias-table generation + correction log
 ├── CASE_STUDY.md                ← Full debugging narrative
+├── walkthrough.md               ← UI redesign & feature walkthrough
 ├── setup.bat                    ← One-click Windows setup
 └── setup.sh                     ← One-click macOS/Linux setup
 ```

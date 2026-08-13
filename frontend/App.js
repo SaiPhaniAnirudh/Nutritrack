@@ -1184,16 +1184,17 @@ function refreshDashboard() {
     if (ring) ring.innerHTML = _dpRing(Math.min(100, (val / (goal || 1)) * 100), color, 56, 6);
   });
 
-  [['dashFiber', 'fiberBar', totals.fiber, goals.fiber || 28, false, 'fiber-card'],
-  ['dashSugar', 'sugarBar', totals.sugar, goals.sugar || 50, true, 'sugar-card'],
-  ['dashSodium', 'sodiumBar', totals.sodium, goals.sodium || 2300, true, 'sodium-card'],
-  ['dashChol', 'cholBar', totals.chol, goals.chol || 300, true, 'chol-card'],
-  ['dashVitD', 'vitDBar', totals.vit_d, goals.vit_d || 15, false, 'vitD-card'],
-  ['dashIron', 'ironBar', totals.iron, goals.iron || 18, false, 'iron-card'],
-  ['dashFolate', 'folateBar', totals.folate, goals.folate || 400, false, 'folate-card'],
-  ].forEach(([vId, bId, val, goal, warnOnOver, cardId]) => {
+  [['dashFiber', 'fiberBar', totals.fiber, goals.fiber || 28, false, 'fiber-card', '#4E9F3D'],
+  ['dashSugar', 'sugarBar', totals.sugar, goals.sugar || 50, true, 'sugar-card', '#E63946'],
+  ['dashSodium', 'sodiumBar', totals.sodium, goals.sodium || 2300, true, 'sodium-card', '#A8DADC'],
+  ['dashChol', 'cholBar', totals.chol, goals.chol || 300, true, 'chol-card', '#FFB703'],
+  ['dashVitD', 'vitDBar', totals.vit_d, goals.vit_d || 15, false, 'vitD-card', '#F5A623'],
+  ['dashIron', 'ironBar', totals.iron, goals.iron || 18, false, 'iron-card', '#D0021B'],
+  ['dashFolate', 'folateBar', totals.folate, goals.folate || 400, false, 'folate-card', '#7ED321'],
+  ].forEach(([vId, ringId, val, goal, warnOnOver, cardId, color]) => {
     const el = document.getElementById(vId); if (el) el.textContent = Math.round(val);
-    const bar = document.getElementById(bId); if (bar) bar.style.width = Math.min(100, (val / (goal || 1)) * 100) + '%';
+    const ring = document.getElementById(ringId);
+    if (ring) ring.innerHTML = _dpRing(Math.min(100, (val / (goal || 1)) * 100), color, 48, 5);
     const card = document.getElementById(cardId);
     if (card) card.classList.toggle('warning-high', warnOnOver && val > goal);
   });

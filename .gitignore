@@ -42,3 +42,9 @@ scratch/
 # Architecture diagrams (dev docs, not app code)
 architecture.mmd
 architecture_flowchart.png
+
+# Temporary patches & mockups
+*.patch
+*_mockup_*.png
+pic 1*
+

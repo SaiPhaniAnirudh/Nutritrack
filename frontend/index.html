@@ -38,7 +38,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://cdn.jsdelivr.net">
   <link rel="preconnect" href="https://unpkg.com">
-  <link rel="stylesheet" href="/Style.css?v=20">
+  <link rel="stylesheet" href="/Style.css?v=21">
   <link
     href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;0,9..144,900;1,9..144,300&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
     rel="stylesheet" media="print" onload="this.media='all'">
@@ -601,74 +601,74 @@
         </div>
 
         <div class="stats-row-secondary">
-          <div class="stat-card" id="fiber-card" style="--accent: var(--fiber-color)">
-            <div class="icon">🌿</div>
-            <div><span class="val" id="dashFiber">0</span><span class="unit">g</span></div>
-            <div class="label">Fiber</div>
-            <div class="goal-bar-wrap">
-              <div class="goal-bar-bg">
-                <div class="goal-bar-fill" id="fiberBar" style="width:0%;background:var(--fiber-color)"></div>
+          <div class="stat-card stat-card-ring" id="fiber-card" style="--accent: var(--fiber-color)">
+            <div class="stat-ring-row">
+              <div>
+                <div class="icon">🌿</div>
+                <div><span class="val" id="dashFiber">0</span><span class="unit">g</span></div>
+                <div class="label">Fiber</div>
               </div>
+              <div class="goal-ring-wrap" id="fiberBar"></div>
             </div>
           </div>
-          <div class="stat-card" id="sugar-card" style="--accent: var(--sugar-color)">
-            <div class="icon">🍬</div>
-            <div><span class="val" id="dashSugar">0</span><span class="unit">g</span></div>
-            <div class="label">Sugar</div>
-            <div class="goal-bar-wrap">
-              <div class="goal-bar-bg">
-                <div class="goal-bar-fill" id="sugarBar" style="width:0%;background:var(--sugar-color)"></div>
+          <div class="stat-card stat-card-ring" id="sugar-card" style="--accent: var(--sugar-color)">
+            <div class="stat-ring-row">
+              <div>
+                <div class="icon">🍬</div>
+                <div><span class="val" id="dashSugar">0</span><span class="unit">g</span></div>
+                <div class="label">Sugar</div>
               </div>
+              <div class="goal-ring-wrap" id="sugarBar"></div>
             </div>
           </div>
-          <div class="stat-card" id="sodium-card" style="--accent: var(--sodium-color)">
-            <div class="icon">🧂</div>
-            <div><span class="val" id="dashSodium">0</span><span class="unit">mg</span></div>
-            <div class="label">Salt</div>
-            <div class="goal-bar-wrap">
-              <div class="goal-bar-bg">
-                <div class="goal-bar-fill" id="sodiumBar" style="width:0%;background:var(--sodium-color)"></div>
+          <div class="stat-card stat-card-ring" id="sodium-card" style="--accent: var(--sodium-color)">
+            <div class="stat-ring-row">
+              <div>
+                <div class="icon">🧂</div>
+                <div><span class="val" id="dashSodium">0</span><span class="unit">mg</span></div>
+                <div class="label">Salt</div>
               </div>
+              <div class="goal-ring-wrap" id="sodiumBar"></div>
             </div>
           </div>
-          <div class="stat-card" id="chol-card" style="--accent: var(--chol-color)">
-            <div class="icon">❤️</div>
-            <div><span class="val" id="dashChol">0</span><span class="unit">mg</span></div>
-            <div class="label">Cholesterol</div>
-            <div class="goal-bar-wrap">
-              <div class="goal-bar-bg">
-                <div class="goal-bar-fill" id="cholBar" style="width:0%;background:var(--chol-color)"></div>
+          <div class="stat-card stat-card-ring" id="chol-card" style="--accent: var(--chol-color)">
+            <div class="stat-ring-row">
+              <div>
+                <div class="icon">❤️</div>
+                <div><span class="val" id="dashChol">0</span><span class="unit">mg</span></div>
+                <div class="label">Cholesterol</div>
               </div>
+              <div class="goal-ring-wrap" id="cholBar"></div>
             </div>
           </div>
-          <div class="stat-card" id="vitD-card" style="--accent: #F5A623">
-            <div class="icon">☀️</div>
-            <div><span class="val" id="dashVitD">0</span><span class="unit">mcg</span></div>
-            <div class="label">Vit D</div>
-            <div class="goal-bar-wrap">
-              <div class="goal-bar-bg">
-                <div class="goal-bar-fill" id="vitDBar" style="width:0%;background:#F5A623"></div>
+          <div class="stat-card stat-card-ring" id="vitD-card" style="--accent: #F5A623">
+            <div class="stat-ring-row">
+              <div>
+                <div class="icon">☀️</div>
+                <div><span class="val" id="dashVitD">0</span><span class="unit">mcg</span></div>
+                <div class="label">Vit D</div>
               </div>
+              <div class="goal-ring-wrap" id="vitDBar"></div>
             </div>
           </div>
-          <div class="stat-card" id="iron-card" style="--accent: #D0021B">
-            <div class="icon">🥩</div>
-            <div><span class="val" id="dashIron">0</span><span class="unit">mg</span></div>
-            <div class="label">Iron</div>
-            <div class="goal-bar-wrap">
-              <div class="goal-bar-bg">
-                <div class="goal-bar-fill" id="ironBar" style="width:0%;background:#D0021B"></div>
+          <div class="stat-card stat-card-ring" id="iron-card" style="--accent: #D0021B">
+            <div class="stat-ring-row">
+              <div>
+                <div class="icon">🥩</div>
+                <div><span class="val" id="dashIron">0</span><span class="unit">mg</span></div>
+                <div class="label">Iron</div>
               </div>
+              <div class="goal-ring-wrap" id="ironBar"></div>
             </div>
           </div>
-          <div class="stat-card" id="folate-card" style="--accent: #7ED321">
-            <div class="icon">🥬</div>
-            <div><span class="val" id="dashFolate">0</span><span class="unit">mcg</span></div>
-            <div class="label">Folate</div>
-            <div class="goal-bar-wrap">
-              <div class="goal-bar-bg">
-                <div class="goal-bar-fill" id="folateBar" style="width:0%;background:#7ED321"></div>
+          <div class="stat-card stat-card-ring" id="folate-card" style="--accent: #7ED321">
+            <div class="stat-ring-row">
+              <div>
+                <div class="icon">🥬</div>
+                <div><span class="val" id="dashFolate">0</span><span class="unit">mcg</span></div>
+                <div class="label">Folate</div>
               </div>
+              <div class="goal-ring-wrap" id="folateBar"></div>
             </div>
           </div>
         </div>
