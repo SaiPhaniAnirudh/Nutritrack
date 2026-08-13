@@ -25,65 +25,282 @@ function init3DAuthVisual() {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
 
-  const rect = canvas.getBoundingClientRect();
-  canvas.width = (rect.width || 380) * (window.devicePixelRatio || 1);
-  canvas.height = (rect.height || 380) * (window.devicePixelRatio || 1);
+  const dpr = window.devicePixelRatio || 1;
+  let width, height, cx, cy;
 
+  function resize() {
+    const rect = canvas.getBoundingClientRect();
+    width = canvas.width = (rect.width || 420) * dpr;
+    height = canvas.height = (rect.height || 420) * dpr;
+    cx = width / 2;
+    cy = height / 2;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  // Mouse & Touch Parallax Tracking
+  let mouseX = 0, mouseY = 0, targetMouseX = 0, targetMouseY = 0;
+  window.addEventListener('mousemove', (e) => {
+    const r = canvas.getBoundingClientRect();
+    targetMouseX = ((e.clientX - r.left) / r.width - 0.5) * 2;
+    targetMouseY = ((e.clientY - r.top) / r.height - 0.5) * 2;
+  });
+
+  // 1. 3D Geodesic Molecular Core Nodes (Icosahedron structure)
+  const nodes = [];
+  const phi = (1 + Math.sqrt(5)) / 2;
+  const baseVertices = [
+    [-1, phi, 0], [1, phi, 0], [-1, -phi, 0], [1, -phi, 0],
+    [0, -1, phi], [0, 1, phi], [0, -1, -phi], [0, 1, -phi],
+    [phi, 0, -1], [phi, 0, 1], [-phi, 0, -1], [-phi, 0, 1]
+  ];
+  baseVertices.forEach(([x, y, z]) => {
+    const len = Math.hypot(x, y, z);
+    nodes.push({ x: (x / len) * 95, y: (y / len) * 95, z: (z / len) * 95, color: '#3ECF8E' });
+  });
+
+  // Inner Core Nodes
+  const innerNodes = [];
+  baseVertices.forEach(([x, y, z]) => {
+    const len = Math.hypot(x, y, z);
+    innerNodes.push({ x: (x / len) * 55, y: (y / len) * 55, z: (z / len) * 55, color: '#F5A623' });
+  });
+
+  // 2. 3D Orbiting Macro Badges
+  const orbitalItems = [
+    { label: '🔥 Cals', color: '#F5A623', orbitRadius: 155, tiltX: 0.45, tiltZ: 0.2, angle: 0, speed: 0.012 },
+    { label: '💪 Protein', color: '#7FB8D4', orbitRadius: 175, tiltX: -0.5, tiltZ: 0.6, angle: Math.PI * 0.66, speed: 0.01 },
+    { label: '🌾 Carbs', color: '#C4A87F', orbitRadius: 160, tiltX: 0.7, tiltZ: -0.4, angle: Math.PI * 1.33, speed: 0.014 },
+    { label: '🥑 Fats', color: '#F4613A', orbitRadius: 185, tiltX: -0.3, tiltZ: -0.5, angle: Math.PI * 1.8, speed: 0.009 }
+  ];
+
+  // 3. Floating 3D Ambient Dust Particles
   const particles = [];
-  for (let i = 0; i < 45; i++) {
+  for (let i = 0; i < 90; i++) {
     particles.push({
-      x: Math.random() * canvas.width,
-      y: Math.random() * canvas.height,
-      radius: Math.random() * 3 + 1.5,
-      color: i % 2 === 0 ? 'rgba(62, 207, 142, 0.5)' : 'rgba(245, 166, 35, 0.4)',
-      vx: (Math.random() - 0.5) * 0.8,
-      vy: (Math.random() - 0.5) * 0.8,
+      x: (Math.random() - 0.5) * 450,
+      y: (Math.random() - 0.5) * 450,
+      z: (Math.random() - 0.5) * 450,
+      size: Math.random() * 2.8 + 1,
+      color: i % 3 === 0 ? '#3ECF8E' : i % 3 === 1 ? '#F5A623' : '#4FC3F7',
+      vx: (Math.random() - 0.5) * 0.4,
+      vy: (Math.random() - 0.5) * 0.4,
+      vz: (Math.random() - 0.5) * 0.4
     });
   }
 
-  let angle = 0;
+  let rotX = 0, rotY = 0, rotZ = 0;
+
+  function project(x, y, z, fov = 340) {
+    const scale = fov / (fov + z);
+    return {
+      x: cx + x * scale,
+      y: cy + y * scale,
+      scale: scale,
+      z: z
+    };
+  }
+
+  function rotate3D(x, y, z, rx, ry, rz) {
+    // Rotate Y
+    let cos = Math.cos(ry), sin = Math.sin(ry);
+    let x1 = x * cos - z * sin;
+    let z1 = z * cos + x * sin;
+
+    // Rotate X
+    cos = Math.cos(rx); sin = Math.sin(rx);
+    let y2 = y * cos - z1 * sin;
+    let z2 = z1 * cos + y * sin;
+
+    // Rotate Z
+    cos = Math.cos(rz); sin = Math.sin(rz);
+    let x3 = x1 * cos - y2 * sin;
+    let y3 = y2 * cos + x1 * sin;
+
+    return { x: x3, y: y2, z: z2 };
+  }
+
   function render() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
-    const coreRadius = Math.min(canvas.width, canvas.height) * 0.22;
+    ctx.clearRect(0, 0, width, height);
 
-    const gradient = ctx.createRadialGradient(centerX, centerY, coreRadius * 0.2, centerX, centerY, coreRadius * 1.8);
-    gradient.addColorStop(0, 'rgba(62, 207, 142, 0.45)');
-    gradient.addColorStop(0.5, 'rgba(45, 158, 107, 0.18)');
-    gradient.addColorStop(1, 'rgba(10, 15, 13, 0)');
-    ctx.fillStyle = gradient;
+    // Smooth lerp mouse
+    mouseX += (targetMouseX - mouseX) * 0.05;
+    mouseY += (targetMouseY - mouseY) * 0.05;
+
+    rotY += 0.007 + mouseX * 0.01;
+    rotX += 0.004 + mouseY * 0.01;
+    rotZ += 0.002;
+
+    const baseRadius = Math.min(cx, cy) * 0.42;
+
+    // A. Ambient Core Radial Energy Glow
+    const pulse = Math.sin(Date.now() * 0.002) * 12;
+    const radialGrad = ctx.createRadialGradient(cx, cy, 10, cx, cy, baseRadius * 1.8 + pulse);
+    radialGrad.addColorStop(0, 'rgba(62, 207, 142, 0.4)');
+    radialGrad.addColorStop(0.35, 'rgba(45, 158, 107, 0.15)');
+    radialGrad.addColorStop(0.7, 'rgba(245, 166, 35, 0.06)');
+    radialGrad.addColorStop(1, 'rgba(10, 15, 13, 0)');
+    ctx.fillStyle = radialGrad;
     ctx.beginPath();
-    ctx.arc(centerX, centerY, coreRadius * 1.8, 0, Math.PI * 2);
+    ctx.arc(cx, cy, baseRadius * 1.8 + pulse, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.save();
-    ctx.translate(centerX, centerY);
-    ctx.rotate(angle);
-
-    ctx.beginPath();
-    ctx.arc(0, 0, coreRadius, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(62, 207, 142, 0.12)';
-    ctx.strokeStyle = '#3ECF8E';
-    ctx.lineWidth = 2.5;
-    ctx.stroke();
-    ctx.fill();
-
-    ctx.restore();
-
+    // B. Draw Floating 3D Ambient Dust
     particles.forEach(p => {
-      p.x += p.vx;
-      p.y += p.vy;
-      if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
-      if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+      p.x += p.vx; p.y += p.vy; p.z += p.vz;
+      if (Math.abs(p.x) > 220) p.vx *= -1;
+      if (Math.abs(p.y) > 220) p.vy *= -1;
+      if (Math.abs(p.z) > 220) p.vz *= -1;
 
+      const r = rotate3D(p.x, p.y, p.z, rotX * 0.5, rotY * 0.5, 0);
+      const pr = project(r.x, r.y, r.z);
+      if (pr.scale > 0) {
+        ctx.beginPath();
+        ctx.arc(pr.x, pr.y, Math.max(0.5, p.size * pr.scale), 0, Math.PI * 2);
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = Math.min(1, Math.max(0.15, (r.z + 250) / 500));
+        ctx.fill();
+      }
+    });
+    ctx.globalAlpha = 1.0;
+
+    // C. 3D Orbiting Macro Rings
+    [0.35, -0.4, 0.65].forEach((tiltAngle, idx) => {
       ctx.beginPath();
-      ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-      ctx.fillStyle = p.color;
-      ctx.fill();
+      const points = [];
+      const steps = 48;
+      const ringR = baseRadius * (1.1 + idx * 0.22);
+      for (let i = 0; i <= steps; i++) {
+        const theta = (i / steps) * Math.PI * 2;
+        let rx = Math.cos(theta) * ringR;
+        let ry = Math.sin(theta) * ringR * Math.cos(tiltAngle);
+        let rz = Math.sin(theta) * ringR * Math.sin(tiltAngle);
+        const rot = rotate3D(rx, ry, rz, rotX, rotY, rotZ);
+        points.push(project(rot.x, rot.y, rot.z));
+      }
+      ctx.beginPath();
+      ctx.moveTo(points[0].x, points[0].y);
+      for (let i = 1; i < points.length; i++) {
+        ctx.lineTo(points[i].x, points[i].y);
+      }
+      ctx.strokeStyle = idx === 0 ? 'rgba(62, 207, 142, 0.35)' : idx === 1 ? 'rgba(245, 166, 35, 0.25)' : 'rgba(79, 195, 247, 0.25)';
+      ctx.lineWidth = 1.8 * dpr;
+      ctx.setLineDash([6 * dpr, 6 * dpr]);
+      ctx.stroke();
+      ctx.setLineDash([]);
     });
 
-    angle += 0.008;
+    // D. Rotate & Project Molecular Lattice Nodes (Outer & Inner)
+    const projOuter = nodes.map(n => {
+      const r = rotate3D(n.x, n.y, n.z, rotX, rotY, rotZ);
+      return { ...project(r.x, r.y, r.z), rawZ: r.z };
+    });
+
+    const projInner = innerNodes.map(n => {
+      const r = rotate3D(n.x, n.y, n.z, -rotX * 1.4, -rotY * 1.4, rotZ);
+      return { ...project(r.x, r.y, r.z), rawZ: r.z };
+    });
+
+    // E. Draw Connecting Lattice Energy Lines
+    ctx.lineWidth = 1.2 * dpr;
+    for (let i = 0; i < projOuter.length; i++) {
+      for (let j = i + 1; j < projOuter.length; j++) {
+        const dx = projOuter[i].x - projOuter[j].x;
+        const dy = projOuter[i].y - projOuter[j].y;
+        const dist = Math.hypot(dx, dy);
+        if (dist < 130 * dpr) {
+          const alpha = Math.max(0.05, 1 - dist / (130 * dpr)) * 0.4;
+          ctx.strokeStyle = `rgba(62, 207, 142, ${alpha})`;
+          ctx.beginPath();
+          ctx.moveTo(projOuter[i].x, projOuter[i].y);
+          ctx.lineTo(projOuter[j].x, projOuter[j].y);
+          ctx.stroke();
+        }
+      }
+    }
+
+    // Inner Lattice Lines
+    for (let i = 0; i < projInner.length; i++) {
+      for (let j = i + 1; j < projInner.length; j++) {
+        const dx = projInner[i].x - projInner[j].x;
+        const dy = projInner[i].y - projInner[j].y;
+        const dist = Math.hypot(dx, dy);
+        if (dist < 80 * dpr) {
+          const alpha = Math.max(0.05, 1 - dist / (80 * dpr)) * 0.5;
+          ctx.strokeStyle = `rgba(245, 166, 35, ${alpha})`;
+          ctx.beginPath();
+          ctx.moveTo(projInner[i].x, projInner[i].y);
+          ctx.lineTo(projInner[j].x, projInner[j].y);
+          ctx.stroke();
+        }
+      }
+    }
+
+    // F. Draw Outer Nodes
+    projOuter.forEach(p => {
+      const nodeR = 4.5 * dpr * p.scale;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, nodeR, 0, Math.PI * 2);
+      ctx.fillStyle = '#3ECF8E';
+      ctx.shadowColor = '#3ECF8E';
+      ctx.shadowBlur = 12 * dpr;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    });
+
+    // Inner Nodes
+    projInner.forEach(p => {
+      const nodeR = 3.5 * dpr * p.scale;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, nodeR, 0, Math.PI * 2);
+      ctx.fillStyle = '#F5A623';
+      ctx.shadowColor = '#F5A623';
+      ctx.shadowBlur = 10 * dpr;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    });
+
+    // G. Render 3D Orbiting Macro Badges
+    orbitalItems.forEach(item => {
+      item.angle += item.speed;
+      let rx = Math.cos(item.angle) * item.orbitRadius;
+      let ry = Math.sin(item.angle) * item.orbitRadius * Math.cos(item.tiltX);
+      let rz = Math.sin(item.angle) * item.orbitRadius * Math.sin(item.tiltX);
+
+      const rot = rotate3D(rx, ry, rz, rotX, rotY, rotZ);
+      const pr = project(rot.x, rot.y, rot.z);
+
+      if (pr.scale > 0) {
+        ctx.save();
+        ctx.translate(pr.x, pr.y);
+        ctx.scale(Math.max(0.6, pr.scale), Math.max(0.6, pr.scale));
+
+        // Badge pill box
+        const textWidth = ctx.measureText(item.label).width + 20 * dpr;
+        const bHeight = 22 * dpr;
+
+        ctx.fillStyle = 'rgba(10, 15, 13, 0.88)';
+        ctx.strokeStyle = item.color;
+        ctx.lineWidth = 1.5 * dpr;
+        ctx.shadowColor = item.color;
+        ctx.shadowBlur = 12 * dpr;
+
+        ctx.beginPath();
+        ctx.roundRect(-textWidth / 2, -bHeight / 2, textWidth, bHeight, 11 * dpr);
+        ctx.fill();
+        ctx.stroke();
+
+        // Badge Text
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = `600 ${11 * dpr}px "Plus Jakarta Sans", sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(item.label, 0, 1 * dpr);
+
+        ctx.restore();
+      }
+    });
+
     requestAnimationFrame(render);
   }
 
