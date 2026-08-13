@@ -46,6 +46,19 @@ function init3DAuthVisual() {
     targetMouseY = ((e.clientY - r.top) / r.height - 0.5) * 2;
   });
 
+  // Interactive Click Energy Ripples
+  const ripples = [];
+  canvas.addEventListener('click', (e) => {
+    const r = canvas.getBoundingClientRect();
+    ripples.push({
+      x: (e.clientX - r.left) * dpr,
+      y: (e.clientY - r.top) * dpr,
+      radius: 5,
+      maxRadius: 160 * dpr,
+      alpha: 0.85
+    });
+  });
+
   // 1. 3D Geodesic Molecular Core Nodes (Icosahedron structure)
   const nodes = [];
   const phi = (1 + Math.sqrt(5)) / 2;
@@ -300,6 +313,22 @@ function init3DAuthVisual() {
         ctx.restore();
       }
     });
+
+    // H. Render Interactive Click Energy Ripples
+    for (let i = ripples.length - 1; i >= 0; i--) {
+      const rip = ripples[i];
+      rip.radius += 3.5 * dpr;
+      rip.alpha -= 0.018;
+      if (rip.alpha <= 0 || rip.radius >= rip.maxRadius) {
+        ripples.splice(i, 1);
+        continue;
+      }
+      ctx.beginPath();
+      ctx.arc(rip.x, rip.y, rip.radius, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(62, 207, 142, ${rip.alpha})`;
+      ctx.lineWidth = 2 * dpr;
+      ctx.stroke();
+    }
 
     requestAnimationFrame(render);
   }
