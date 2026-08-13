@@ -5291,3 +5291,71 @@ body {
   font-size: 0.72rem;
   color: var(--mist, #a0aec0);
 }
+
+/* ── Auth Split-Screen Mobile ── */
+@media (max-width: 860px) {
+  .auth-split-wrapper {
+    flex-direction: column;
+  }
+
+  .auth-split-left {
+    flex: none;
+    min-height: 280px;
+    padding: 2rem;
+    border-right: none;
+    border-bottom: 1px solid rgba(62, 207, 142, 0.15);
+  }
+
+  .auth-3d-canvas-wrap {
+    max-width: 280px;
+    height: 280px;
+  }
+
+  .auth-split-right {
+    flex: 1;
+    padding: 2rem;
+  }
+
+  .auth-card {
+    max-width: 100%;
+    padding: 2rem 1.8rem;
+    border-radius: 22px;
+  }
+}
+
+@media (max-width: 600px) {
+  .auth-split-left {
+    display: none;
+  }
+
+  .auth-split-right {
+    padding: 1.5rem 1rem;
+    min-height: 100vh;
+  }
+
+  .auth-card {
+    padding: 2rem 1.5rem;
+    border-radius: 18px;
+  }
+
+  .auth-tabs {
+    border-radius: 12px;
+  }
+
+  .auth-tab {
+    font-size: 0.85rem;
+    padding: 8px 0;
+  }
+}
+
+/* ── Progress Rings Mobile ── */
+@media (max-width: 480px) {
+  .stat-ring-row {
+    gap: 8px;
+  }
+
+  .goal-ring-wrap svg {
+    width: 42px;
+    height: 42px;
+  }
+}

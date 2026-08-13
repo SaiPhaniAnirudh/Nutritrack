@@ -6,23 +6,45 @@ We have successfully implemented and deployed NutriTrack's **Modern 3D Split-Scr
 
 ## 🛠️ Changes Accomplished
 
-### 1. 🔑 3D Parallax Split-Screen Auth Page ([frontend/index.html](file:///c:/Users/pc/OneDrive/Desktop/nutritrack/frontend/index.html#L220-L280))
+### 1. 🔑 3D Parallax Split-Screen Auth Page ([frontend/index.html](frontend/index.html#L220-L280))
 - **Left 50% Visual Hero:** Interactive 3D particle orbit and glowing nutrition sphere canvas (`#auth3dCanvas`) with dynamic radial gradients (`rgba(62,207,142,0.45)`).
 - **Right 50% Form Panel:** Spacious glassmorphism card (`backdrop-filter: blur(20px)`), 1-click Google OAuth button, clean inputs, and smooth login/signup tab switcher.
 
-![3D Split-Screen Auth Page](C:/Users/pc/.gemini/antigravity-ide/brain/5a0664a7-4f86-451d-9d3c-c3abcf92eebe/auth_page_3d_mockup_1786287659820.png)
+| Sign In | Sign Up |
+| :---: | :---: |
+| ![Sign In Tab](screenshots/auth_signin.png) | ![Sign Up Tab](screenshots/auth_signup.png) |
 
-### 2. 🎨 Logo Obsidian Dark Theme Integration ([frontend/Style.css](file:///c:/Users/pc/OneDrive/Desktop/nutritrack/frontend/Style.css#L310-L330))
+### 2. 🔀 Auth Tab Switcher ([frontend/App.js](frontend/App.js#L508-L530) | [frontend/Style.css](frontend/Style.css#L336-L380))
+- Replaced the old "Don't have an account?" / "Already have an account?" text links with a **polished sliding pill tab switcher**.
+- Green gradient indicator slides between Sign In ↔ Sign Up with a `cubic-bezier(0.4, 0, 0.2, 1)` animation.
+- Active tab text goes dark (`#0a0f0d`) for high contrast; inactive remains muted (`--mist`).
+
+### 3. 🎨 Logo Obsidian Dark Theme Integration ([frontend/Style.css](frontend/Style.css#L310-L330))
 - Styled `.logo-mark-dark` background container (`#0a0f0d`) with subtle kiwi glow (`rgba(62,207,142,0.25)`), eliminating any white borders or light square outlines so the logo blends seamlessly into the dark obsidian header.
 
-### 3. 📊 Spacious Modern Dashboard ([frontend/Style.css](file:///c:/Users/pc/OneDrive/Desktop/nutritrack/frontend/Style.css#L500-L550))
+### 4. 📊 Circular Progress Rings on Dashboard ([frontend/App.js](frontend/App.js#L1177-L1185) | [frontend/index.html](frontend/index.html#L560-L600))
+- Replaced flat linear progress bars for the 4 primary macros (Calories, Protein, Carbs, Fat) with **animated SVG circular rings** using the `_dpRing()` helper.
+- Each ring has its own accent color and animates with a smooth `stroke-dasharray` transition.
+- Stats now use a side-by-side layout (`.stat-ring-row`) with text on the left and the ring on the right.
+
+![Dashboard with Progress Rings](screenshots/dashboard_rings.png)
+
+### 5. 📱 Spacious Modern Dashboard ([frontend/Style.css](frontend/Style.css#L500-L550))
 - Increased card grid spacing (`gap: 1.8rem`) and card inner padding (`padding: 2.8rem 3.2rem`).
 - Preserved 100% of NutriTrack features (AI Scanner, Barcode Camera, Custom Recipe Builder, Restaurant Menu AI, Wearable Auto-Sync, Water Tracker, Weight Chart, Achievements, Meal Templates, Voice Logging, CSV/Health Exports).
 
-![Spacious Modern Dashboard](C:/Users/pc/.gemini/antigravity-ide/brain/5a0664a7-4f86-451d-9d3c-c3abcf92eebe/spacious_dashboard_mockup_1786287679122.png)
+---
+
+## ✅ Verification
+
+- **Live Deployment:** [https://nutritrack-rho-rust.vercel.app/](https://nutritrack-rho-rust.vercel.app/) — auto-deployed via Vercel
+- **Auth Tab Switcher:** Sign In ↔ Sign Up tabs work with smooth sliding indicator
+- **Progress Rings:** All 4 primary macro stats display animated circular rings
+- **Service Worker:** Cache bumped to `nutritrack-v25`
+- **All features preserved:** Dashboard, Track Food, History, Profile, AI Scanner, Barcode Camera, Water Tracker, Workout Tracker, Achievements, Diet Planner — all working
 
 ---
 
-## 🚀 Git Push Details:
-- **Commit:** `a2822c0` — *"feat(ui): implement 3D split-screen auth, spacious glassmorphism layout, and dark logo container styling with 100% feature preservation"*
+## 🚀 Git Push Details
 - **Branch:** `main` (Live on GitHub)
+- **Repository:** [github.com/SaiPhaniAnirudh/Nutritrack](https://github.com/SaiPhaniAnirudh/Nutritrack)

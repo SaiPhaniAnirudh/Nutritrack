@@ -142,3 +142,38 @@ real systems, not a straight line. The methodology that mattered wasn't
 any single fix; it was building a reproducible, adversarial test *first*,
 then refusing to trust a "should work now" claim (including my own)
 without re-running it and reading the actual output row by row.
+
+## UI/UX iteration: from text links to tab switcher, bars to rings
+
+A separate class of issues emerged in the frontend — not data-accuracy bugs,
+but user-experience friction that undermined confidence in the app.
+
+**Problem 1 — Auth form switching via text links.** The login and signup forms
+were toggled by small "Don't have an account? Sign Up" / "Already have an
+account? Sign In" text links buried below the forms. Users frequently missed
+them, and the form switch happened with no visual feedback (the old form
+vanished, the new one appeared — zero indication of *where* you were).
+
+**Fix:** replaced the text links with a polished **tab switcher** — two
+side-by-side pill buttons ("Sign In" / "Sign Up") with a sliding green gradient
+indicator that animates between them (`cubic-bezier(0.4, 0, 0.2, 1)`,
+280ms). The active tab's text darkens to `#0a0f0d` for high contrast against
+the green pill; the inactive tab stays at `--mist`. Both forms share the same
+container; form swap is tied to the tab state.
+
+**Problem 2 — Flat linear bars on dashboard.** The four primary macro stats
+(Calories, Protein, Carbs, Fat) used thin linear `goal-bar-fill` elements
+— fine functionally, but visually indistinguishable from the secondary stats
+below (Fiber, Sugar, Salt, Cholesterol, etc.), making the dashboard look
+monotonous.
+
+**Fix:** replaced the four linear bars with **circular SVG progress rings**
+rendered by `_dpRing(percentage, color, size, strokeWidth)`. Each ring has a
+unique accent color, a background track at 6% opacity, rounded stroke
+caps, and a `transition: stroke-dasharray 1s ease` animation for smooth
+fill updates. The stat cards switched to a side-by-side layout
+(`.stat-ring-row`) with text on the left and the ring on the right.
+
+| Auth Tab Switcher | Dashboard Progress Rings |
+| :---: | :---: |
+| ![Tab Switcher](screenshots/auth_signin.png) | ![Progress Rings](screenshots/dashboard_rings.png) |

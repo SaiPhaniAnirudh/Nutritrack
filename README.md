@@ -8,11 +8,11 @@
 
 ## 🎨 UI/UX Visual Experience
 
-NutriTrack features a modern **3D Parallax Split-Screen Auth Experience** and a **Spacious Dark Obsidian Glassmorphism Dashboard** (`#0A0F0D` / `#0F1712`).
+NutriTrack features a modern **3D Parallax Split-Screen Auth Experience** with a sliding **Sign In / Sign Up tab switcher**, and a **Spacious Dark Obsidian Glassmorphism Dashboard** (`#0A0F0D` / `#0F1712`) with **circular SVG progress rings** for macro tracking.
 
-| 3D Parallax Split-Screen Auth | Spacious Dark Obsidian Dashboard |
-| :---: | :---: |
-| ![3D Auth Page](C:/Users/pc/.gemini/antigravity-ide/brain/5a0664a7-4f86-451d-9d3c-c3abcf92eebe/auth_page_3d_mockup_1786287659820.png) | ![Spacious Dashboard](C:/Users/pc/.gemini/antigravity-ide/brain/5a0664a7-4f86-451d-9d3c-c3abcf92eebe/spacious_dashboard_mockup_1786287679122.png) |
+| Sign In (Tab Switcher) | Sign Up (Sliding Indicator) | Dashboard (Progress Rings) |
+| :---: | :---: | :---: |
+| ![Sign In](screenshots/auth_signin.png) | ![Sign Up](screenshots/auth_signup.png) | ![Dashboard](screenshots/dashboard_rings.png) |
 
 ---
 
