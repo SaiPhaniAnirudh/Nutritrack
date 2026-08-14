@@ -707,19 +707,13 @@ body {
   display: none;
 }
 
-/* ── NAV ── */
+/* ── APPLICATION LAYOUT (sidebar + main-content-wrap) ── */
 #mainApp {
   display: none;
-  position: relative;
-  z-index: 10;
-  min-height: 100vh;
-}
-
-/* ── SIDEBAR & APPLICATION LAYOUT ── */
-#mainApp {
-  display: flex;
   min-height: 100vh;
   background: #0a0f0d;
+  position: relative;
+  z-index: 10;
 }
 
 .sidebar-nav {
@@ -3677,22 +3671,6 @@ body {
   #mainApp .page {
     padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px) + 1rem);
   }
-
-  /* Keep top nav brand visible but remove the desktop nav links */
-  /* (nav-center is already display:none in the existing 900px breakpoint) */
-
-  /* Make the top nav more compact on mobile */
-  .topnav {
-    padding: 0.7rem 1rem;
-  }
-
-  /* Hide sign out button text — too crowded on mobile; user can sign out from Profile page */
-  .logout-link {
-    display: none;
-  }
-
-  /* Show "Sign Out" as part of profile page instead on mobile */
-  /* User chip stays visible so they know who is logged in */
 }
 
 @media (max-width: 480px) {

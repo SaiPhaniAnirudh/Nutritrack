@@ -1204,7 +1204,7 @@ async function loginSuccess(userProfile) {
   const onbSec = document.getElementById('onboardingSection');
   if (onbSec) onbSec.style.display = 'none';
   const mainApp = document.getElementById('mainApp');
-  if (mainApp) mainApp.style.display = 'block';
+  if (mainApp) mainApp.style.display = 'flex';
 
   hideLoader();
 
