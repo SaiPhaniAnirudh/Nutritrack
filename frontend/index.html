@@ -38,7 +38,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://cdn.jsdelivr.net">
   <link rel="preconnect" href="https://unpkg.com">
-  <link rel="stylesheet" href="/Style.css?v=26">
+  <link rel="stylesheet" href="/Style.css?v=27">
   <link
     href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;0,9..144,900;1,9..144,300&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
     rel="stylesheet" media="print" onload="this.media='all'">
@@ -764,11 +764,49 @@
               </div>
             </div>
           </div>
-          <div class="glass-card">
-            <div class="card-title">
-              <div class="dot"></div>Macro Split
+          <div class="glass-card macro-3d-card">
+            <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <div class="dot"></div>
+                <span>Macro Split</span>
+              </div>
+              <span class="macro-badge-pill" id="macroTargetRatio">P 30% · C 45% · F 25%</span>
             </div>
-            <div class="chart-wrap"><canvas id="macroChart"></canvas></div>
+
+            <!-- Dynamic 3D Macro Split Badges -->
+            <div class="macro-pills-grid" id="macroPillsGrid">
+              <div class="macro-pill pill-pro" id="pill-protein">
+                <span class="macro-pill-icon">💪</span>
+                <div class="macro-pill-info">
+                  <span class="macro-pill-label">Protein</span>
+                  <span class="macro-pill-val" id="pillProVal">0g (0%)</span>
+                </div>
+              </div>
+              <div class="macro-pill pill-carb" id="pill-carbs">
+                <span class="macro-pill-icon">🌾</span>
+                <div class="macro-pill-info">
+                  <span class="macro-pill-label">Carbs</span>
+                  <span class="macro-pill-val" id="pillCarbVal">0g (0%)</span>
+                </div>
+              </div>
+              <div class="macro-pill pill-fat" id="pill-fats">
+                <span class="macro-pill-icon">🥑</span>
+                <div class="macro-pill-info">
+                  <span class="macro-pill-label">Fats</span>
+                  <span class="macro-pill-val" id="pillFatVal">0g (0%)</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Chart with 3D Depth Isometric Perspective -->
+            <div class="chart-wrap macro-chart-3d-wrap">
+              <canvas id="macroChart"></canvas>
+              <div class="macro-chart-center-hub" id="macroCenterHub">
+                <span class="hub-label">TOTAL</span>
+                <span class="hub-cals" id="hubCalVal">0</span>
+                <span class="hub-unit">kcal</span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -842,11 +880,34 @@
               <button type="button" class="scan-btn blue" onclick="startBarcodeScan()">📦 Barcode</button>
               <button type="button" class="scan-btn purple" onclick="startVoiceLog()">🎙️ Voice Log</button>
             </div>
-            <div id="voiceStatusRow"
-              style="display:none; padding:0.6rem; background:rgba(62,207,142,0.1); border-radius:10px; margin-top:0.6rem; text-align:center; font-size:0.85rem; color:var(--kiwi);">
-              <span class="voice-pulse">🔴</span> <span id="voiceStatusText">Listening… Speak your meal!</span>
-              <button type="button" onclick="stopVoiceLog()"
-                style="margin-left:0.6rem; background:rgba(255,255,255,0.15); border:none; color:#fff; border-radius:6px; padding:2px 8px; cursor:pointer; font-size:0.75rem;">Done</button>
+            <!-- HIGH-TECH VOICE LOGGING AUDIO WAVEFORM HUD -->
+            <div id="voiceStatusRow" class="voice-waveform-hud" style="display:none;">
+              <div class="voice-hud-top">
+                <div class="voice-recording-badge">
+                  <span class="voice-pulse-ring"></span>
+                  <span style="letter-spacing:0.06em; font-weight:800;">🎙️ LISTENING</span>
+                </div>
+                <div class="voice-status-text" id="voiceStatusText">Speak naturally (e.g., "2 scrambled eggs, avocado toast and black coffee")…</div>
+                <button type="button" class="voice-stop-btn" onclick="stopVoiceLog()">Stop & Parse</button>
+              </div>
+              <div class="voice-bars-container">
+                <div class="voice-bar"></div>
+                <div class="voice-bar"></div>
+                <div class="voice-bar"></div>
+                <div class="voice-bar"></div>
+                <div class="voice-bar"></div>
+                <div class="voice-bar"></div>
+                <div class="voice-bar"></div>
+                <div class="voice-bar"></div>
+                <div class="voice-bar"></div>
+                <div class="voice-bar"></div>
+                <div class="voice-bar"></div>
+                <div class="voice-bar"></div>
+                <div class="voice-bar"></div>
+                <div class="voice-bar"></div>
+                <div class="voice-bar"></div>
+                <div class="voice-bar"></div>
+              </div>
             </div>
             <div class="scan-btn-row" id="scanCamRow" style="display:none">
               <button type="button" class="scan-btn gold" onclick="takeScanPhoto()">📸 Take Photo</button>

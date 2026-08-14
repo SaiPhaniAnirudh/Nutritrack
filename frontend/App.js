@@ -1487,24 +1487,53 @@ function renderMacroChart(p, c, f, fiber, sugar, sodium, chol, cal) {
   const ctx2 = chartCanvas.getContext('2d');
   if (macroChart) macroChart.destroy();
 
+  // Compute 3D macro energy breakdown
+  const proCal = p * 4;
+  const carbCal = c * 4;
+  const fatCal = f * 9;
+  const totMacroCal = proCal + carbCal + fatCal || 1;
+  const proPct = Math.round((proCal / totMacroCal) * 100);
+  const carbPct = Math.round((carbCal / totMacroCal) * 100);
+  const fatPct = Math.max(0, 100 - proPct - carbPct);
+
+  // Update dynamic 3D macro badge pills
+  const proPill = document.getElementById('pillProVal');
+  if (proPill) proPill.textContent = `${p}g (${proPct}%)`;
+  const carbPill = document.getElementById('pillCarbVal');
+  if (carbPill) carbPill.textContent = `${c}g (${carbPct}%)`;
+  const fatPill = document.getElementById('pillFatVal');
+  if (fatPill) fatPill.textContent = `${f}g (${fatPct}%)`;
+  const hubCal = document.getElementById('hubCalVal');
+  if (hubCal) hubCal.textContent = Math.round(cal);
+  const ratioPill = document.getElementById('macroTargetRatio');
+  if (ratioPill) ratioPill.textContent = `P ${proPct}% · C ${carbPct}% · F ${fatPct}%`;
+
   const sodiumG = +(sodium / 10).toFixed(1);
   const cholG = +(chol / 10).toFixed(1);
 
-  const labels = ['Protein', 'Carbs', 'Fat', 'Fiber', 'Sugar', 'Salt', 'Cholesterol']; // change #13
+  const labels = ['Protein', 'Carbs', 'Fat', 'Fiber', 'Sugar', 'Salt', 'Cholesterol'];
   const rawVals = [p, c, f, fiber, sugar, sodiumG, cholG];
   const units = ['g', 'g', 'g', 'g', 'g', 'mg (÷10)', 'mg (÷10)'];
   const realVals = [p, c, f, fiber, sugar, sodium, chol];
 
   const bgColors = [
-    'rgba(127,184,212,0.85)',
-    'rgba(196,168,127,0.85)',
-    'rgba(244,97,58,0.85)',
-    'rgba(100,180,110,0.85)',
+    'rgba(127,184,212,0.92)',
+    'rgba(245,166,35,0.92)',
+    'rgba(244,97,58,0.92)',
+    'rgba(62,207,142,0.92)',
     'rgba(212,168,83,0.85)',
     'rgba(160,120,200,0.85)',
-    'rgba(220,100,100,0.85)',
+    'rgba(255,107,107,0.85)',
   ];
-  const borderColors = bgColors.map(c => c.replace('0.85', '1'));
+  const borderColors = [
+    '#7FB8D4',
+    '#F5A623',
+    '#F4613A',
+    '#3ECF8E',
+    '#D4A853',
+    '#A078C8',
+    '#FF6B6B',
+  ];
 
   const nonZeroIdx = rawVals.map((v, i) => v > 0 ? i : -1).filter(i => i >= 0);
   const filtLabels = nonZeroIdx.map(i => labels[i]);
@@ -1518,57 +1547,66 @@ function renderMacroChart(p, c, f, fiber, sugar, sodium, chol, cal) {
   macroChart = new Chart(ctx2, {
     type: 'doughnut',
     data: {
-      labels: filtLabels,
-      datasets: [{ data: filtRaw, backgroundColor: filtBg, borderColor: filtBorder, borderWidth: 2, hoverOffset: 8 }]
+      labels: filtLabels.length > 0 ? filtLabels : ['Empty'],
+      datasets: [{
+        data: filtRaw.length > 0 ? filtRaw : [1],
+        backgroundColor: filtBg.length > 0 ? filtBg : ['rgba(255,255,255,0.06)'],
+        borderColor: filtBorder.length > 0 ? filtBorder : ['rgba(255,255,255,0.1)'],
+        borderWidth: 2,
+        hoverOffset: 10,
+        borderRadius: 4,
+        spacing: 3
+      }]
     },
     options: {
-      responsive: true, maintainAspectRatio: false, cutout: '62%',
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '68%',
       plugins: {
         legend: {
           position: 'bottom',
           labels: {
-            color: 'rgba(184,201,186,0.8)', font: { family: 'Plus Jakarta Sans', size: 11 }, padding: 10,
-            usePointStyle: true, pointStyleWidth: 10,
+            color: 'rgba(184,201,186,0.85)',
+            font: { family: 'Plus Jakarta Sans', size: 11, weight: '600' },
+            padding: 12,
+            usePointStyle: true,
+            pointStyleWidth: 8,
             generateLabels(chart) {
+              if (filtRaw.length === 0) return [];
               return chart.data.labels.map((label, i) => ({
                 text: `${label}: ${filtReal[i]}${filtUnits[i] === 'g' ? 'g' : 'mg'}`,
-                fillStyle: filtBg[i], strokeStyle: filtBorder[i],
-                fontColor: 'rgba(184,201,186,0.8)', lineWidth: 1, pointStyle: 'circle', hidden: false, index: i,
+                fillStyle: filtBg[i],
+                strokeStyle: filtBorder[i],
+                fontColor: 'rgba(184,201,186,0.9)',
+                lineWidth: 1,
+                pointStyle: 'circle',
+                hidden: false,
+                index: i,
               }));
             }
           }
         },
         tooltip: {
+          enabled: filtRaw.length > 0,
           callbacks: {
             label(ctx) {
               const idx = ctx.dataIndex, real = filtReal[idx], unit = filtUnits[idx] === 'g' ? 'g' : 'mg';
               const pct = Math.round((filtRaw[idx] / total) * 100);
-              return `  ${real}${unit}  (${pct}% of chart)`;
+              return `  ${real}${unit}  (${pct}% of total)`;
             },
             title(ctx) { return ctx[0].label; }
           },
-          backgroundColor: 'rgba(255,255,255,0.96)', titleColor: '#12110F', bodyColor: 'rgba(18,17,15,0.6)',
-          borderColor: 'rgba(18,17,15,0.1)', borderWidth: 1, padding: 10, cornerRadius: 8,
+          backgroundColor: 'rgba(10,15,13,0.95)',
+          titleColor: '#fff',
+          bodyColor: '#3ecf8e',
+          borderColor: 'rgba(62,207,142,0.3)',
+          borderWidth: 1,
+          padding: 12,
+          cornerRadius: 10,
         }
       },
-      animation: { animateRotate: true, duration: 600 }
-    },
-    plugins: [{
-      id: 'centerLabel',
-      afterDraw(chart) {
-        const { ctx: c2, chartArea: { width, height, left, top } } = chart;
-        c2.save();
-        const cx = left + width / 2, cy = top + height / 2;
-        c2.textAlign = 'center'; c2.textBaseline = 'middle';
-        c2.fillStyle = '#B87200';
-        c2.font = `bold 18px "Plus Jakarta Sans",sans-serif`;
-        c2.fillText(Math.round(cal) + ' kcal', cx, cy - 8);
-        c2.fillStyle = 'rgba(18,17,15,0.4)';
-        c2.font = `11px "Plus Jakarta Sans",sans-serif`;
-        c2.fillText('today', cx, cy + 10);
-        c2.restore();
-      }
-    }]
+      animation: { animateRotate: true, animateScale: true, duration: 800 }
+    }
   });
 }
 
@@ -2789,8 +2827,11 @@ function startVoiceLog() {
   }
   const row = document.getElementById('voiceStatusRow');
   const txt = document.getElementById('voiceStatusText');
-  if (row) row.style.display = 'block';
-  if (txt) txt.textContent = 'Listening… Speak your meal now!';
+  if (row) {
+    row.style.display = 'block';
+    row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+  if (txt) txt.textContent = 'Listening… Speak your meal (e.g. "2 boiled eggs and oatmeal")!';
 
   _voiceRecognition = new SpeechRecognition();
   _voiceRecognition.continuous = false;
@@ -2799,21 +2840,28 @@ function startVoiceLog() {
 
   _voiceRecognition.onresult = (event) => {
     const transcript = event.results[0][0].transcript;
-    if (txt) txt.textContent = `Processing: "${transcript}"…`;
+    if (txt) txt.textContent = `🎙️ Transcribed: "${transcript}" — Parsing with AI…`;
     parseVoiceText(transcript);
   };
   _voiceRecognition.onerror = (err) => {
     if (row) row.style.display = 'none';
-    showToast('Voice error: ' + err.error, 'error');
+    showToast('Voice error: ' + (err.error || 'No microphone detected'), 'error');
   };
   _voiceRecognition.onend = () => {
-    if (row) row.style.display = 'none';
+    // Keep visible briefly for processing state, handled inside parseVoiceText
   };
-  _voiceRecognition.start();
+  try {
+    _voiceRecognition.start();
+  } catch (e) {
+    if (row) row.style.display = 'none';
+    showToast('Microphone access unavailable', 'error');
+  }
 }
 
 function stopVoiceLog() {
-  if (_voiceRecognition) _voiceRecognition.stop();
+  if (_voiceRecognition) {
+    try { _voiceRecognition.stop(); } catch (e) { }
+  }
   const row = document.getElementById('voiceStatusRow');
   if (row) row.style.display = 'none';
 }
