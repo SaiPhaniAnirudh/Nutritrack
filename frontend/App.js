@@ -1508,6 +1508,16 @@ function renderMacroChart(p, c, f, fiber, sugar, sodium, chol, cal) {
   const ratioPill = document.getElementById('macroTargetRatio');
   if (ratioPill) ratioPill.textContent = `P ${proPct}% · C ${carbPct}% · F ${fatPct}%`;
 
+  // Populate clean formatted secondary micronutrient grid
+  const fiberEl = document.getElementById('macroSecFiber');
+  if (fiberEl) fiberEl.textContent = `${+(fiber || 0).toFixed(1)}g`;
+  const sugarEl = document.getElementById('macroSecSugar');
+  if (sugarEl) sugarEl.textContent = `${+(sugar || 0).toFixed(1)}g`;
+  const sodEl = document.getElementById('macroSecSodium');
+  if (sodEl) sodEl.textContent = `${Math.round(sodium || 0)}mg`;
+  const cholEl = document.getElementById('macroSecChol');
+  if (cholEl) cholEl.textContent = `${Math.round(chol || 0)}mg`;
+
   const sodiumG = +(sodium / 10).toFixed(1);
   const cholG = +(chol / 10).toFixed(1);
 
@@ -1564,33 +1574,13 @@ function renderMacroChart(p, c, f, fiber, sugar, sodium, chol, cal) {
       cutout: '68%',
       plugins: {
         legend: {
-          position: 'bottom',
-          labels: {
-            color: 'rgba(184,201,186,0.85)',
-            font: { family: 'Plus Jakarta Sans', size: 11, weight: '600' },
-            padding: 12,
-            usePointStyle: true,
-            pointStyleWidth: 8,
-            generateLabels(chart) {
-              if (filtRaw.length === 0) return [];
-              return chart.data.labels.map((label, i) => ({
-                text: `${label}: ${filtReal[i]}${filtUnits[i] === 'g' ? 'g' : 'mg'}`,
-                fillStyle: filtBg[i],
-                strokeStyle: filtBorder[i],
-                fontColor: 'rgba(184,201,186,0.9)',
-                lineWidth: 1,
-                pointStyle: 'circle',
-                hidden: false,
-                index: i,
-              }));
-            }
-          }
+          display: false
         },
         tooltip: {
           enabled: filtRaw.length > 0,
           callbacks: {
             label(ctx) {
-              const idx = ctx.dataIndex, real = filtReal[idx], unit = filtUnits[idx] === 'g' ? 'g' : 'mg';
+              const idx = ctx.dataIndex, real = +(filtReal[idx] || 0).toFixed(1), unit = filtUnits[idx] === 'g' ? 'g' : 'mg';
               const pct = Math.round((filtRaw[idx] / total) * 100);
               return `  ${real}${unit}  (${pct}% of total)`;
             },

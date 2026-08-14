@@ -5585,15 +5585,15 @@ body {
 
 .macro-chart-center-hub {
   position: absolute;
-  top: 44%;
+  top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   width: 96px;
   height: 96px;
   border-radius: 50%;
   background: radial-gradient(circle, #142018 0%, #0a0f0d 90%);
-  border: 2px solid rgba(62, 207, 142, 0.3);
-  box-shadow: 0 0 24px rgba(62, 207, 142, 0.15), inset 0 0 16px rgba(0, 0, 0, 0.8);
+  border: 2px solid rgba(62, 207, 142, 0.35);
+  box-shadow: 0 0 24px rgba(62, 207, 142, 0.2), inset 0 0 16px rgba(0, 0, 0, 0.85);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -5624,6 +5624,44 @@ body {
   font-size: 0.62rem;
   font-weight: 700;
   color: #3ecf8e;
+}
+
+.macro-secondary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.sec-micro-chip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 0.72rem;
+}
+
+.sec-micro-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.sec-micro-label {
+  color: var(--mist);
+  font-weight: 600;
+}
+
+.sec-micro-val {
+  color: #fff;
+  font-weight: 800;
 }
 
 /* ══════════════════════════════════════════════════
