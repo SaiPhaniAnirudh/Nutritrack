@@ -249,6 +249,30 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
 db  = SQLAlchemy(app)
 
 
+# ── Retry decorator for transient Postgres SSL errors ──────────────────
+# Render free-tier Postgres drops idle SSL connections; pool_pre_ping
+# catches stale connections *before* use, but if the connection dies
+# *during* a query, the OperationalError propagates unhandled. This
+# decorator catches it, rolls back the broken session, and retries once.
+def db_retry(f):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        try:
+            return f(*args, **kwargs)
+        except Exception as e:
+            err_str = str(e).lower()
+            if 'ssl' in err_str or 'operational' in err_str or 'connection' in err_str:
+                db.session.rollback()
+                try:
+                    return f(*args, **kwargs)
+                except Exception as retry_err:
+                    db.session.rollback()
+                    print(f"⚠️ db_retry: second attempt also failed: {retry_err}")
+                    return jsonify({'error': 'Database temporarily unavailable. Please try again.'}), 503
+            raise
+    return wrapper
+
+
 # CORS — allow frontend from local dev and production
 _cors_origins = [
     'http://localhost:3000',
@@ -788,6 +812,7 @@ def update_profile():
 
 @app.route('/api/logs', methods=['GET'])
 @jwt_required()
+@db_retry
 def get_logs():
     uid  = get_jwt_identity()
     date = request.args.get('date')          # YYYY-MM-DD
@@ -868,6 +893,7 @@ def delete_log(log_id):
 
 @app.route('/api/logs/summary', methods=['GET'])
 @jwt_required()
+@db_retry
 def logs_summary():
     """Daily totals for past N days."""
     uid  = get_jwt_identity()
@@ -1209,6 +1235,7 @@ def export_health_data():
 
 @app.route('/api/water', methods=['GET'])
 @jwt_required()
+@db_retry
 def get_water():
     """Water log entries for a given date (default: today)."""
     uid  = get_jwt_identity()
@@ -1266,6 +1293,7 @@ def delete_water(log_id):
 
 @app.route('/api/weight', methods=['GET'])
 @jwt_required()
+@db_retry
 def get_weight():
     """Get user's weight log history (past 30 days default)."""
     uid  = get_jwt_identity()
@@ -1342,6 +1370,7 @@ def delete_weight(log_id):
 
 @app.route('/api/meals/templates', methods=['GET'])
 @jwt_required()
+@db_retry
 def get_meal_templates():
     """List saved meal templates for the logged in user."""
     uid = get_jwt_identity()
@@ -1568,6 +1597,7 @@ def recommend_meals():
 
 @app.route('/api/analytics/weekly-insights', methods=['GET'])
 @jwt_required()
+@db_retry
 def weekly_insights():
     """Calculates 7-day nutrition insights, trend scores, and actionable feedback."""
     uid = get_jwt_identity()
@@ -1624,6 +1654,7 @@ def weekly_insights():
 # ══════════════════════════════════════════════════
 
 @app.route('/api/challenges', methods=['GET'])
+@db_retry
 def get_challenges():
     """List available public community challenges."""
     defaults = [
@@ -1675,6 +1706,7 @@ def join_challenge(challenge_id):
 
 
 @app.route('/api/challenges/leaderboard/<int:challenge_id>', methods=['GET'])
+@db_retry
 def challenge_leaderboard(challenge_id):
     participants = ChallengeParticipant.query.filter_by(challenge_id=challenge_id).order_by(ChallengeParticipant.current_val.desc()).limit(20).all()
     return jsonify([p.to_dict() for p in participants])
@@ -1686,6 +1718,7 @@ def challenge_leaderboard(challenge_id):
 
 @app.route('/api/logs/export', methods=['GET'])
 @jwt_required()
+@db_retry
 def export_logs_csv():
     """Download food logs as a CSV spreadsheet."""
     uid = get_jwt_identity()
@@ -1714,6 +1747,7 @@ def export_logs_csv():
 
 @app.route('/api/workouts', methods=['GET'])
 @jwt_required()
+@db_retry
 def get_workouts():
     """Get workout entries for a given date (default: today)."""
     uid  = get_jwt_identity()
@@ -2052,6 +2086,7 @@ def ai_analyze_stream():
 
 @app.route('/api/analytics/streak', methods=['GET'])
 @jwt_required()
+@db_retry
 def streak():
     """How many consecutive days the user has logged food."""
     uid = get_jwt_identity()
