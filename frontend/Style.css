@@ -715,79 +715,196 @@ body {
   min-height: 100vh;
 }
 
-.topnav {
+/* ── SIDEBAR & APPLICATION LAYOUT ── */
+#mainApp {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.85rem 2.2rem;
-  background: var(--parchment);
-  border-bottom: 1px solid var(--border-soft);
+  min-height: 100vh;
+  background: #0a0f0d;
+}
+
+.sidebar-nav {
+  width: 260px;
+  min-width: 260px;
+  height: 100vh;
   position: sticky;
   top: 0;
+  background: #0f1712;
+  border-right: 1px solid rgba(62, 207, 142, 0.15);
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem 1.2rem;
   z-index: 100;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.4);
 }
 
-.nav-brand {
-  display: flex;
-  align-items: center;
-  gap: 0.7rem;
+.sidebar-brand {
+  margin-bottom: 1.8rem;
 }
 
-.nav-brand .mark {
-  width: 40px;
-  height: 40px;
-  background: var(--white);
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--border-soft);
-  flex-shrink: 0;
-  overflow: hidden;
-}
-
-.nav-brand h1,
-.nav-brand-name {
+.sidebar-title {
   font-family: 'Fraunces', serif;
-  font-size: 1.35rem;
-  font-weight: 900;
-  color: var(--ink);
-  letter-spacing: -0.03em;
+  font-size: 1.22rem;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.02em;
 }
 
-.nav-center {
+.sidebar-section-label {
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: var(--mist);
+  letter-spacing: 0.08em;
+  margin-bottom: 0.6rem;
+  opacity: 0.6;
+}
+
+.sidebar-menu {
   display: flex;
-  gap: 0.2rem;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 1.2rem;
 }
 
-.nav-btn {
-  padding: 8px 18px;
-  border-radius: 50px;
-  border: none;
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 16px;
+  border-radius: 12px;
   background: transparent;
-  color: var(--ink-50);
-  cursor: pointer;
-  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  font-size: 0.88rem;
+  border: 1px solid transparent;
+  color: var(--mist);
+  font-size: 0.9rem;
   font-weight: 600;
-  transition: all 0.2s;
+  text-align: left;
+  width: 100%;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-.nav-btn:hover {
-  background: var(--smoke);
-  color: var(--ink);
+.sidebar-icon {
+  font-size: 1.1rem;
 }
 
-.nav-btn.active {
-  background: var(--kiwi);
-  color: white;
-  box-shadow: 0 2px 12px rgba(45, 158, 107, 0.35);
+.sidebar-link:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  transform: translateX(3px);
 }
 
-.nav-right {
+.sidebar-link.active {
+  background: linear-gradient(135deg, rgba(62, 207, 142, 0.22), rgba(45, 158, 107, 0.12));
+  border-color: rgba(62, 207, 142, 0.35);
+  color: #3ecf8e;
+  box-shadow: 0 4px 16px rgba(62, 207, 142, 0.15);
+  font-weight: 700;
+}
+
+.sidebar-widgets {
   display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sidebar-widget-btn {
+  width: 100%;
+  text-align: left;
+}
+
+.share-btn-side {
+  padding: 10px 14px;
+  background: linear-gradient(135deg, #F5A623, #F4613A);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
+  text-align: center;
+  margin-top: 4px;
+  box-shadow: 0 4px 14px rgba(245, 166, 35, 0.25);
+  transition: transform 0.2s, filter 0.2s;
+}
+
+.share-btn-side:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.1);
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sidebar-user-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sidebar-user-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-username {
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-user-role {
+  color: var(--mist);
+  font-size: 0.72rem;
+  opacity: 0.7;
+}
+
+.sidebar-lang-select {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  padding: 4px 6px;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.sidebar-logout-btn {
+  background: transparent;
+  border: none;
+  color: #ff6b6b;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  padding: 4px 0;
+  transition: opacity 0.2s;
+}
+
+.sidebar-logout-btn:hover {
+  opacity: 0.8;
+  text-decoration: underline;
+}
+
+.main-content-wrap {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.mobile-topbar {
+  display: none;
+}
   align-items: center;
   gap: 0.75rem;
 }
@@ -2353,6 +2470,26 @@ body {
 
 @media(max-width:900px) {
 
+  #mainApp {
+    flex-direction: column;
+  }
+
+  .sidebar-nav {
+    display: none;
+  }
+
+  .mobile-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 18px;
+    background: #0f1712;
+    border-bottom: 1px solid rgba(62, 207, 142, 0.15);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
   .main-grid,
   .history-grid,
   .profile-grid {
@@ -2361,20 +2498,6 @@ body {
 
   .page {
     padding: 1.5rem 1rem;
-  }
-
-  .topnav {
-    padding: 0.8rem 1.2rem;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-
-  .nav-center {
-    display: none;
-  }
-
-  .diet-widget {
-    display: none;
   }
 
   .food-results-wide {
@@ -5357,5 +5480,17 @@ body {
   .goal-ring-wrap svg {
     width: 42px;
     height: 42px;
+  }
+}
+
+@keyframes bboxFadeIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
   }
 }

@@ -38,7 +38,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://cdn.jsdelivr.net">
   <link rel="preconnect" href="https://unpkg.com">
-  <link rel="stylesheet" href="/Style.css?v=23">
+  <link rel="stylesheet" href="/Style.css?v=24">
   <link
     href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;0,9..144,900;1,9..144,300&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
     rel="stylesheet" media="print" onload="this.media='all'">
@@ -479,63 +479,92 @@
 ════════════════════════════════════════ -->
   <div id="mainApp" style="display:none">
 
-    <!-- TOP NAV -->
-    <nav class="topnav">
-      <div class="nav-brand">
-        <a href="/" style="display: flex; align-items: center; text-decoration: none;">
-          <img src="/logo-nav.png" alt="NutriTrack Logo" width="36" height="32" style="height: 32px; width: auto;" />
+    <!-- SIDEBAR NAVIGATION (Desktop) -->
+    <aside class="sidebar-nav">
+      <div class="sidebar-brand">
+        <a href="/" style="display: flex; align-items: center; gap: 10px; text-decoration: none;">
+          <div class="logo-mark-dark" style="padding: 4px; border-radius: 12px; background: #0a0f0d; border: 1px solid rgba(62,207,142,0.25);">
+            <img src="/logo-nav.png" alt="NutriTrack Logo" height="32" style="height: 32px; width: auto;" />
+          </div>
+          <span class="sidebar-title">NutriTrack <span style="color:#3ecf8e; font-size:0.75rem; font-weight:800; background:rgba(62,207,142,0.15); padding:2px 6px; border-radius:6px; margin-left:2px;">AI</span></span>
         </a>
-        <h1
-          style="position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); border:0;">
-          NutriTrack — AI Food & Macro Intelligence</h1>
       </div>
-      <div class="nav-center">
-        <!-- FIX: added type="button" to all nav buttons -->
-        <button type="button" class="nav-btn active" onclick="showPage('dashboard', this)">Dashboard</button>
-        <button type="button" class="nav-btn" onclick="showPage('track', this)">Track Food</button>
-        <button type="button" class="nav-btn" onclick="showPage('history', this)">History</button>
-        <button type="button" class="nav-btn" onclick="showPage('profile', this)">Profile</button>
+
+      <div class="sidebar-section-label">NAVIGATION</div>
+      <div class="sidebar-menu">
+        <button type="button" class="sidebar-link nav-btn active" id="sideBtn-dashboard" onclick="showPage('dashboard', this)">
+          <span class="sidebar-icon">📊</span>
+          <span>Dashboard</span>
+        </button>
+        <button type="button" class="sidebar-link nav-btn" id="sideBtn-track" onclick="showPage('track', this)">
+          <span class="sidebar-icon">🍽️</span>
+          <span>Track Food</span>
+        </button>
+        <button type="button" class="sidebar-link nav-btn" id="sideBtn-history" onclick="showPage('history', this)">
+          <span class="sidebar-icon">📈</span>
+          <span>History</span>
+        </button>
+        <button type="button" class="sidebar-link nav-btn" id="sideBtn-profile" onclick="showPage('profile', this)">
+          <span class="sidebar-icon">👤</span>
+          <span>Profile</span>
+        </button>
       </div>
-      <div class="nav-right">
-        <!-- Language Switcher -->
-        <select id="langSelect" onchange="setLanguage(this.value)"
-          style="background:rgba(255,255,255,0.08); color:#fff; border:1px solid rgba(255,255,255,0.15); border-radius:8px; padding:4px 8px; font-size:0.8rem; cursor:pointer;">
-          <option value="en" style="background:#12110F; color:#fff;">🌐 EN</option>
-          <option value="hi" style="background:#12110F; color:#fff;">🇮🇳 हिंदी</option>
-          <option value="te" style="background:#12110F; color:#fff;">🇮🇳 తెలుగు</option>
-          <option value="ta" style="background:#12110F; color:#fff;">🇮🇳 தமிழ்</option>
-          <option value="es" style="background:#12110F; color:#fff;">🇪🇸 ES</option>
-        </select>
 
-        <button type="button" onclick="openShareCardModal()" class="water-quick-btn"
-          style="font-size:0.78rem; padding:6px 12px; background:linear-gradient(135deg,#F5A623,#F4613A); color:#fff; border:none; border-radius:8px; font-weight:700;">📸
-          Share</button>
-
-        <button type="button" class="diet-widget" id="dietWidget" onclick="openDietModal()">
+      <div class="sidebar-section-label" style="margin-top: 1.2rem;">QUICK WIDGETS</div>
+      <div class="sidebar-widgets">
+        <button type="button" class="diet-widget sidebar-widget-btn" id="dietWidget" onclick="openDietModal()">
           <span class="diet-widget-icon">🥗</span>
           <div class="diet-widget-text">
             <span class="diet-widget-label">Plan My Diet</span>
             <span class="diet-widget-tag" id="dietWidgetTag">Set up profile</span>
           </div>
         </button>
-        <button type="button" class="diet-widget" id="achievementsWidget" onclick="openAchievementsModal()">
+        <button type="button" class="diet-widget sidebar-widget-btn" id="achievementsWidget" onclick="openAchievementsModal()">
           <span class="diet-widget-icon">🏅</span>
           <div class="diet-widget-text">
             <span class="diet-widget-label">Achievements</span>
             <span class="diet-widget-tag" id="achievementsWidgetTag">0/10 unlocked</span>
           </div>
         </button>
-        <div class="user-chip" onclick="showPage('profile', document.querySelector('.nav-btn[onclick*=profile]'))"
-          style="cursor: pointer;" title="Go to profile">
-          <div class="user-avatar" id="navAvatar">A</div>
-          <span id="navName">User</span>
-        </div>
-        <button type="button" class="logout-link" onclick="handleLogout()">Sign out</button>
+        <button type="button" onclick="openShareCardModal()" class="sidebar-widget-btn share-btn-side">
+          <span>📸 Share Card</span>
+        </button>
       </div>
-    </nav>
 
-    <!-- MAIN LANDMARK CONTENT -->
-    <main id="mainContent" role="main">
+      <div class="sidebar-footer">
+        <div class="sidebar-user-row">
+          <div class="user-avatar" id="navAvatar" onclick="showPage('profile', document.querySelector('.nav-btn[onclick*=profile]'))" style="cursor:pointer;">A</div>
+          <div class="sidebar-user-info" onclick="showPage('profile', document.querySelector('.nav-btn[onclick*=profile]'))" style="cursor:pointer;">
+            <span class="sidebar-username" id="navName">User</span>
+            <span class="sidebar-user-role">Member</span>
+          </div>
+          <select id="langSelect" onchange="setLanguage(this.value)" class="sidebar-lang-select">
+            <option value="en">🌐 EN</option>
+            <option value="hi">🇮🇳 HI</option>
+            <option value="te">🇮🇳 TE</option>
+            <option value="ta">🇮🇳 TA</option>
+            <option value="es">🇪🇸 ES</option>
+          </select>
+        </div>
+        <button type="button" class="sidebar-logout-btn" onclick="handleLogout()">Sign out ➔</button>
+      </div>
+    </aside>
+
+    <!-- MOBILE TOP BAR (<900px) -->
+    <div class="mobile-topbar">
+      <div class="nav-brand">
+        <img src="/logo-nav.png" alt="NutriTrack Logo" height="28" style="height: 28px; width: auto;" />
+        <span style="font-family:'Fraunces',serif; font-size:1.1rem; font-weight:800; color:#fff;">NutriTrack AI</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <button type="button" onclick="openShareCardModal()" class="water-quick-btn" style="font-size:0.75rem; padding:4px 10px;">📸 Share</button>
+        <div class="user-avatar" id="mobNavAvatar" onclick="showPage('profile', document.querySelector('.nav-btn[onclick*=profile]'))" style="width:30px; height:30px; font-size:0.8rem; cursor:pointer;">A</div>
+      </div>
+    </div>
+
+    <!-- MAIN LANDMARK CONTENT WRAPPER -->
+    <div class="main-content-wrap">
+      <main id="mainContent" role="main">
 
       <!-- ══════════════════════
        DASHBOARD
@@ -1187,6 +1216,7 @@
     <footer class="app-footer">
       <p>&copy; 2026 Sai Phani Anirudh. All rights reserved. | NutriTrack</p>
     </footer>
+    </div><!-- /main-content-wrap -->
 
     <!-- ══ MOBILE BOTTOM NAV ══ -->
     <nav class="mobile-nav" id="mobileNav">

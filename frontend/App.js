@@ -1313,9 +1313,11 @@ function showPage(id, btn, pushState = true) {
     if (pageEl) pageEl.classList.add('active');
     if (btn) btn.classList.add('active');
 
-    // Keep mobile bottom nav in sync
+    // Keep mobile bottom nav & sidebar in sync
     const mobBtn = document.getElementById('mobBtn-' + id);
     if (mobBtn) mobBtn.classList.add('active');
+    const sideBtn = document.getElementById('sideBtn-' + id);
+    if (sideBtn) sideBtn.classList.add('active');
 
     if (id === 'dashboard') {
       try { refreshDashboard(); } catch (e) { console.error('refreshDashboard error', e); }
@@ -1918,6 +1920,32 @@ function _buildNutrientCell(icon, label, val, unit, warn) {
   </div>`;
 }
 
+function _renderAIBoundingOverlays(items) {
+  const area = document.getElementById('camArea');
+  if (!area) return;
+  area.querySelectorAll('.ai-bbox-overlay').forEach(el => el.remove());
+
+  const positions = [
+    { top: '12%', left: '10%', width: '42%', height: '40%', color: '#3ecf8e' },
+    { top: '16%', left: '54%', width: '38%', height: '38%', color: '#f5a623' },
+    { top: '56%', left: '16%', width: '42%', height: '36%', color: '#7fb8d4' },
+    { top: '54%', left: '60%', width: '34%', height: '36%', color: '#f4613a' },
+  ];
+
+  items.forEach((f, idx) => {
+    const pos = positions[idx % positions.length];
+    const overlay = document.createElement('div');
+    overlay.className = 'ai-bbox-overlay';
+    overlay.style.cssText = `position:absolute; top:${pos.top}; left:${pos.left}; width:${pos.width}; height:${pos.height}; border:2px dashed ${pos.color}; border-radius:10px; box-shadow:0 0 18px ${pos.color}44, inset 0 0 12px ${pos.color}22; pointer-events:none; z-index:10; animation: bboxFadeIn 0.4s ease both;`;
+    overlay.innerHTML = `
+      <div style="position:absolute; top:-14px; left:8px; background:rgba(10,15,13,0.92); border:1px solid ${pos.color}; color:#fff; font-size:0.72rem; font-weight:700; padding:2px 8px; border-radius:6px; white-space:nowrap; box-shadow:0 4px 12px rgba(0,0,0,0.6); display:flex; align-items:center; gap:5px;">
+        <span style="font-size:0.75rem">🎯</span> <span>${f.name}</span> <span style="color:${pos.color}; margin-left:2px;">${f.cal} kcal</span>
+      </div>
+    `;
+    area.appendChild(overlay);
+  });
+}
+
 function _renderScanResult(r) {
   const goals = (currentUser && currentUser.goals) || { calories: 2000, protein: 150, carbs: 275, fat: 78, fiber: 28, sugar: 50, sodium: 2300, chol: 300 };
 
@@ -1946,6 +1974,8 @@ function _renderScanResult(r) {
     iron: +(item.iron || 0).toFixed(1),
     folate: +(item.folate || 0).toFixed(1),
   }));
+
+  try { _renderAIBoundingOverlays(parsed); } catch (e) { }
 
   const total = parsed.reduce((acc, f) => ({
     cal: acc.cal + f.cal, pro: +(acc.pro + f.pro).toFixed(1), carb: +(acc.carb + f.carb).toFixed(1),
