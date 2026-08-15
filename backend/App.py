@@ -273,6 +273,36 @@ def db_retry(f):
     return wrapper
 
 
+# ── Teardown-safe session cleanup (Sentry PYTHON-FLASK-5) ──────────────
+# @db_retry above only wraps the route function body, so it can't catch
+# everything. Render free-tier Postgres can drop a connection's SSL
+# session in the split-second between when a request finishes and when
+# Flask tears down the app context — even though the request itself
+# already completed and returned its response successfully. When that
+# happens, Flask-SQLAlchemy's own internal teardown hook calls
+# db.session.remove(), which tries to roll back the now-dead connection
+# and raises an unhandled OperationalError *after* the response was
+# already sent to the user (0 users impacted, always status 200 — this
+# is teardown noise, not a real failure).
+#
+# Flask calls teardown_appcontext hooks in reverse registration order,
+# so registering our own hook here (right after `db = SQLAlchemy(app)`)
+# makes it run BEFORE Flask-SQLAlchemy's internal one. We remove the
+# session ourselves first, absorbing this specific harmless close-time
+# error — which leaves the internal teardown's later call a no-op on an
+# already-removed session, so it never gets the chance to raise.
+@app.teardown_appcontext
+def _safe_session_teardown(exc=None):
+    try:
+        db.session.remove()
+    except Exception as e:
+        err_str = str(e).lower()
+        if 'ssl' in err_str or 'operational' in err_str or 'connection' in err_str:
+            print(f"⚠️ teardown: swallowed harmless SSL close-time error: {e}")
+        else:
+            raise
+
+
 # CORS — allow frontend from local dev and production
 _cors_origins = [
     'http://localhost:3000',
