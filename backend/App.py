@@ -752,6 +752,7 @@ def health_check():
 
 @app.route('/api/auth/me', methods=['GET'])
 @jwt_required()
+@db_retry
 def me():
     uid  = get_jwt_identity()
     user = db.session.get(User, uid)
@@ -762,6 +763,7 @@ def me():
 
 @app.route('/api/auth/update', methods=['PUT'])
 @jwt_required()
+@db_retry
 def update_profile():
     uid  = get_jwt_identity()
     user = db.session.get(User, uid)
@@ -832,6 +834,7 @@ def get_logs():
 
 @app.route('/api/logs', methods=['POST'])
 @jwt_required()
+@db_retry
 def add_log():
     try:
         uid  = get_jwt_identity()
@@ -870,6 +873,7 @@ def add_log():
 
 @app.route('/api/logs/<string:log_id>', methods=['DELETE'])
 @jwt_required()
+@db_retry
 def delete_log(log_id):
     uid = get_jwt_identity()
     # FoodLog.id is an Integer column — validate before it ever reaches the
@@ -1189,6 +1193,7 @@ def barcode_food(barcode):
 
 @app.route('/api/export/health', methods=['GET'])
 @jwt_required()
+@db_retry
 def export_health_data():
     """Export user's food logs formatted for Apple Health & Google Health Connect sync."""
     uid = get_jwt_identity()
@@ -1247,6 +1252,7 @@ def get_water():
 
 @app.route('/api/water', methods=['POST'])
 @jwt_required()
+@db_retry
 def add_water():
     """Log a water intake entry."""
     uid  = get_jwt_identity()
@@ -1271,6 +1277,7 @@ def add_water():
 
 @app.route('/api/water/<string:log_id>', methods=['DELETE'])
 @jwt_required()
+@db_retry
 def delete_water(log_id):
     uid = get_jwt_identity()
     if not log_id.isdigit():
@@ -1306,6 +1313,7 @@ def get_weight():
 
 @app.route('/api/weight', methods=['POST'])
 @jwt_required()
+@db_retry
 def add_weight():
     """Log a daily weight entry."""
     uid  = get_jwt_identity()
@@ -1347,6 +1355,7 @@ def add_weight():
 
 @app.route('/api/weight/<string:log_id>', methods=['DELETE'])
 @jwt_required()
+@db_retry
 def delete_weight(log_id):
     uid = get_jwt_identity()
     if not log_id.isdigit():
@@ -1380,6 +1389,7 @@ def get_meal_templates():
 
 @app.route('/api/meals/templates', methods=['POST'])
 @jwt_required()
+@db_retry
 def save_meal_template():
     """Save a list of food items as a named template (e.g. 'My Usual Breakfast')."""
     uid  = get_jwt_identity()
@@ -1416,6 +1426,7 @@ def save_meal_template():
 
 @app.route('/api/meals/templates/<string:template_id>', methods=['DELETE'])
 @jwt_required()
+@db_retry
 def delete_meal_template(template_id):
     uid = get_jwt_identity()
     if not template_id.isdigit():
@@ -1688,6 +1699,7 @@ def get_challenges():
 
 @app.route('/api/challenges/join/<int:challenge_id>', methods=['POST'])
 @jwt_required()
+@db_retry
 def join_challenge(challenge_id):
     uid = get_jwt_identity()
     existing = ChallengeParticipant.query.filter_by(challenge_id=challenge_id, user_id=uid).first()
@@ -1759,6 +1771,7 @@ def get_workouts():
 
 @app.route('/api/workouts', methods=['POST'])
 @jwt_required()
+@db_retry
 def add_workout():
     """Log an exercise / workout session."""
     uid  = get_jwt_identity()
@@ -1791,6 +1804,7 @@ def add_workout():
 
 @app.route('/api/workouts/<string:log_id>', methods=['DELETE'])
 @jwt_required()
+@db_retry
 def delete_workout(log_id):
     uid = get_jwt_identity()
     if not log_id.isdigit():
@@ -1813,6 +1827,7 @@ def delete_workout(log_id):
 
 @app.route('/api/ai/chat', methods=['POST'])
 @jwt_required(optional=True)
+@db_retry
 def ai_chat():
     """
     NutriBot — Context-Aware AI Nutritionist Chatbot.
@@ -2140,6 +2155,7 @@ def google_fit_client_id():
 
 @app.route('/api/integrations/google-fit/connect', methods=['POST'])
 @jwt_required()
+@db_retry
 def connect_google_fit():
     """Exchange a Google authorization `code` (from a dedicated consent
     redirect that never touches Supabase auth) for tokens, and store the
@@ -2197,6 +2213,7 @@ def connect_google_fit():
 
 @app.route('/api/integrations/google-fit/status', methods=['GET'])
 @jwt_required()
+@db_retry
 def google_fit_status():
     """Lets the frontend show 'Connected' / 'Not connected' without
     triggering a full sync."""
@@ -2208,6 +2225,7 @@ def google_fit_status():
 
 @app.route('/api/integrations/google-fit/disconnect', methods=['POST'])
 @jwt_required()
+@db_retry
 def disconnect_google_fit():
     """Lets the user disconnect (e.g. to reconnect a different Google
     account) rather than being stuck with whichever account they first used."""
@@ -2279,6 +2297,7 @@ def _fetch_google_fitness_today(access_token):
 
 @app.route('/api/integrations/google-fit/sync', methods=['POST'])
 @jwt_required()
+@db_retry
 def sync_google_fit():
     """Pull TODAY's real step count & active calorie burn from Google Fit
     using the stored refresh token — no hardcoded numbers, no re-login."""
@@ -2317,6 +2336,7 @@ def sync_google_fit():
 
 @app.route('/api/integrations/auto-sync', methods=['POST'])
 @jwt_required(optional=True)
+@db_retry
 def auto_sync_ecosystem():
     """
     Automated background auto-sync for ecosystem and wearable health data.
@@ -2397,6 +2417,7 @@ def auto_sync_ecosystem():
 
 @app.route('/api/integrations/status/all', methods=['GET'])
 @jwt_required(optional=True)
+@db_retry
 def get_all_integration_statuses():
     """
     Returns unified ecosystem connectivity status for all supported integrations:
