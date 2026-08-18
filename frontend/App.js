@@ -3359,12 +3359,22 @@ function renderWorkoutLogs() {
     list.innerHTML = `<div style="font-size:0.78rem; color:var(--mist); opacity:0.7;">No workouts logged today. Add one above!</div>`;
     return;
   }
-  list.innerHTML = logs.map(w => `
-    <div style="padding:6px 12px; background:rgba(62,207,142,0.1); border-radius:8px; font-size:0.8rem; display:flex; align-items:center; gap:8px;">
-      <span>🏃 ${w.name} (${w.durationMin}m)</span>
-      <strong style="color:var(--kiwi);">-${Math.round(w.calBurned)} kcal</strong>
-    </div>
-  `).join('');
+  let totalBurn = 0;
+  list.innerHTML = logs.map(w => {
+    const dur = parseInt(w.duration_min || w.durationMin || w.duration || 30);
+    const cal = parseFloat(w.cal_burned || w.calBurned || w.calories || w.burn || 0);
+    totalBurn += cal;
+    const name = w.name || 'Workout Activity';
+    return `
+      <div style="padding:7px 12px; background:rgba(62,207,142,0.08); border:1px solid rgba(62,207,142,0.18); border-radius:8px; font-size:0.82rem; display:flex; align-items:center; justify-content:space-between; gap:8px;">
+        <span style="font-weight:600; color:var(--ink);">🏃 ${name} (${dur}m)</span>
+        <strong style="color:var(--kiwi); font-weight:800;">-${Math.round(cal)} kcal</strong>
+      </div>
+    `;
+  }).join('');
+
+  const burnEl = document.getElementById('dashWorkoutBurn');
+  if (burnEl) burnEl.textContent = Math.round(totalBurn);
 }
 
 async function logWorkoutEntry() {
