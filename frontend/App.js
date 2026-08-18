@@ -2073,6 +2073,7 @@ function _renderScanResult(r) {
     const mT = (f.pro * 4) + (f.carb * 4) + (f.fat * 9) || 1;
     const ipW = Math.round((f.pro * 4 / mT) * 100), icW = Math.round((f.carb * 4 / mT) * 100), ifW = 100 - ipW - icW;
     const iCC = f.conf >= 85 ? 'rgba(100,180,110,0.8)' : f.conf >= 65 ? 'rgba(212,168,83,0.8)' : 'rgba(196,132,90,0.8)';
+    const provenance = f.source === 'openfoodfacts' ? '🌍 OpenFoodFacts' : '🔬 USDA Scientific RAG';
 
     const itemFoodObj = {
       name: f.name,
@@ -2098,11 +2099,11 @@ function _renderScanResult(r) {
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0.4rem;">
         <div>
           <div style="font-size:0.9rem;font-weight:600;color:var(--ink)">🍽️ ${f.name}</div>
-          <div style="font-size:0.68rem;color:var(--ink-50);margin-top:1px">${f.size}</div>
+          <div style="font-size:0.68rem;color:var(--ink-50);margin-top:1px">${f.size} · <span style="color:#7fb8d4">⚖️ ~${Math.round(f.cal * 0.85)}g</span></div>
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.3rem">
           <div style="font-size:1rem;font-weight:700;color:#F5A623">${f.cal} <span style="font-size:0.65rem;font-weight:400;color:var(--ink-50)">kcal</span></div>
-          <div style="font-size:0.62rem;padding:1px 7px;border-radius:50px;border:1px solid ${iCC};color:${iCC}">${f.conf}%</div>
+          <div style="font-size:0.62rem;padding:1px 7px;border-radius:50px;border:1px solid ${iCC};color:${iCC}">${f.conf}% confident</div>
         </div>
       </div>
       <div style="height:4px;border-radius:2px;display:flex;gap:2px;overflow:hidden;margin-bottom:0.5rem;">
@@ -2113,6 +2114,10 @@ function _renderScanResult(r) {
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.3rem;font-size:0.67rem;color:var(--ink-50);margin-bottom:0.6rem;">
         <span>💪 ${f.pro}g</span><span>🌾 ${f.carb}g</span><span>🥑 ${f.fat}g</span><span>🌿 ${f.fiber}g</span>
         <span>🍬 ${f.sugar}g</span><span>🧂 ${f.sod}mg</span><span>❤️ ${f.chol}mg</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.6rem; padding-top:0.3rem; border-top:1px solid rgba(255,255,255,0.05);">
+        <span style="font-size:0.65rem; color:#7fb8d4; font-weight:600;">🏷️ ${provenance}</span>
+        <button type="button" onclick="correctScannedPortion('${itemSafeId}', '${f.name}', ${f.cal})" style="background:none; border:none; color:var(--mist); font-size:0.68rem; cursor:pointer; text-decoration:underline;">✏️ Correct Portion</button>
       </div>
       <button type="button" class="scan-add-btn" style="padding:0.45rem;font-size:0.78rem;" onclick="addFoodById('${itemSafeId}')">
         ✓ Add ${f.name} to ${currentMealType || 'meal'}
@@ -2181,7 +2186,38 @@ function _renderScanResult(r) {
 // ─────────────────────────────────────────────────
 //  FOOD SEARCH  (change #2: show food description)
 // ─────────────────────────────────────────────────
-function buildCatFilters() {
+function correctScannedPortion(safeId, foodName, origCal) {
+  const currentObj = window._foodCardMap && window._foodCardMap[safeId];
+  if (!currentObj) return;
+  const newCalStr = prompt(`Adjust portion / calories for "${foodName}" (AI estimated: ${origCal} kcal):`, origCal);
+  if (!newCalStr) return;
+  const newCal = parseFloat(newCalStr);
+  if (isNaN(newCal) || newCal <= 0) return;
+
+  const mult = newCal / Math.max(origCal, 1);
+  currentObj.cal = Math.round(newCal);
+  currentObj.pro = +(currentObj.pro * mult).toFixed(1);
+  currentObj.carb = +(currentObj.carb * mult).toFixed(1);
+  currentObj.fat = +(currentObj.fat * mult).toFixed(1);
+
+  // Persist user correction to fine-tune active learning
+  const backendUrl = window._BACKEND_URL || '';
+  _authFetch(`${backendUrl}/api/ai/corrections`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      original_food: foodName,
+      corrected_food: foodName,
+      original_cal: origCal,
+      corrected_cal: newCal
+    })
+  }).catch(() => {});
+
+  showToast(`✓ Portion calibrated for ${foodName} (${Math.round(newCal)} kcal)!`, 'success');
+  addFoodToLog(currentObj);
+}
+
+function initCatFilters() {
   const row = document.getElementById('catFilters');
   row.innerHTML = CATEGORIES.map(c => `
     <button class="cat-chip ${c.key === 'all' ? 'active' : ''}" onclick="setCat('${c.key}',this)">${c.label}</button>
