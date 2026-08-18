@@ -75,7 +75,7 @@ def analyze_food_photo(image_base64, api_key=None):
                 res["source"] = "gemini"
                 return res
         except Exception as e:
-            print(f"⚡ Gemini {model_name} error: {e}")
+            print(f"[Gemini {model_name}] notice: {e}")
             continue
 
     return {
@@ -102,7 +102,7 @@ def _call_gemini(endpoint_url, api_key, image_base64):
         }
     }
 
-    resp = requests.post(url, json=payload, timeout=8)
+    resp = requests.post(url, json=payload, timeout=15)
     if resp.status_code != 200:
         return {"success": False, "error": f"HTTP {resp.status_code}: {resp.text[:200]}"}
 

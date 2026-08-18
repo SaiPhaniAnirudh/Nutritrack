@@ -5481,6 +5481,71 @@ function _roundNum(v, dec = 1) {
   return Math.round(n * f) / f;
 }
 
+function _synthesizeExtendedNutrients(l) {
+  const pro = floatVal(l.pro) || 0;
+  const fat = floatVal(l.fat) || 0;
+  const name = (l.name || '').toLowerCase();
+
+  const isFruit = name.includes('apple') || name.includes('banana') || name.includes('berry') || name.includes('orange') || name.includes('fruit') || name.includes('mango');
+  const isVeg = name.includes('salad') || name.includes('spinach') || name.includes('broccoli') || name.includes('carrot') || name.includes('veg') || name.includes('greens');
+  const isDairy = name.includes('milk') || name.includes('yogurt') || name.includes('cheese') || name.includes('paneer') || name.includes('curd');
+  const isProtein = pro >= 8 || name.includes('chicken') || name.includes('egg') || name.includes('fish') || name.includes('meat') || name.includes('tofu');
+  const isNut = name.includes('nut') || name.includes('seed') || name.includes('almond') || name.includes('peanut');
+  const isGrain = name.includes('rice') || name.includes('bread') || name.includes('oat') || name.includes('roti') || name.includes('pasta');
+
+  return {
+    vitamin_a_mcg_rae: isVeg ? 220 : isFruit ? 60 : isDairy ? 95 : 20,
+    vitamin_c_mg: isFruit ? 40 : isVeg ? 32 : 3,
+    vitamin_d_mcg: floatVal(l.vit_d) || (isDairy ? 1.5 : isProtein ? 0.8 : 0.0),
+    vitamin_e_mg: isNut ? 5.2 : isVeg ? 1.5 : 0.6,
+    vitamin_k_mcg: isVeg ? 90 : 5,
+    thiamin_b1_mg: isGrain ? 0.35 : 0.12,
+    riboflavin_b2_mg: isDairy ? 0.45 : isProtein ? 0.3 : 0.1,
+    niacin_b3_mg: isProtein ? 7.0 : isGrain ? 3.0 : 1.0,
+    pantothenic_acid_b5_mg: isProtein ? 1.4 : 0.5,
+    vitamin_b6_mg: isProtein ? 0.7 : isFruit ? 0.4 : 0.15,
+    folate_mcg: floatVal(l.folate) || (isVeg ? 120 : isFruit ? 25 : 15),
+    vitamin_b12_mcg: isProtein ? 1.8 : isDairy ? 0.9 : 0.0,
+    choline_mg: isProtein ? 95 : isDairy ? 40 : 18,
+
+    calcium_mg: isDairy ? 280 : isVeg ? 55 : 22,
+    iron_mg: floatVal(l.iron) || (isVeg ? 2.1 : isProtein ? 1.8 : 0.5),
+    magnesium_mg: isNut ? 75 : isGrain ? 50 : isVeg ? 30 : 18,
+    phosphorus_mg: isProtein ? 240 : isDairy ? 200 : 45,
+    potassium_mg: isFruit ? 310 : isVeg ? 340 : isProtein ? 280 : 100,
+    zinc_mg: isProtein ? 3.2 : isNut ? 1.8 : 0.5,
+    copper_mg: isNut ? 0.35 : 0.1,
+    manganese_mg: isGrain ? 0.9 : isVeg ? 0.35 : 0.06,
+    selenium_mcg: isProtein ? 26 : isGrain ? 14 : 2.0,
+
+    saturated_fat_g: +(fat * (isDairy ? 0.6 : isProtein ? 0.35 : 0.15)).toFixed(1),
+    monounsaturated_fat_g: +(fat * 0.45).toFixed(1),
+    polyunsaturated_fat_g: +(fat * 0.30).toFixed(1),
+    trans_fat_g: 0.0,
+    omega3_ala_g: isNut ? +(fat * 0.15).toFixed(2) : 0.08,
+    omega3_epa_g: isProtein && name.includes('fish') ? 0.25 : 0.0,
+    omega3_dha_g: isProtein && name.includes('fish') ? 0.25 : 0.0,
+
+    leucine_g: +(pro * (isProtein ? 0.085 : 0.045)).toFixed(2),
+    isoleucine_g: +(pro * (isProtein ? 0.055 : 0.032)).toFixed(2),
+    valine_g: +(pro * (isProtein ? 0.065 : 0.035)).toFixed(2),
+    lysine_g: +(pro * (isProtein ? 0.075 : 0.025)).toFixed(2),
+    methionine_g: +(pro * (isProtein ? 0.032 : 0.012)).toFixed(2),
+    phenylalanine_g: +(pro * 0.045).toFixed(2),
+    tryptophan_g: +(pro * 0.014).toFixed(2),
+    threonine_g: +(pro * 0.042).toFixed(2),
+    histidine_g: +(pro * 0.028).toFixed(2),
+    arginine_g: +(pro * 0.062).toFixed(2),
+    glutamic_acid_g: +(pro * 0.18).toFixed(2),
+
+    beta_carotene_mcg: isVeg ? 1200 : isFruit ? 250 : 0,
+    alpha_carotene_mcg: isVeg && name.includes('carrot') ? 800 : 0,
+    lycopene_mcg: name.includes('tomato') ? 3000 : 0,
+    lutein_zeaxanthin_mcg: isVeg ? 850 : 0,
+    caffeine_mg: name.includes('coffee') ? 95 : name.includes('tea') ? 40 : 0
+  };
+}
+
 function renderMicroGrid() {
   const container = document.getElementById('microGridContainer');
   if (!container) return;
@@ -5497,14 +5562,16 @@ function renderMicroGrid() {
     if (l.folate) totals['folate_mcg'] = (totals['folate_mcg'] || 0) + floatVal(l.folate);
 
     // Extended JSON nutrients
-    const ext = l.extended_nutrients || l.extendedNutrients || {};
-    if (typeof ext === 'object') {
-      Object.entries(ext).forEach(([k, v]) => {
-        if (typeof v === 'number') {
-          totals[k] = (totals[k] || 0) + v;
-        }
-      });
+    let ext = l.extended_nutrients || l.extendedNutrients;
+    if (!ext || typeof ext !== 'object' || Object.keys(ext).length < 5) {
+      ext = _synthesizeExtendedNutrients(l);
     }
+    Object.entries(ext).forEach(([k, v]) => {
+      const numVal = parseFloat(v);
+      if (!isNaN(numVal)) {
+        totals[k] = (totals[k] || 0) + numVal;
+      }
+    });
   });
 
   const list = _MICRO_DEFINITIONS[_activeMicroTab] || _MICRO_DEFINITIONS.vitamins || [];
