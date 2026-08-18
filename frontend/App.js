@@ -2274,6 +2274,72 @@ const FOOD_DESCRIPTIONS = {
   african: 'African cuisine',
 };
 
+// ══════════════════════════════════════════════════
+//  INDEXEDDB HIGH-PERFORMANCE LOCAL CACHE ENGINE
+// ══════════════════════════════════════════════════
+const NutriCacheDB = {
+  dbName: 'NutriTrackLocalCache',
+  version: 1,
+  _db: null,
+
+  async getDB() {
+    if (this._db) return this._db;
+    if (typeof indexedDB === 'undefined') return null;
+    return new Promise((resolve) => {
+      const request = indexedDB.open(this.dbName, this.version);
+      request.onupgradeneeded = (e) => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains('barcodes')) {
+          db.createObjectStore('barcodes', { keyPath: 'barcode' });
+        }
+        if (!db.objectStoreNames.contains('searches')) {
+          db.createObjectStore('searches', { keyPath: 'query' });
+        }
+        if (!db.objectStoreNames.contains('custom_foods')) {
+          db.createObjectStore('custom_foods', { keyPath: 'id' });
+        }
+      };
+      request.onsuccess = (e) => {
+        this._db = e.target.result;
+        resolve(this._db);
+      };
+      request.onerror = () => resolve(null);
+    });
+  },
+
+  async get(storeName, key) {
+    try {
+      const db = await this.getDB();
+      if (!db) return null;
+      return new Promise(resolve => {
+        const tx = db.transaction(storeName, 'readonly');
+        const store = tx.objectStore(storeName);
+        const req = store.get(key);
+        req.onsuccess = () => resolve(req.result || null);
+        req.onerror = () => resolve(null);
+      });
+    } catch (e) {
+      return null;
+    }
+  },
+
+  async put(storeName, value) {
+    try {
+      const db = await this.getDB();
+      if (!db) return false;
+      return new Promise(resolve => {
+        const tx = db.transaction(storeName, 'readwrite');
+        const store = tx.objectStore(storeName);
+        store.put(value);
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => resolve(false);
+      });
+    } catch (e) {
+      return false;
+    }
+  }
+};
+
 // Debounced backend search state
 let _searchDebounceTimer = null;
 let _lastSearchQuery = '';
@@ -2848,16 +2914,30 @@ function manualBarcodePrompt() {
 }
 
 async function processScannedBarcode(barcode) {
+  if (!barcode) return;
+  const cleanCode = String(barcode).trim();
+  
+  // 1. Instant 0ms IndexedDB Local Cache Lookup
+  const cached = await NutriCacheDB.get('barcodes', cleanCode).catch(() => null);
+  if (cached && cached.item) {
+    playHaptic(100);
+    showToast(`✓ [Cached] Found: ${cached.item.name}`, 'success');
+    await addFoodToLog(cached.item);
+    return;
+  }
+
   showLoader('Looking up product barcode…');
   const backendUrl = window._BACKEND_URL || '';
   try {
-    const res = await fetch(`${backendUrl}/api/foods/barcode/${encodeURIComponent(barcode)}`);
+    const res = await fetch(`${backendUrl}/api/foods/barcode/${encodeURIComponent(cleanCode)}`);
     hideLoader();
     if (res.ok) {
       const data = await res.json();
       if (data.found && data.item) {
         playHaptic(100);
-        showToast(`Found: ${data.item.name}`, 'success');
+        showToast(`✓ Found: ${data.item.name}`, 'success');
+        // Persist to local IndexedDB for future instant offline access
+        await NutriCacheDB.put('barcodes', { barcode: cleanCode, item: data.item, cached_at: Date.now() });
         await addFoodToLog(data.item);
       } else {
         showToast('Product not found in global database', 'error');

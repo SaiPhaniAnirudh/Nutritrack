@@ -20,20 +20,26 @@ import requests
 GEMINI_25_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
 GEMINI_15_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
 
-GEMINI_FOOD_PROMPT = """Analyze this food image carefully and identify every food item present with high precision.
+GEMINI_FOOD_PROMPT = """Analyze this food photo with clinical precision and identify every food item present.
 
-RULES:
-- Identify ONLY food items that are visibly present in the image.
-- Deconstruct complex/mixed meals into major ingredient components where appropriate (e.g. in a thali or salad).
-- Provide an honest confidence score (0-100) reflecting visual certainty.
-- If the image contains no edible food or beverage, return {"not_food": true}.
+SPATIAL & VOLUMETRIC CALIBRATION RULES:
+1. ANCHOR SCALE: Use visual anchors (standard dinner plate ~10 inches/25cm, standard cup ~240ml, bowl ~350ml, cutlery/hands) to estimate exact volumetric dimensions.
+2. DENSITY & MASS: Compute physical mass (grams) using food density benchmarks:
+   - Cooked Grains/Rice: ~155g per cup
+   - Dense Proteins (Steak, Chicken, Paneer, Fish): ~120-160g per palm-sized portion
+   - Leafy Greens/Salad: ~30-40g per cup (low density)
+   - Cooked Legumes/Dals/Curries: ~200-240g per cup
+   - Liquid/Soups: ~240g per cup
+3. COMPONENT DECONSTRUCTION: Separate mixed plates, thalis, bowls, and combos into individual ingredients.
+4. If the image contains no edible food or beverage, return {"not_food": true}.
 
 Return ONLY valid JSON in this exact structure:
 {
   "items": [
     {
-      "food_name": "<specific name>",
-      "serving_size": "<estimated portion, e.g. 1 cup, 150g, 2 slices>",
+      "food_name": "<specific culinary/scientific name>",
+      "serving_size": "<e.g. 1 cup (155g), 2 slices (60g), 1 medium breast (140g)>",
+      "estimated_grams": <number>,
       "confidence": <0-100>,
       "calories": <number>,
       "protein_g": <number>,
