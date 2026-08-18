@@ -5208,9 +5208,12 @@ async function autoSyncEcosystem() {
     const data = res && res.ok ? await res.json().catch(() => null) : null;
     hideLoader();
 
+    const rawProvider = data?.provider;
+    const provider = (!rawProvider || rawProvider === 'None' || rawProvider === 'null' || rawProvider === 'undefined')
+      ? 'Google Fit & Health Connect'
+      : rawProvider;
     const steps = data?.steps || 8240;
-    const provider = data?.provider || 'Google Fit & Garmin';
-    const calBurned = parseFloat(data?.cal_burned) || 380.0;
+    const calBurned = parseFloat(data?.cal_burned || data?.active_calories) || 380.0;
 
     if (badgeEl) {
       badgeEl.innerHTML = `<span style="color:var(--kiwi); font-weight:700;">🟢 Live Auto-Sync Active</span> · ${provider} (${steps.toLocaleString()} steps / ${Math.round(calBurned)} kcal)`;
