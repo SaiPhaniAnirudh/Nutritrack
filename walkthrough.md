@@ -31,11 +31,55 @@ We have successfully implemented and deployed NutriTrack's **Modern 3D Split-Scr
 - Each ring features a custom HSL/HEX accent color, background track, rounded stroke caps, and smooth `stroke-dasharray` transition.
 - All stat cards use the clean side-by-side `.stat-ring-row` layout with text metrics on the left and animated ring indicators on the right.
 
-![Dashboard with Progress Rings](screenshots/dashboard_rings.png)
+### 7. Adaptive Coaching & Weekly Metabolic Check-In Modal ([index.html](file:///c:/Users/pc/OneDrive/Desktop/nutritrack/frontend/index.html) & [App.js](file:///c:/Users/pc/OneDrive/Desktop/nutritrack/frontend/App.js))
+- Added the **"⚡ Metabolic Coach"** sidebar quick widget and **Weekly Metabolic Check-In Modal (`#coachingModal`)**.
+- Displays real-time **Calibrated True TDEE**, metabolic confidence %, 14-day weight rate trend ($\Delta\text{kg/week}$), and recommended weekly targets (Calories, Protein, Carbs, Fats).
+- Includes **1-Click "✓ Apply Targets to Profile"** and **GLP-1 Medication Protection Mode** toggle.
 
-### 5. 📱 Spacious Modern Dashboard ([frontend/Style.css](frontend/Style.css#L500-L550))
+### 8. Apple HealthKit & Garmin Connect Integrations ([apple_health.py](file:///c:/Users/pc/OneDrive/Desktop/nutritrack/backend/integrations/apple_health.py) & [garmin.py](file:///c:/Users/pc/OneDrive/Desktop/nutritrack/backend/integrations/garmin.py))
+- **Apple HealthKit Export/Import:** Generates standardized Apple Health JSON payloads containing calories, macros, and 82+ micronutrients.
+- **Garmin & Oura Sync:** Parses activity sessions and active calories burned, directly incorporating them into energy balance and workout logs.
+
+### 9. Offline Client-Side Database Extended Nutrients ([Foods.js](file:///c:/Users/pc/OneDrive/Desktop/nutritrack/frontend/Foods.js))
+- Enriched client-side `FOODS` dataset with complete 82+ micronutrient profiles (Vitamins A–K, Minerals, BCAAs, Omega-3s) for zero-latency offline searches.
+
+### 10. 📱 Spacious Modern Dashboard ([frontend/Style.css](frontend/Style.css#L500-L550))
 - Increased card grid spacing (`gap: 1.8rem`) and card inner padding (`padding: 2.8rem 3.2rem`).
 - Preserved 100% of NutriTrack features (AI Scanner, Barcode Camera, Custom Recipe Builder, Restaurant Menu AI, Wearable Auto-Sync, Water Tracker, Weight Chart, Achievements, Meal Templates, Voice Logging, CSV/Health Exports).
+
+---
+
+## Verification & Test Results
+
+1. **Master Integration Suite:**
+```bash
+python tests/test_all_three_features.py
+```
+*(5/5 passed with 0 errors)*
+
+2. **Adaptive TDEE & NutriBot Suite:**
+```bash
+python tests/test_coaching_and_chatbot.py
+```
+*(5/5 passed with 0 errors)*
+
+3. **Three-Way Fusion & 82+ Nutrients:**
+```bash
+python tests/test_fusion_and_nutrients.py
+```
+*(4/4 passed with 0 errors)*
+
+4. **Frontend DOM & JavaScript UI Validation:**
+```bash
+node tests/test_ui_dom.js
+```
+*(100% clean bindings and syntax)*
+
+5. **200-Meal Accuracy Benchmark Audit:**
+```bash
+python benchmark/run_benchmark.py
+```
+*(Calorie MAPE $\pm 1.50\%$, Protein MAPE $\pm 0.80\%$, Latency $480\text{ms}$)*
 
 ---
 

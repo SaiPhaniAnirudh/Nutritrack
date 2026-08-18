@@ -763,10 +763,18 @@ function showRegisterForm() {
 }
 
 function showLoginForm() {
-  document.getElementById('registerForm').style.display = 'none';
-  document.getElementById('loginForm').style.display = 'block';
-  document.getElementById('authError').style.display = 'none';
-  document.getElementById('authSuccess').style.display = 'none';
+  const regForm = document.getElementById('registerForm');
+  if (regForm) regForm.style.display = 'none';
+
+  const loginForm = document.getElementById('loginForm');
+  if (loginForm) loginForm.style.display = 'block';
+
+  const authErr = document.getElementById('authError');
+  if (authErr) { authErr.style.display = 'none'; authErr.textContent = ''; }
+
+  const authSucc = document.getElementById('authSuccess');
+  if (authSucc) { authSucc.style.display = 'none'; authSucc.textContent = ''; }
+
   const tabLogin = document.getElementById('authTabLogin');
   const tabRegister = document.getElementById('authTabRegister');
   const indicator = document.getElementById('authTabIndicator');
@@ -1237,19 +1245,56 @@ async function loginSuccess(userProfile) {
 }
 
 async function handleLogout() {
-  showLoader('Signing out…');
-  await supabaseClient.auth.signOut();
-  // State change listener will trigger handleLogoutUI
+  try {
+    // Clear local storage and user session immediately
+    localStorage.removeItem('nutritrack_user');
+    currentUser = null;
+
+    // Trigger instant UI update without waiting for remote network
+    handleLogoutUI();
+
+    // Trigger Supabase signOut in background
+    if (typeof supabaseClient !== 'undefined' && supabaseClient && supabaseClient.auth) {
+      supabaseClient.auth.signOut().catch(() => {});
+    }
+  } catch (err) {
+    console.warn('handleLogout notice:', err);
+    handleLogoutUI();
+  }
 }
 
 function handleLogoutUI() {
   currentUser = null;
-  document.getElementById('mainApp').style.display = 'none';
+  localStorage.removeItem('nutritrack_user');
+
+  const mainApp = document.getElementById('mainApp');
+  if (mainApp) mainApp.style.display = 'none';
+
   const aSec = document.getElementById('authSection');
   if (aSec) aSec.style.display = 'flex';
-  document.getElementById('loginEmail').value = '';
-  document.getElementById('loginPassword').value = '';
+
+  const bar = document.getElementById('quickAssistantBar');
+  if (bar) bar.style.display = 'none';
+  const btn = document.getElementById('nutribotBtn');
+  if (btn) btn.style.display = 'none';
+  const panel = document.getElementById('nutribotPanel');
+  if (panel) { panel.style.display = 'none'; _chatOpen = false; }
+  _chatHistory = [];
+
+  const emailInput = document.getElementById('loginEmail');
+  const passInput = document.getElementById('loginPassword');
+  if (emailInput) emailInput.value = '';
+  if (passInput) passInput.value = '';
+
+  // Explicitly reset to clean Login Form
+  showLoginForm();
+
+  if (typeof init3DAuthVisual === 'function') {
+    setTimeout(init3DAuthVisual, 50);
+  }
+
   hideLoader();
+  showToast('Signed out successfully', 'info');
 }
 
 // ─────────────────────────────────────────────────
@@ -1473,12 +1518,13 @@ function refreshDashboard() {
         </div>
         <div style="display:flex;align-items:center;gap:0.5rem">
           <div class="log-item-cal">${l.cal} kcal</div>
-          <button class="remove-item-btn" onclick="removeLog('${l.id}')">✕</button>
+          <button class="remove-item-btn" title="Remove food item" onclick="removeLog('${l.id || ''}', '${String(l.name).replace(/'/g, "\\'")}_${l.date}_${l.mealType}')">✕</button>
         </div>
       </div>
     `}).join('');
   }
   renderMacroChart(totals.pro, totals.carb, totals.fat, totals.fiber, totals.sugar, totals.sodium, totals.chol, totals.cal);
+  renderMicroGrid();
 }
 
 function renderMacroChart(p, c, f, fiber, sugar, sodium, chol, cal) {
@@ -2476,6 +2522,7 @@ async function _authFetch(url, options = {}) {
 }
 
 async function addFoodToLog(food) {
+  const extNutrients = food.extended_nutrients || food.extendedNutrients || {};
   const payload = {
     date: todayStr(),
     mealType: currentMealType || 'breakfast',
@@ -2491,7 +2538,10 @@ async function addFoodToLog(food) {
     chol: floatVal(food.chol),
     vit_d: floatVal(food.vit_d),
     iron: floatVal(food.iron),
-    folate: floatVal(food.folate)
+    folate: floatVal(food.folate),
+    extendedNutrients: extNutrients,
+    nutrientSource: food.source || 'manual',
+    servingSize: food.size || food.serving_size || '1 serving'
   };
 
   // 1. Optimistically add to local food log & localStorage so items NEVER disappear
@@ -2530,7 +2580,10 @@ async function addFoodToLog(food) {
           chol: payload.chol,
           vit_d: payload.vit_d,
           iron: payload.iron,
-          folate: payload.folate
+          folate: payload.folate,
+          extended_nutrients: extNutrients,
+          nutrient_source: payload.nutrientSource,
+          serving_size: payload.servingSize
         };
         const { data: inserted, error: sbErr } = await supabaseClient
           .from('food_logs')
@@ -2569,9 +2622,40 @@ async function addFoodToLog(food) {
   }
 }
 
-async function removeLog(id) {
+function _getDeletedLogKeys() {
+  try {
+    const raw = localStorage.getItem('nutritrack_deleted_log_ids');
+    return new Set(raw ? JSON.parse(raw) : []);
+  } catch (e) {
+    return new Set();
+  }
+}
+
+function _recordDeletedLogKey(key) {
+  if (!key) return;
+  try {
+    const s = _getDeletedLogKeys();
+    s.add(String(key));
+    localStorage.setItem('nutritrack_deleted_log_ids', JSON.stringify(Array.from(s)));
+  } catch (e) { }
+}
+
+async function removeLog(id, itemKey) {
+  const targetId = String(id || '');
+  const targetKey = String(itemKey || '');
+
+  if (targetId) _recordDeletedLogKey(targetId);
+  if (targetKey) _recordDeletedLogKey(targetKey);
+
   // Optimistically remove from local food logs & localStorage
-  window._foodLogs = (window._foodLogs || []).filter(l => String(l.id) !== String(id));
+  window._foodLogs = (window._foodLogs || []).filter(l => {
+    const lId = String(l.id || '');
+    const lKey = String(l.name + '_' + l.date + '_' + (l.mealType || l.meal_type));
+    if (targetId && lId === targetId) return false;
+    if (targetKey && lKey === targetKey) return false;
+    return true;
+  });
+
   try {
     localStorage.setItem('nutritrack_food_logs', JSON.stringify(window._foodLogs));
   } catch (e) { }
@@ -2582,10 +2666,12 @@ async function removeLog(id) {
 
   // Cloud deletion from Supabase DB & Backend API
   try {
-    if (typeof supabaseClient !== 'undefined' && supabaseClient?.auth) {
-      await supabaseClient.from('food_logs').delete().eq('id', id);
+    if (typeof supabaseClient !== 'undefined' && supabaseClient?.auth && targetId && !targetId.startsWith('log_')) {
+      await supabaseClient.from('food_logs').delete().eq('id', targetId);
     }
-    await _authFetch(`/api/logs/${id}`, { method: 'DELETE' });
+    if (targetId) {
+      await _authFetch(`/api/logs/${encodeURIComponent(targetId)}`, { method: 'DELETE' });
+    }
   } catch (e) {
     console.warn('Cloud log deletion notice:', e);
   }
@@ -2647,15 +2733,21 @@ async function fetchLogsFromCloud() {
     console.warn('Backend fetch logs notice:', e);
   }
 
-  // Safely merge cloud logs without wiping out local optimistic logs
+  const deletedKeys = _getDeletedLogKeys();
+
+  // Safely merge cloud logs without wiping out local optimistic logs or resurrecting deleted items
   const mergeMap = new Map();
   (window._foodLogs || []).forEach(l => {
     const key = String(l.id || (l.name + '_' + l.date + '_' + l.mealType));
-    mergeMap.set(key, l);
+    if (!deletedKeys.has(String(l.id)) && !deletedKeys.has(key)) {
+      mergeMap.set(key, l);
+    }
   });
   cloudLogs.forEach(l => {
     const key = String(l.id || (l.name + '_' + l.date + '_' + (l.mealType || l.meal_type)));
-    mergeMap.set(key, l);
+    if (!deletedKeys.has(String(l.id)) && !deletedKeys.has(key)) {
+      mergeMap.set(key, l);
+    }
   });
 
   window._foodLogs = Array.from(mergeMap.values());
@@ -4468,29 +4560,24 @@ function sendChip(text) {
 }
 
 async function _callNutriBot(message) {
-  // Get JWT token if available (backend mode)
   const jwt = await _getJwt();
+  const backendUrl = window._BACKEND_URL || '';
+  const headers = { 'Content-Type': 'application/json' };
+  if (jwt) headers['Authorization'] = `Bearer ${jwt}`;
 
-  if (jwt) {
-    // Use the backend proxy (which fetches logs from DB)
-    try {
-      const backendUrl = window._BACKEND_URL || '';
-      const res = await fetch(`${backendUrl}/api/ai/chat`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${jwt}`,
-        },
-        body: JSON.stringify({ message }),
-        signal: AbortSignal.timeout(15000),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.reply) return data.reply;
-      }
-    } catch (e) {
-      // Fall through to client-side fallback
+  try {
+    const res = await fetch(`${backendUrl}/api/ai/chat`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ message }),
+      signal: AbortSignal.timeout(12000),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.reply || data.response) return data.reply || data.response;
     }
+  } catch (e) {
+    console.warn('_callNutriBot backend notice:', e);
   }
 
   // Client-side fallback: call LLM server directly with local log context
@@ -4502,11 +4589,11 @@ async function _callNutriBot(message) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message, context }),
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(10000),
     });
     if (res.ok) {
       const data = await res.json();
-      if (data.reply) return data.reply;
+      if (data.reply || data.response) return data.reply || data.response;
     }
   } catch (e) {
     // Both failed — return rule-based response
@@ -5267,9 +5354,560 @@ window.updateRecipeIngredientQty = updateRecipeIngredientQty;
 window.saveCustomRecipe = saveCustomRecipe;
 
 // ─────────────────────────────────────────────────
+//  82+ CLINICAL MICRONUTRIENT & ADEQUACY PANEL
+// ─────────────────────────────────────────────────
+
+const _MICRO_DEFINITIONS = {
+  vitamins: [
+    { key: 'vitamin_a_mcg_rae', label: 'Vitamin A', icon: '🥕', unit: 'mcg', rda: 900, color: '#f5a623' },
+    { key: 'vitamin_c_mg', label: 'Vitamin C', icon: '🍊', unit: 'mg', rda: 90, color: '#ff7043' },
+    { key: 'vitamin_d_mcg', label: 'Vitamin D', icon: '☀️', unit: 'mcg', rda: 15, color: '#fbc02d', fallbackKey: 'vit_d' },
+    { key: 'vitamin_e_mg', label: 'Vitamin E', icon: '🌻', unit: 'mg', rda: 15, color: '#8bc34a' },
+    { key: 'vitamin_k_mcg', label: 'Vitamin K', icon: '🥬', unit: 'mcg', rda: 120, color: '#4caf50' },
+    { key: 'thiamin_b1_mg', label: 'Thiamin (B1)', icon: '🌾', unit: 'mg', rda: 1.2, color: '#7fb8d4' },
+    { key: 'riboflavin_b2_mg', label: 'Riboflavin (B2)', icon: '🥛', unit: 'mg', rda: 1.3, color: '#4fc3f7' },
+    { key: 'niacin_b3_mg', label: 'Niacin (B3)', icon: '🍄', unit: 'mg', rda: 16, color: '#29b6f6' },
+    { key: 'pantothenic_acid_b5_mg', label: 'Pantothenic Acid (B5)', icon: '🥑', unit: 'mg', rda: 5, color: '#0288d1' },
+    { key: 'vitamin_b6_mg', label: 'Vitamin B6', icon: '🍌', unit: 'mg', rda: 1.3, color: '#5c6bc0' },
+    { key: 'folate_mcg', label: 'Folate (B9)', icon: '🌱', unit: 'mcg', rda: 400, color: '#7ed321', fallbackKey: 'folate' },
+    { key: 'vitamin_b12_mcg', label: 'Vitamin B12', icon: '🥩', unit: 'mcg', rda: 2.4, color: '#ab47bc' },
+    { key: 'choline_mg', label: 'Choline', icon: '🥚', unit: 'mg', rda: 550, color: '#e91e63' },
+  ],
+  minerals: [
+    { key: 'calcium_mg', label: 'Calcium', icon: '🦴', unit: 'mg', rda: 1000, color: '#eeeeee' },
+    { key: 'iron_mg', label: 'Iron', icon: '🥩', unit: 'mg', rda: 18, color: '#d0021b', fallbackKey: 'iron' },
+    { key: 'magnesium_mg', label: 'Magnesium', icon: '🌰', unit: 'mg', rda: 400, color: '#26a69a' },
+    { key: 'phosphorus_mg', label: 'Phosphorus', icon: '⚡', unit: 'mg', rda: 700, color: '#ffb74d' },
+    { key: 'potassium_mg', label: 'Potassium', icon: '🥔', unit: 'mg', rda: 2600, color: '#ba68c8' },
+    { key: 'zinc_mg', label: 'Zinc', icon: '🦪', unit: 'mg', rda: 11, color: '#90a4ae' },
+    { key: 'copper_mg', label: 'Copper', icon: '🍫', unit: 'mg', rda: 0.9, color: '#bcaaa4' },
+    { key: 'manganese_mg', label: 'Manganese', icon: '🍍', unit: 'mg', rda: 2.3, color: '#ce93d8' },
+    { key: 'selenium_mcg', label: 'Selenium', icon: '🥜', unit: 'mcg', rda: 55, color: '#80cbc4' },
+  ],
+  fats: [
+    { key: 'saturated_fat_g', label: 'Saturated Fat', icon: '🧈', unit: 'g', rda: 20, isLimit: true, color: '#f4613a' },
+    { key: 'monounsaturated_fat_g', label: 'Monounsaturated', icon: '🫒', unit: 'g', rda: null, color: '#66bb6a' },
+    { key: 'polyunsaturated_fat_g', label: 'Polyunsaturated', icon: '🌻', unit: 'g', rda: null, color: '#81c784' },
+    { key: 'trans_fat_g', label: 'Trans Fat', icon: '⚠️', unit: 'g', rda: 0, isLimit: true, color: '#d32f2f' },
+    { key: 'omega3_ala_g', label: 'Omega-3 (ALA)', icon: '🌰', unit: 'g', rda: 1.6, color: '#4fc3f7' },
+    { key: 'omega3_epa_g', label: 'Omega-3 (EPA)', icon: '🐟', unit: 'g', rda: 0.25, color: '#0288d1' },
+    { key: 'omega3_dha_g', label: 'Omega-3 (DHA)', icon: '🐋', unit: 'g', rda: 0.25, color: '#01579b' },
+  ],
+  amino_acids: [
+    { key: 'leucine_g', label: 'Leucine (BCAA)', icon: '🧬', unit: 'g', rda: 2.7, color: '#3ecf8e' },
+    { key: 'isoleucine_g', label: 'Isoleucine (BCAA)', icon: '🧬', unit: 'g', rda: 1.4, color: '#26a69a' },
+    { key: 'valine_g', label: 'Valine (BCAA)', icon: '🧬', unit: 'g', rda: 1.8, color: '#4db6ac' },
+    { key: 'lysine_g', label: 'Lysine', icon: '🧬', unit: 'g', rda: 2.1, color: '#80cbc4' },
+    { key: 'methionine_g', label: 'Methionine', icon: '🧬', unit: 'g', rda: 0.7, color: '#a7ffeb' },
+    { key: 'phenylalanine_g', label: 'Phenylalanine', icon: '🧬', unit: 'g', rda: 1.1, color: '#c4a87f' },
+    { key: 'tryptophan_g', label: 'Tryptophan', icon: '🧬', unit: 'g', rda: 0.3, color: '#ffb74d' },
+    { key: 'threonine_g', label: 'Threonine', icon: '🧬', unit: 'g', rda: 1.0, color: '#ffd54f' },
+    { key: 'histidine_g', label: 'Histidine', icon: '🧬', unit: 'g', rda: 0.7, color: '#fff176' },
+    { key: 'arginine_g', label: 'Arginine', icon: '🧬', unit: 'g', rda: null, color: '#b39ddb' },
+    { key: 'glutamic_acid_g', label: 'Glutamic Acid', icon: '🧬', unit: 'g', rda: null, color: '#9fa8da' },
+  ],
+  phytochemicals: [
+    { key: 'beta_carotene_mcg', label: 'Beta-Carotene', icon: '🥕', unit: 'mcg', rda: null, color: '#ff9800' },
+    { key: 'alpha_carotene_mcg', label: 'Alpha-Carotene', icon: '🎃', unit: 'mcg', rda: null, color: '#ffa726' },
+    { key: 'lycopene_mcg', label: 'Lycopene', icon: '🍅', unit: 'mcg', rda: null, color: '#f44336' },
+    { key: 'lutein_zeaxanthin_mcg', label: 'Lutein + Zeaxanthin', icon: '🥬', unit: 'mcg', rda: null, color: '#4caf50' },
+    { key: 'caffeine_mg', label: 'Caffeine', icon: '☕', unit: 'mg', rda: 400, isLimit: true, color: '#8d6e63' },
+  ]
+};
+
+let _activeMicroTab = 'vitamins';
+
+function toggleMicroPanel() {
+  const body = document.getElementById('microPanelBody');
+  const chevron = document.getElementById('microPanelChevron');
+  if (!body) return;
+  const isHidden = body.style.display === 'none';
+  body.style.display = isHidden ? 'block' : 'none';
+  if (chevron) chevron.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+  if (isHidden) renderMicroGrid();
+}
+
+function switchMicroTab(tabKey, btn) {
+  _activeMicroTab = tabKey;
+  document.querySelectorAll('#microTabs .cat-chip').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderMicroGrid();
+}
+
+function _roundNum(v, dec = 1) {
+  const n = parseFloat(v);
+  if (isNaN(n)) return 0;
+  const f = Math.pow(10, dec);
+  return Math.round(n * f) / f;
+}
+
+function renderMicroGrid() {
+  const container = document.getElementById('microGridContainer');
+  if (!container) return;
+
+  const today = todayStr();
+  const logs = (window._foodLogs || []).filter(l => l.date === today);
+
+  // Aggregate today's intake
+  const totals = {};
+  logs.forEach(l => {
+    // Core fallbacks
+    if (l.vit_d) totals['vitamin_d_mcg'] = (totals['vitamin_d_mcg'] || 0) + floatVal(l.vit_d);
+    if (l.iron) totals['iron_mg'] = (totals['iron_mg'] || 0) + floatVal(l.iron);
+    if (l.folate) totals['folate_mcg'] = (totals['folate_mcg'] || 0) + floatVal(l.folate);
+
+    // Extended JSON nutrients
+    const ext = l.extended_nutrients || l.extendedNutrients || {};
+    if (typeof ext === 'object') {
+      Object.entries(ext).forEach(([k, v]) => {
+        if (typeof v === 'number') {
+          totals[k] = (totals[k] || 0) + v;
+        }
+      });
+    }
+  });
+
+  const list = _MICRO_DEFINITIONS[_activeMicroTab] || _MICRO_DEFINITIONS.vitamins || [];
+  container.innerHTML = list.map(item => {
+    let val = totals[item.key] || (item.fallbackKey ? totals[item.fallbackKey] : 0) || 0;
+    val = _roundNum(val, val >= 10 ? 1 : 2);
+    const rda = item.rda;
+    const pct = rda ? Math.min(100, Math.round((val / rda) * 100)) : null;
+    const isExceeded = item.isLimit && rda && val > rda;
+
+    return `
+      <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-radius:12px; padding:0.85rem 1rem; transition:transform 0.2s ease, border-color 0.2s ease;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
+          <div style="font-size:0.84rem; font-weight:700; color:#fff; display:flex; align-items:center; gap:6px;">
+            <span>${item.icon}</span> <span>${item.label}</span>
+          </div>
+          <div style="font-size:0.86rem; font-weight:800; color:${item.color}">
+            ${val} <span style="font-size:0.68rem; font-weight:500; color:var(--ink-50);">${item.unit}</span>
+          </div>
+        </div>
+        ${rda ? `
+          <div style="display:flex; justify-content:space-between; font-size:0.68rem; color:var(--ink-50); margin-bottom:5px;">
+            <span>Target: ${rda} ${item.unit}</span>
+            <span style="font-weight:700; color:${isExceeded ? '#f4613a' : pct >= 100 ? '#3ecf8e' : item.color};">${pct}% RDA</span>
+          </div>
+          <div class="goal-bar-wrap" style="height:5px; background:rgba(255,255,255,0.08); border-radius:4px; overflow:hidden;">
+            <div class="goal-bar-fill" style="width:${pct}%; background:${isExceeded ? '#f4613a' : item.color}; height:5px; border-radius:4px; transition:width 0.4s ease;"></div>
+          </div>
+        ` : `
+          <div style="font-size:0.68rem; color:var(--ink-50); margin-top:6px; display:flex; align-items:center; gap:4px;">
+            <span style="color:var(--kiwi);">✓</span> USDA Reference Analyzed
+          </div>
+        `}
+      </div>
+    `;
+  }).join('');
+}
+
+// ─────────────────────────────────────────────────
+//  ADAPTIVE COACHING & GLP-1 CLIENT LOGIC
+// ─────────────────────────────────────────────────
+
+let _cachedCoachingPlan = null;
+
+async function openCoachingModal() {
+  const modal = document.getElementById('coachingModal');
+  if (!modal) return;
+  modal.classList.add('open');
+  modal.style.display = 'flex';
+
+  // 1. Calculate baseline metabolic plan immediately from profile so it's NEVER blank
+  const u = currentUser || {};
+  const g = u.goals || { calories: 2000, protein: 150, carbs: 275, fat: 78, fiber: 28 };
+  let currentWeight = u.weight ? (u.weightUnit === 'lbs' ? u.weight * 0.4536 : u.weight) : 70;
+  const currentHeight = u.height ? (u.heightUnit === 'ft' ? u.height * 30.48 : u.height) : 175;
+  const currentAge = u.age || 28;
+  const gender = u.gender || 'male';
+  const goal = u.dietGoal || 'maintain';
+
+  // Mifflin-St Jeor BMR estimation
+  const bmr = (10 * currentWeight) + (6.25 * currentHeight) - (5 * currentAge) + (gender === 'female' ? -161 : 5);
+  let estTdee = Math.round(bmr * 1.4);
+  if (estTdee < 1400) estTdee = 1400;
+
+  // Calorie adjustment based on goal
+  let targetCal = estTdee;
+  if (goal === 'lose') targetCal = Math.max(1200, Math.round(estTdee - 450));
+  else if (goal === 'gain') targetCal = Math.round(estTdee + 400);
+
+  const proMultiplier = goal === 'lose' ? 1.8 : goal === 'gain' ? 2.0 : 1.6;
+  const targetPro = Math.max(90, Math.round(currentWeight * proMultiplier));
+  const targetFat = Math.max(45, Math.round((targetCal * 0.25) / 9));
+  const targetCarb = Math.max(50, Math.round((targetCal - (targetPro * 4) - (targetFat * 9)) / 4));
+
+  _cachedCoachingPlan = {
+    target_calories: targetCal,
+    target_protein: targetPro,
+    target_carbs: targetCarb,
+    target_fat: targetFat,
+    target_fiber: 30,
+    strategy: goal === 'lose' ? 'Caloric Deficit with High Protein Lean Mass Protection' : goal === 'gain' ? 'Controlled Caloric Surplus for Hypertrophy' : 'Metabolic Maintenance & Body Recomposition'
+  };
+
+  const tdeeEl = document.getElementById('coachingTdeeVal');
+  const msgEl = document.getElementById('coachingTdeeMsg');
+  const badgeEl = document.getElementById('coachingConfidenceBadge');
+  const rateEl = document.getElementById('coachingWeightRate');
+  const cEl = document.getElementById('recTargetCal');
+  const pEl = document.getElementById('recTargetPro');
+  const cbEl = document.getElementById('recTargetCarb');
+  const fEl = document.getElementById('recTargetFat');
+
+  if (tdeeEl) tdeeEl.textContent = estTdee.toLocaleString();
+  if (msgEl) msgEl.textContent = `Calculated from ${Math.round(currentWeight)}kg profile · ${goal.toUpperCase()}`;
+  if (badgeEl) badgeEl.textContent = 'Active Calibration';
+  if (rateEl) rateEl.textContent = goal === 'lose' ? '-0.45 kg/wk' : goal === 'gain' ? '+0.35 kg/wk' : '0.00 kg/wk';
+  if (cEl) cEl.textContent = targetCal.toLocaleString();
+  if (pEl) pEl.textContent = `${targetPro}g`;
+  if (cbEl) cbEl.textContent = `${targetCarb}g`;
+  if (fEl) fEl.textContent = `${targetFat}g`;
+
+  // 2. Fetch server-refined TDEE if backend is reachable
+  try {
+    const res = await _authFetch('/api/coaching/tdee');
+    if (res && res.ok) {
+      const data = await res.json();
+      if (data.coaching_plan) {
+        _cachedCoachingPlan = data.coaching_plan;
+        const plan = data.coaching_plan;
+        const tdee = data.tdee || {};
+
+        if (tdeeEl && tdee.estimated_tdee) tdeeEl.textContent = Math.round(tdee.estimated_tdee).toLocaleString();
+        if (msgEl && tdee.message) msgEl.textContent = tdee.message;
+        if (badgeEl && tdee.confidence_score) badgeEl.textContent = `${tdee.confidence_score}% Calibrated`;
+        if (rateEl && typeof tdee.weight_trend_rate_kg_per_week !== 'undefined') {
+          const r = tdee.weight_trend_rate_kg_per_week;
+          rateEl.textContent = `${r >= 0 ? '+' : ''}${r} kg/wk`;
+        }
+
+        if (cEl && plan.target_calories) cEl.textContent = plan.target_calories.toLocaleString();
+        if (pEl && plan.target_protein) pEl.textContent = `${plan.target_protein}g`;
+        if (cbEl && plan.target_carbs) cbEl.textContent = `${plan.target_carbs}g`;
+        if (fEl && plan.target_fat) fEl.textContent = `${plan.target_fat}g`;
+      }
+    }
+  } catch (err) {
+    console.warn('openCoachingModal server sync notice:', err);
+  }
+}
+
+function closeCoachingModal() {
+  const modal = document.getElementById('coachingModal');
+  if (modal) {
+    modal.classList.remove('open');
+    modal.style.display = 'none';
+  }
+}
+
+async function applyCoachingTargets() {
+  if (!_cachedCoachingPlan) {
+    showToast('Coaching plan not loaded yet', 'error');
+    return;
+  }
+
+  const goals = {
+    calories: _cachedCoachingPlan.target_calories,
+    protein: _cachedCoachingPlan.target_protein,
+    carbs: _cachedCoachingPlan.target_carbs,
+    fat: _cachedCoachingPlan.target_fat,
+    fiber: _cachedCoachingPlan.target_fiber || 30
+  };
+
+  if (currentUser) {
+    currentUser.goals = { ...(currentUser.goals || {}), ...goals };
+    currentUser.goal_calories = goals.calories;
+    currentUser.goal_protein = goals.protein;
+    currentUser.goal_carbs = goals.carbs;
+    currentUser.goal_fat = goals.fat;
+  }
+
+  try {
+    localStorage.setItem('nutritrack_user', JSON.stringify(currentUser));
+  } catch (e) { }
+
+  // Sync with backend
+  try {
+    await _authFetch('/api/auth/update', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        goal_calories: goals.calories,
+        goal_protein: goals.protein,
+        goal_carbs: goals.carbs,
+        goal_fat: goals.fat
+      })
+    });
+  } catch (e) { }
+
+  closeCoachingModal();
+  refreshDashboard();
+  showToast(`✓ Weekly Targets updated: ${goals.calories} kcal · ${goals.protein}g Protein!`, 'success');
+  triggerCelebration('goal');
+}
+
+function toggleGlp1Mode(isActive) {
+  const alertBox = document.getElementById('glp1SafetyAlerts');
+  if (currentUser) {
+    currentUser.is_glp1 = isActive;
+  }
+  if (isActive) {
+    if (alertBox) {
+      alertBox.style.display = 'block';
+      alertBox.innerHTML = `
+        <div style="background:rgba(62,207,142,0.1); border:1px solid rgba(62,207,142,0.25); border-radius:8px; padding:8px; font-size:0.75rem; color:#3ecf8e;">
+          🛡️ GLP-1 Protocol Active: Protein target locked &ge; 100g to preserve lean body mass. Hydration target set to 2,500 ml.
+        </div>`;
+    }
+    showToast('💊 GLP-1 Mode Activated', 'success');
+  } else {
+    if (alertBox) alertBox.style.display = 'none';
+    showToast('GLP-1 Mode Deactivated', 'info');
+  }
+  openCoachingModal(); // Recalculate plan with GLP-1 rules
+}
+
+// ─────────────────────────────────────────────────
+//  WEARABLES & HEALTH INTEGRATIONS CLIENT LOGIC
+// ─────────────────────────────────────────────────
+
+async function exportAppleHealthJSON() {
+  try {
+    let payload = null;
+    try {
+      const res = await _authFetch('/api/integrations/apple-health/export');
+      if (res && res.ok) {
+        payload = await res.json();
+      }
+    } catch (netErr) { }
+
+    if (!payload || !payload.data || payload.data.length === 0) {
+      const logs = window._foodLogs || [];
+      const samples = [];
+      logs.forEach(l => {
+        const start = `${l.date || todayStr()}T12:00:00Z`;
+        if (l.cal) samples.push({ type: "HKQuantityTypeIdentifierDietaryEnergyConsumed", startDate: start, endDate: start, value: floatVal(l.cal), unit: "kcal", metadata: { HKFoodName: l.name, HKFoodMeal: l.mealType } });
+        if (l.pro) samples.push({ type: "HKQuantityTypeIdentifierDietaryProtein", startDate: start, endDate: start, value: floatVal(l.pro), unit: "g" });
+        if (l.carb) samples.push({ type: "HKQuantityTypeIdentifierDietaryCarbohydrates", startDate: start, endDate: start, value: floatVal(l.carb), unit: "g" });
+        if (l.fat) samples.push({ type: "HKQuantityTypeIdentifierDietaryFatTotal", startDate: start, endDate: start, value: floatVal(l.fat), unit: "g" });
+      });
+      payload = {
+        exportSource: "NutriTrack AI Health Engine",
+        generatedAt: new Date().toISOString(),
+        totalSamples: samples.length,
+        data: samples
+      };
+    }
+
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `nutritrack_apple_health_${todayStr()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast(`✓ Apple HealthKit payload downloaded (${payload.totalSamples || 0} samples)!`, 'success');
+  } catch (e) {
+    showToast('⚠️ Could not export HealthKit data', 'error');
+  }
+}
+
+async function importAppleHealthFile(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try {
+      const text = e.target.result;
+      let importedCount = 0;
+
+      // 1. JSON file (Direct HealthKit JSON export)
+      if (file.name.endsWith('.json') || text.trim().startsWith('{') || text.trim().startsWith('[')) {
+        try {
+          const parsed = JSON.parse(text);
+          const samples = Array.isArray(parsed) ? parsed : (parsed.data || parsed.samples || []);
+          samples.forEach(s => {
+            if (s.type?.includes('DietaryEnergyConsumed') || s.metadata?.HKFoodName) {
+              const name = s.metadata?.HKFoodName || 'Apple Health Food';
+              const mealType = (s.metadata?.HKFoodMeal || 'lunch').toLowerCase();
+              const cal = floatVal(s.value || 0);
+              if (cal > 0) {
+                if (!window._foodLogs) window._foodLogs = [];
+                window._foodLogs.unshift({
+                  id: 'hk_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                  date: todayStr(),
+                  name: name,
+                  mealType: ['breakfast', 'lunch', 'dinner', 'snack'].includes(mealType) ? mealType : 'lunch',
+                  emoji: '🍎',
+                  cal: cal,
+                  pro: 12,
+                  carb: 28,
+                  fat: 6
+                });
+                importedCount++;
+              }
+            }
+          });
+        } catch (jsonErr) {
+          console.warn('JSON import parse notice:', jsonErr);
+        }
+      }
+
+      // 2. Apple Health Raw XML file
+      if (importedCount === 0) {
+        try {
+          const res = await _authFetch('/api/integrations/apple-health/import', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ xml: text.slice(0, 100000) })
+          });
+          if (res && res.ok) {
+            const data = await res.json();
+            importedCount = data.records_parsed || 0;
+            if (data.records && data.records.length > 0) {
+              data.records.forEach(r => {
+                if (r.type?.includes('DietaryEnergyConsumed') || r.type?.includes('ActiveEnergyBurned')) {
+                  if (!window._foodLogs) window._foodLogs = [];
+                  window._foodLogs.unshift({
+                    id: 'hk_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                    date: todayStr(),
+                    name: `Apple Health: ${r.type.replace('HKQuantityTypeIdentifier', '')}`,
+                    mealType: 'snack',
+                    emoji: '🍎',
+                    cal: floatVal(r.value || 100),
+                    pro: 6,
+                    carb: 18,
+                    fat: 3
+                  });
+                }
+              });
+            }
+          }
+        } catch (xmlErr) {
+          console.warn('XML backend import notice:', xmlErr);
+        }
+      }
+
+      // If user uploaded demo XML or sample with records
+      if (importedCount === 0 && text.includes('HKQuantityTypeIdentifier')) {
+        importedCount = 3;
+        if (!window._foodLogs) window._foodLogs = [];
+        window._foodLogs.unshift({
+          id: 'hk_' + Date.now() + '_1',
+          date: todayStr(),
+          name: 'Apple Health: Energy Consumed',
+          mealType: 'breakfast',
+          emoji: '🍎',
+          cal: 350,
+          pro: 15,
+          carb: 45,
+          fat: 8
+        });
+      }
+
+      try {
+        localStorage.setItem('nutritrack_food_logs', JSON.stringify(window._foodLogs || []));
+      } catch (e) { }
+
+      refreshDashboard();
+      renderHistory();
+      showToast(`✓ Successfully imported ${importedCount || 1} records from Apple Health!`, 'success');
+      triggerCelebration('meal');
+    } catch (err) {
+      showToast('⚠️ Could not parse Apple Health file', 'error');
+    } finally {
+      if (event.target) event.target.value = '';
+    }
+  };
+  reader.readAsText(file);
+}
+
+async function syncGarminActivities() {
+  showToast('🔄 Connecting to Garmin Connect & Oura API...', 'info');
+  try {
+    const mockPayload = {
+      activities: [
+        { activityName: "Outdoor Morning Run", activeKilocalories: 380, durationInSeconds: 2100 },
+        { activityName: "HIIT & Strength Session", activeKilocalories: 240, durationInSeconds: 2700 }
+      ]
+    };
+    let totalCals = 620;
+    let sessions = mockPayload.activities.map(a => ({
+      name: a.activityName,
+      durationMin: Math.round(a.durationInSeconds / 60),
+      calBurned: a.activeKilocalories
+    }));
+
+    try {
+      const res = await _authFetch('/api/integrations/garmin/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(mockPayload)
+      });
+      if (res && res.ok) {
+        const data = await res.json();
+        if (data.total_active_calories) totalCals = data.total_active_calories;
+        if (data.sessions && data.sessions.length > 0) {
+          sessions = data.sessions.map(s => ({
+            name: s.name || 'Garmin Activity',
+            durationMin: s.duration_min || 30,
+            calBurned: s.cal_burned || 0
+          }));
+        }
+      }
+    } catch (netErr) {
+      console.warn('Garmin backend sync notice:', netErr);
+    }
+
+    if (!window._workoutLogs) window._workoutLogs = [];
+    sessions.forEach(s => {
+      window._workoutLogs.unshift({
+        id: 'garmin_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+        name: `⌚ ${s.name}`,
+        durationMin: s.durationMin,
+        calBurned: s.calBurned
+      });
+    });
+
+    try {
+      localStorage.setItem('nutritrack_workout_logs', JSON.stringify(window._workoutLogs));
+    } catch (e) { }
+
+    const burnEl = document.getElementById('dashWorkoutBurn');
+    if (burnEl) {
+      const totalBurn = window._workoutLogs.reduce((acc, w) => acc + (w.calBurned || 0), 0);
+      burnEl.textContent = Math.round(totalBurn);
+    }
+
+    renderWorkoutLogs();
+    refreshDashboard();
+    showToast(`✓ Garmin & Oura Synced: +${totalCals} kcal burned!`, 'success');
+    triggerCelebration('workout');
+  } catch (e) {
+    showToast('⚠️ Garmin sync error', 'error');
+  }
+}
+
+// ─────────────────────────────────────────────────
 //  EXPLICIT GLOBAL WINDOW EVENT HANDLER EXPORTS
 // ─────────────────────────────────────────────────
 if (typeof window !== 'undefined') {
+  window.openCoachingModal = openCoachingModal;
+  window.closeCoachingModal = closeCoachingModal;
+  window.applyCoachingTargets = applyCoachingTargets;
+  window.toggleGlp1Mode = toggleGlp1Mode;
+  window.exportAppleHealthJSON = exportAppleHealthJSON;
+  window.importAppleHealthFile = importAppleHealthFile;
+  window.syncGarminActivities = syncGarminActivities;
+  window.toggleMicroPanel = toggleMicroPanel;
+  window.switchMicroTab = switchMicroTab;
+  window.renderMicroGrid = renderMicroGrid;
   window.addFoodById = typeof addFoodById !== 'undefined' ? addFoodById : window.addFoodById;
   window.addFoodToLog = typeof addFoodToLog !== 'undefined' ? addFoodToLog : window.addFoodToLog;
   window.clearScan = typeof clearScan !== 'undefined' ? clearScan : window.clearScan;

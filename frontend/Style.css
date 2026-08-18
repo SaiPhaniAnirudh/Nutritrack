@@ -323,14 +323,13 @@ body {
 }
 
 .auth-card {
-  background: rgba(15, 23, 18, 0.85);
-  backdrop-filter: blur(20px);
+  background: #0F1712;
   border: 1px solid rgba(62, 207, 142, 0.25);
   border-radius: 28px;
   padding: 2.8rem 3.2rem;
   width: 100%;
   max-width: 480px;
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.7);
   animation: cardReveal 0.2s ease both;
 }
 
@@ -863,13 +862,21 @@ body {
 }
 
 .sidebar-lang-select {
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: #000000 !important;
+  color: #FFFFFF !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
   border-radius: 8px;
-  padding: 4px 6px;
-  font-size: 0.75rem;
+  padding: 5px 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
   cursor: pointer;
+  outline: none;
+}
+
+.sidebar-lang-select option {
+  background: #000000 !important;
+  color: #FFFFFF !important;
+  padding: 6px 10px;
 }
 
 .sidebar-logout-btn {
@@ -1072,16 +1079,14 @@ body {
 }
 
 .stat-card {
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.02) 100%);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: #0F1712;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-lg);
   padding: 1.8rem;
   position: relative;
   overflow: hidden;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 
 .stat-card::before {
@@ -1185,13 +1190,11 @@ body {
 }
 
 .glass-card {
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: #0F1712;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-lg);
   padding: 2rem;
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
   transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
@@ -2305,18 +2308,16 @@ body {
   padding: 1.1rem 0.75rem;
   border-radius: var(--radius-md);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: #0F1712;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
   overflow: hidden;
 }
 
 .achievement-badge.earned {
-  background: linear-gradient(145deg, rgba(62, 207, 142, 0.16) 0%, rgba(62, 207, 142, 0.04) 100%);
+  background: #14241B;
   border-color: rgba(62, 207, 142, 0.4);
-  box-shadow: 0 8px 24px rgba(62, 207, 142, 0.15), inset 0 1px 1px rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 
 .achievement-badge:hover {
@@ -2393,9 +2394,7 @@ body {
   top: 84px !important;
   bottom: auto !important;
   right: 24px !important;
-  background: rgba(15, 23, 19, 0.94);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: #0F1712;
   border: 1px solid rgba(62, 207, 142, 0.4);
   border-radius: 14px;
   padding: 12px 20px;
@@ -3585,9 +3584,7 @@ body {
   left: 0;
   right: 0;
   z-index: 500;
-  background: rgba(15, 23, 18, 0.88);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
+  background: #0A0F0D;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.5);
   /* Safe area for iPhone home bar */
@@ -3949,16 +3946,14 @@ body {
   bottom: 85px;
   right: 20px;
   z-index: 1200;
-  background: rgba(15, 23, 18, 0.88);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: #0A0F0D;
   border: 1px solid rgba(62, 207, 142, 0.3);
   border-radius: 50px;
   padding: 6px 10px;
   display: flex;
   align-items: center;
   gap: 8px;
-  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(62, 207, 142, 0.15);
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.5), 0 0 20px rgba(62, 207, 142, 0.15);
   transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -4586,13 +4581,11 @@ body {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.03) 100%);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: #0F1712;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: var(--radius-md);
   padding: 0.75rem 0.95rem;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
   text-align: left;
   opacity: 0;
   animation: scanCardIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) both, scanCardFloat 5s ease-in-out infinite;

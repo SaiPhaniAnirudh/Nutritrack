@@ -38,7 +38,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://cdn.jsdelivr.net">
   <link rel="preconnect" href="https://unpkg.com">
-  <link rel="stylesheet" href="/Style.css?v=28">
+  <link rel="stylesheet" href="/Style.css?v=35">
   <link
     href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;0,9..144,900;1,9..144,300&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
     rel="stylesheet" media="print" onload="this.media='all'">
@@ -519,6 +519,13 @@
             <span class="diet-widget-tag" id="dietWidgetTag">Set up profile</span>
           </div>
         </button>
+        <button type="button" class="diet-widget sidebar-widget-btn" id="coachingWidget" onclick="openCoachingModal()">
+          <span class="diet-widget-icon">⚡</span>
+          <div class="diet-widget-text">
+            <span class="diet-widget-label">Metabolic Coach</span>
+            <span class="diet-widget-tag" id="coachingWidgetTag">Adaptive TDEE</span>
+          </div>
+        </button>
         <button type="button" class="diet-widget sidebar-widget-btn" id="achievementsWidget" onclick="openAchievementsModal()">
           <span class="diet-widget-icon">🏅</span>
           <div class="diet-widget-text">
@@ -698,6 +705,36 @@
                 <div class="label">Folate</div>
               </div>
               <div class="goal-ring-wrap" id="folateBar"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 82+ CLINICAL MICRONUTRIENT & ADEQUACY PANEL -->
+        <div class="glass-card" id="micronutrientPanel" style="margin-bottom: 1.5rem; border: 1px solid rgba(62,207,142,0.18);">
+          <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleMicroPanel()">
+            <div class="card-title" style="margin-bottom:0;">
+              <div class="dot" style="background:#3ecf8e; box-shadow:0 0 8px #3ecf8e;"></div>
+              🧬 82+ Clinical Nutrient & Micronutrient Adequacy
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span class="badge badge-emerald" style="font-size:0.7rem; font-weight:700;">USDA SR Legacy</span>
+              <span id="microPanelChevron" style="color:var(--ink-50); font-size:0.9rem; transition:transform 0.3s ease;">▼</span>
+            </div>
+          </div>
+          
+          <div id="microPanelBody" style="display:none; margin-top:1.2rem; border-top:1px solid rgba(255,255,255,0.06); padding-top:1rem;">
+            <!-- Category Tabs -->
+            <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:1rem;" id="microTabs">
+              <button type="button" class="cat-chip active" onclick="switchMicroTab('vitamins', this)">💊 Vitamins (13)</button>
+              <button type="button" class="cat-chip" onclick="switchMicroTab('minerals', this)">⚡ Minerals (9)</button>
+              <button type="button" class="cat-chip" onclick="switchMicroTab('fats', this)">🥑 Fat Profile & Omega-3</button>
+              <button type="button" class="cat-chip" onclick="switchMicroTab('amino_acids', this)">🧬 Amino Acids (19)</button>
+              <button type="button" class="cat-chip" onclick="switchMicroTab('phytochemicals', this)">🌿 Phytochemicals</button>
+            </div>
+            
+            <!-- Dynamic Grid Container -->
+            <div id="microGridContainer" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:0.8rem;">
+              <!-- Populated dynamically via App.js -->
             </div>
           </div>
         </div>
@@ -1292,6 +1329,44 @@
             <div class="chart-wrap" style="height:220px; margin-top:0.8rem;"><canvas id="weightChart"></canvas></div>
           </div>
 
+          <!-- Wearable & Health App Integrations Card -->
+          <div class="glass-card" style="grid-column: 1 / -1;">
+            <div class="card-title">
+              <div class="dot" style="background:#4FC3F7;"></div>⌚ Health & Wearable Integrations
+            </div>
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:1rem; margin-top:0.8rem;">
+              <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:1rem; display:flex; flex-direction:column; justify-content:space-between;">
+                <div>
+                  <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+                    <span style="font-size:1.3rem;">🍎</span>
+                    <span style="font-weight:700; font-size:0.95rem; color:#fff;">Apple HealthKit</span>
+                  </div>
+                  <p style="font-size:0.75rem; color:var(--ink-50); line-height:1.4;">Export logs, calories, and 82+ micronutrients in Apple HealthKit format or import XML data.</p>
+                </div>
+                <div style="display:flex; gap:8px; margin-top:10px;">
+                  <button type="button" onclick="exportAppleHealthJSON()" class="water-quick-btn" style="flex:1; font-size:0.75rem; padding:6px 10px;">📤 Export to Health</button>
+                  <label class="water-quick-btn" style="flex:1; font-size:0.75rem; padding:6px 10px; cursor:pointer; text-align:center;">
+                    📥 Import XML
+                    <input type="file" id="appleHealthFileInput" accept=".xml,.json" style="display:none;" onchange="importAppleHealthFile(event)">
+                  </label>
+                </div>
+              </div>
+
+              <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:1rem; display:flex; flex-direction:column; justify-content:space-between;">
+                <div>
+                  <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+                    <span style="font-size:1.3rem;">⌚</span>
+                    <span style="font-weight:700; font-size:0.95rem; color:#fff;">Garmin Connect & Oura</span>
+                  </div>
+                  <p style="font-size:0.75rem; color:var(--ink-50); line-height:1.4;">Sync active calories burned, daily steps, and workout sessions directly into your daily energy balance.</p>
+                </div>
+                <button type="button" onclick="syncGarminActivities()" class="water-quick-btn" style="margin-top:10px; font-size:0.75rem; padding:6px 10px; background:linear-gradient(135deg,#0288d1,#01579b); color:#fff;">
+                  🔄 Sync Garmin Activities
+                </button>
+              </div>
+            </div>
+          </div>
+
           <!-- Achievements moved to a navbar widget/modal (see #achievementsModal) -->
         </div>
       </div>
@@ -1632,6 +1707,82 @@
           style="width:auto; padding:8px 16px;">Cancel</button>
         <button type="button" onclick="saveCustomRecipe()" class="scan-btn green"
           style="width:auto; padding:8px 20px;">Save Custom Recipe</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════
+     WEEKLY METABOLIC CHECK-IN & ADAPTIVE COACHING MODAL
+  ════════════════════════════════════════ -->
+  <div id="coachingModal" class="modal-overlay" style="display:none">
+    <div class="modal-box" style="max-width:580px; width:92%; max-height:88vh; overflow-y:auto; padding:1.5rem; text-align:left;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+        <h3 style="color:#fff; font-size:1.15rem; margin:0; display:flex; align-items:center; gap:8px;">
+          ⚡ Adaptive Metabolic Coach
+        </h3>
+        <button type="button" onclick="closeCoachingModal()" style="background:none; border:none; color:var(--mist); font-size:1.2rem; cursor:pointer;">✕</button>
+      </div>
+
+      <!-- TDEE Calibration Gauge Card -->
+      <div style="background:linear-gradient(135deg, rgba(62,207,142,0.12), rgba(34,197,94,0.05)); border:1px solid rgba(62,207,142,0.3); border-radius:14px; padding:1.2rem; margin-bottom:1.2rem;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+          <div>
+            <div style="font-size:0.75rem; color:var(--kiwi); font-weight:700; text-transform:uppercase; letter-spacing:0.06em;">Calibrated True TDEE</div>
+            <div style="font-size:2rem; font-weight:900; color:#fff; margin-top:2px;">
+              <span id="coachingTdeeVal">--</span> <span style="font-size:0.9rem; font-weight:500; color:var(--ink-50);">kcal/day</span>
+            </div>
+            <div style="font-size:0.75rem; color:var(--ink-50); margin-top:4px;" id="coachingTdeeMsg">Loading metabolic history...</div>
+          </div>
+          <div style="text-align:right;">
+            <span class="badge badge-emerald" id="coachingConfidenceBadge" style="font-size:0.72rem; font-weight:700;">Calibrated</span>
+            <div style="font-size:0.72rem; color:var(--ink-50); margin-top:6px;">Rate: <span id="coachingWeightRate" style="color:#fff; font-weight:600;">--</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- GLP-1 Protocol Section -->
+      <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:1rem; margin-bottom:1.2rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <div style="font-weight:700; font-size:0.9rem; color:#fff; display:flex; align-items:center; gap:6px;">
+              💊 GLP-1 Medication Protection Mode
+            </div>
+            <div style="font-size:0.72rem; color:var(--ink-50); margin-top:2px;">Enforces &ge;100g protein baseline and hydration alerts</div>
+          </div>
+          <label class="switch" style="position:relative; display:inline-block; width:44px; height:24px;">
+            <input type="checkbox" id="glp1ToggleInput" onchange="toggleGlp1Mode(this.checked)">
+            <span class="slider round" style="position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background-color:#333; transition:.3s; border-radius:24px;"></span>
+          </label>
+        </div>
+        <div id="glp1SafetyAlerts" style="margin-top:8px; display:none;"></div>
+      </div>
+
+      <!-- Recommended Macro Breakdown for Next 7 Days -->
+      <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:1rem; margin-bottom:1.2rem;">
+        <div style="font-size:0.78rem; font-weight:700; color:#fff; margin-bottom:8px;">RECOMMENDED WEEKLY TARGETS</div>
+        <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; text-align:center;">
+          <div style="background:rgba(245,166,35,0.08); border:1px solid rgba(245,166,35,0.2); border-radius:8px; padding:8px;">
+            <div style="font-size:0.68rem; color:#f5a623;">CALORIES</div>
+            <div style="font-size:1.1rem; font-weight:800; color:#fff;" id="recTargetCal">--</div>
+          </div>
+          <div style="background:rgba(127,184,212,0.08); border:1px solid rgba(127,184,212,0.2); border-radius:8px; padding:8px;">
+            <div style="font-size:0.68rem; color:#7fb8d4;">PROTEIN</div>
+            <div style="font-size:1.1rem; font-weight:800; color:#fff;" id="recTargetPro">--g</div>
+          </div>
+          <div style="background:rgba(196,168,127,0.08); border:1px solid rgba(196,168,127,0.2); border-radius:8px; padding:8px;">
+            <div style="font-size:0.68rem; color:#c4a87f;">CARBS</div>
+            <div style="font-size:1.1rem; font-weight:800; color:#fff;" id="recTargetCarb">--g</div>
+          </div>
+          <div style="background:rgba(244,97,58,0.08); border:1px solid rgba(244,97,58,0.2); border-radius:8px; padding:8px;">
+            <div style="font-size:0.68rem; color:#f4613a;">FATS</div>
+            <div style="font-size:1.1rem; font-weight:800; color:#fff;" id="recTargetFat">--g</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:10px; justify-content:flex-end;">
+        <button type="button" onclick="closeCoachingModal()" class="scan-btn muted" style="width:auto; padding:8px 16px;">Dismiss</button>
+        <button type="button" onclick="applyCoachingTargets()" class="scan-btn green" style="width:auto; padding:8px 20px; font-weight:700;">✓ Apply Targets to Profile</button>
       </div>
     </div>
   </div>
