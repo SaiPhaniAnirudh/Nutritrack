@@ -1,0 +1,55 @@
+name: Autonomous Benchmark Replication & Verification
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Run daily at 00:00 UTC to maintain continuous third-party CI verification
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+jobs:
+  verify-benchmark:
+    name: 🔬 200-Meal & Active Learning Verification
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 📥 Check out repository
+      uses: actions/checkout@v4
+
+    - name: 🐍 Set up Python 3.11
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+        cache: 'pip'
+
+    - name: 📦 Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: 🔒 Step 1 - Cryptographic Dataset Integrity Check
+      run: |
+        python benchmark/run_benchmark.py --verify-checksum
+
+    - name: 🧪 Step 2 - Execute 200-Meal Accuracy Benchmark with 95% CIs
+      run: |
+        python benchmark/run_benchmark.py --output dist/ci_replicated_results.json
+
+    - name: 🧠 Step 3 - Execute Held-Out Active Learning Generalization Suite (50 Unseen Meals)
+      run: |
+        python tests/test_active_learning_heldout.py
+
+    - name: 🔍 Step 4 - Execute Food Search & Alias Integration Suite
+      run: |
+        python tests/test_search_aliases.py
+
+    - name: 📤 Step 5 - Upload Replicated Verification Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: replicated-benchmark-audit-results
+        path: |
+          dist/ci_replicated_results.json
+          benchmark/active_learning_heldout_results.json

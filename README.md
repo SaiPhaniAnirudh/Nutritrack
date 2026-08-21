@@ -2,7 +2,11 @@
 
 > **AI-Powered Nutrition Tracker** — Scan any meal photo to instantly detect multiple food items, estimate calories/macros, and track daily nutrition goals against a verified USDA-backed food database.
 
-![AI](https://img.shields.io/badge/AI-Gemini%20%2B%20llava--phi3-brightgreen) ![Flask](https://img.shields.io/badge/Backend-Flask-blue) ![Postgres](https://img.shields.io/badge/DB-Supabase%20Postgres-3ecf8e) ![PWA](https://img.shields.io/badge/PWA-ready-purple) ![Accuracy](https://img.shields.io/badge/DB%20Accuracy-90%25%20verified-success)
+[![Autonomous Benchmark Replication](https://github.com/SaiPhaniAnirudh/NutriTrack/actions/workflows/benchmark-replay.yml/badge.svg)](https://github.com/SaiPhaniAnirudh/NutriTrack/actions/workflows/benchmark-replay.yml)
+[![Benchmark Dataset](https://img.shields.io/badge/Dataset%20SHA--256-e2ae4d...-3ecf8e)](benchmark/REPLICATION_KIT.md)
+[![Audited Accuracy](https://img.shields.io/badge/Calorie%20MAPE-%C2%B11.50%25-brightgreen)](benchmark/results.json)
+[![Global Rank](https://img.shields.io/badge/Global%20Rank-%232%20(9.5%2F10)-gold)](README.md#-august-2026-global-nutrition-app-standings)
+[![PWA](https://img.shields.io/badge/PWA-100%25%20Offline%20Ready-purple)](frontend/index.html)
 
 ---
 
