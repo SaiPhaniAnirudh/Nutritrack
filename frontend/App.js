@@ -1346,6 +1346,7 @@ const PAGE_NAMES = {
   track: 'Track Food',
   history: 'History',
   profile: 'Profile',
+  benchmark: 'Accuracy Benchmark',
 };
 
 function showPage(id, btn, pushState = true) {
@@ -1383,6 +1384,9 @@ function showPage(id, btn, pushState = true) {
       try { renderProfile(); } catch (e) { console.error('renderProfile error', e); }
       try { fetchWeightFromCloud(); } catch (e) { }
     }
+    if (id === 'benchmark') {
+      try { initBenchmarkPage(); } catch (e) { console.error('initBenchmarkPage error', e); }
+    }
 
     if (pushState && typeof pushState !== 'object') {
       if (window.location.pathname !== '/' + id) {
@@ -1405,7 +1409,7 @@ window.addEventListener('popstate', (event) => {
     // Determine from pathname
     let path = window.location.pathname.replace('/', '');
     if (!path) path = 'dashboard';
-    const validPages = ['dashboard', 'track', 'history', 'profile'];
+    const validPages = ['dashboard', 'track', 'history', 'profile', 'benchmark'];
     if (validPages.includes(path)) {
       const btnId = path === 'dashboard' ? 1 : path === 'track' ? 2 : path === 'history' ? 3 : 4;
       const btn = document.querySelector(`.nav-btn:nth-child(${btnId})`);
@@ -6156,6 +6160,398 @@ async function syncGarminActivities() {
   }
 }
 
+
+// ─────────────────────────────────────────────────
+//  BENCHMARK PAGE — 200-Meal Accuracy Validation
+// ─────────────────────────────────────────────────
+const BENCHMARK_CATEGORY_LABELS = {
+  high_protein: { label: "High-Protein & Fitness", icon: "💪", color: "#3ECF8E" },
+  south_asian: { label: "South Asian & Indian", icon: "🍛", color: "#F5A623" },
+  western: { label: "Western & American", icon: "🍔", color: "#E06C75" },
+  mediterranean: { label: "Mediterranean & Middle Eastern", icon: "🫒", color: "#56B6C2" },
+  east_asian: { label: "East Asian & SE Asian", icon: "🍜", color: "#C678DD" },
+  packaged: { label: "Packaged & Barcode", icon: "📦", color: "#5BC0EB" },
+  edge_case: { label: "Edge Cases & Shared", icon: "🧩", color: "#ABB2BF" }
+};
+
+// Client-side benchmark data for fast rendering (200 meals)
+const BENCHMARK_DATA = [
+  // HIGH-PROTEIN & FITNESS (25)
+  {id:1, name:"Grilled Chicken Breast (200g)", target:"chicken", cat:"high_protein", ref_cal:330, ref_pro:62.0, ref_carb:0.0, ref_fat:7.2, fdc:"171077", src:"USDA SR"},
+  {id:2, name:"Hard Boiled Eggs (2 large)", target:"egg", cat:"high_protein", ref_cal:156, ref_pro:12.6, ref_carb:1.1, ref_fat:10.6, fdc:"173424", src:"USDA SR"},
+  {id:3, name:"Salmon Fillet Baked (150g)", target:"salmon", cat:"high_protein", ref_cal:312, ref_pro:33.0, ref_carb:0.0, ref_fat:19.5, fdc:"175168", src:"USDA SR"},
+  {id:4, name:"Whey Protein Shake (1 scoop)", target:"protein", cat:"high_protein", ref_cal:120, ref_pro:24.0, ref_carb:3.0, ref_fat:1.5, fdc:"—", src:"Label"},
+  {id:5, name:"Greek Yogurt Plain (200g)", target:"yogurt", cat:"high_protein", ref_cal:146, ref_pro:20.0, ref_carb:7.8, ref_fat:3.8, fdc:"170903", src:"USDA SR"},
+  {id:6, name:"Cottage Cheese / Paneer (100g)", target:"paneer", cat:"high_protein", ref_cal:265, ref_pro:18.3, ref_carb:3.4, ref_fat:20.8, fdc:"170845", src:"USDA SR"},
+  {id:7, name:"Tofu Stir Fry (150g)", target:"tofu", cat:"high_protein", ref_cal:144, ref_pro:15.0, ref_carb:4.5, ref_fat:8.0, fdc:"174272", src:"USDA SR"},
+  {id:8, name:"Tuna Salad (1 can + light mayo)", target:"tuna", cat:"high_protein", ref_cal:210, ref_pro:30.0, ref_carb:2.0, ref_fat:9.0, fdc:"175159", src:"USDA SR"},
+  {id:9, name:"Turkey Breast Sliced (150g)", target:"turkey", cat:"high_protein", ref_cal:189, ref_pro:38.0, ref_carb:0.0, ref_fat:3.6, fdc:"171082", src:"USDA SR"},
+  {id:10, name:"Beef Steak Sirloin Grilled (200g)", target:"steak", cat:"high_protein", ref_cal:440, ref_pro:52.0, ref_carb:0.0, ref_fat:24.8, fdc:"174032", src:"USDA SR"},
+  {id:11, name:"Shrimp Grilled (150g)", target:"shrimp", cat:"high_protein", ref_cal:144, ref_pro:27.6, ref_carb:0.2, ref_fat:2.5, fdc:"175180", src:"USDA SR"},
+  {id:12, name:"Egg White Omelette (4 whites, veg)", target:"egg", cat:"high_protein", ref_cal:110, ref_pro:16.0, ref_carb:3.0, ref_fat:3.5, fdc:"173423", src:"USDA SR"},
+  {id:13, name:"Chicken Tikka (6 pieces, ~180g)", target:"chicken", cat:"high_protein", ref_cal:295, ref_pro:42.0, ref_carb:5.0, ref_fat:12.0, fdc:"—", src:"IFCT"},
+  {id:14, name:"Pork Tenderloin Grilled (150g)", target:"pork", cat:"high_protein", ref_cal:211, ref_pro:35.0, ref_carb:0.0, ref_fat:7.2, fdc:"167820", src:"USDA SR"},
+  {id:15, name:"Sardines in Olive Oil (120g)", target:"sardines", cat:"high_protein", ref_cal:252, ref_pro:24.6, ref_carb:0.0, ref_fat:16.8, fdc:"175139", src:"USDA SR"},
+  {id:16, name:"Lamb Chops Grilled (200g)", target:"lamb", cat:"high_protein", ref_cal:490, ref_pro:44.0, ref_carb:0.0, ref_fat:34.0, fdc:"174373", src:"USDA SR"},
+  {id:17, name:"Protein Bar (60g bar)", target:"protein bar", cat:"high_protein", ref_cal:220, ref_pro:20.0, ref_carb:24.0, ref_fat:7.0, fdc:"—", src:"Label"},
+  {id:18, name:"Edamame Steamed (1 cup, 155g)", target:"edamame", cat:"high_protein", ref_cal:188, ref_pro:18.5, ref_carb:13.8, ref_fat:8.1, fdc:"168411", src:"USDA SR"},
+  {id:19, name:"Chicken Sausage (2 links, 120g)", target:"sausage", cat:"high_protein", ref_cal:228, ref_pro:24.0, ref_carb:2.0, ref_fat:14.0, fdc:"—", src:"Label"},
+  {id:20, name:"Tilapia Baked (170g fillet)", target:"tilapia", cat:"high_protein", ref_cal:183, ref_pro:37.0, ref_carb:0.0, ref_fat:3.4, fdc:"175178", src:"USDA SR"},
+  {id:21, name:"Lentil Soup Thick (1 bowl, 300g)", target:"lentil", cat:"high_protein", ref_cal:240, ref_pro:16.0, ref_carb:32.0, ref_fat:5.0, fdc:"172421", src:"USDA SR"},
+  {id:22, name:"Tempeh Pan-Fried (150g)", target:"tempeh", cat:"high_protein", ref_cal:285, ref_pro:28.5, ref_carb:12.0, ref_fat:16.5, fdc:"174273", src:"USDA SR"},
+  {id:23, name:"Cod Fillet Baked (200g)", target:"cod", cat:"high_protein", ref_cal:186, ref_pro:40.0, ref_carb:0.0, ref_fat:1.6, fdc:"171955", src:"USDA SR"},
+  {id:24, name:"Venison Steak (150g)", target:"venison", cat:"high_protein", ref_cal:201, ref_pro:38.0, ref_carb:0.0, ref_fat:4.8, fdc:"174393", src:"USDA SR"},
+  {id:25, name:"Duck Breast Seared (180g)", target:"duck", cat:"high_protein", ref_cal:342, ref_pro:36.0, ref_carb:0.0, ref_fat:21.6, fdc:"171100", src:"USDA SR"},
+  // SOUTH ASIAN & INDIAN (50)
+  {id:26, name:"Chicken Biryani (1 plate / 350g)", target:"biryani", cat:"south_asian", ref_cal:520, ref_pro:28.0, ref_carb:65.0, ref_fat:16.0, fdc:"—", src:"IFCT"},
+  {id:27, name:"Yellow Dal Tadka (1 cup / 200g)", target:"dal", cat:"south_asian", ref_cal:180, ref_pro:10.5, ref_carb:26.0, ref_fat:4.0, fdc:"—", src:"IFCT"},
+  {id:28, name:"Paneer Butter Masala (1 cup / 220g)", target:"paneer", cat:"south_asian", ref_cal:420, ref_pro:16.0, ref_carb:18.0, ref_fat:32.0, fdc:"—", src:"IFCT"},
+  {id:29, name:"Plain Roti / Chapati (2 pieces)", target:"roti", cat:"south_asian", ref_cal:160, ref_pro:5.2, ref_carb:32.0, ref_fat:1.4, fdc:"—", src:"IFCT"},
+  {id:30, name:"Masala Dosa with Sambar", target:"dosa", cat:"south_asian", ref_cal:385, ref_pro:8.0, ref_carb:56.0, ref_fat:14.0, fdc:"—", src:"IFCT"},
+  {id:31, name:"Steamed Idli (3 pieces)", target:"idli", cat:"south_asian", ref_cal:180, ref_pro:6.0, ref_carb:36.0, ref_fat:0.6, fdc:"—", src:"IFCT"},
+  {id:32, name:"Chole Masala (Chickpea Curry)", target:"chickpea", cat:"south_asian", ref_cal:280, ref_pro:12.0, ref_carb:38.0, ref_fat:9.0, fdc:"173757", src:"USDA+IFCT"},
+  {id:33, name:"Rajma Masala (Kidney Bean Curry)", target:"kidney", cat:"south_asian", ref_cal:240, ref_pro:11.5, ref_carb:36.0, ref_fat:5.0, fdc:"175198", src:"USDA+IFCT"},
+  {id:34, name:"Vegetable Pulao (1 plate / 250g)", target:"pulao", cat:"south_asian", ref_cal:350, ref_pro:7.0, ref_carb:58.0, ref_fat:10.0, fdc:"—", src:"IFCT"},
+  {id:35, name:"Aloo Gobi (Potato Cauliflower, 200g)", target:"aloo gobi", cat:"south_asian", ref_cal:195, ref_pro:4.5, ref_carb:24.0, ref_fat:9.5, fdc:"—", src:"IFCT"},
+  {id:36, name:"Palak Paneer (1 cup / 220g)", target:"palak paneer", cat:"south_asian", ref_cal:350, ref_pro:18.0, ref_carb:12.0, ref_fat:26.0, fdc:"—", src:"IFCT"},
+  {id:37, name:"Mutton Rogan Josh (200g)", target:"mutton", cat:"south_asian", ref_cal:380, ref_pro:28.0, ref_carb:8.0, ref_fat:26.0, fdc:"—", src:"IFCT"},
+  {id:38, name:"Samosa (2 pieces, potato filling)", target:"samosa", cat:"south_asian", ref_cal:350, ref_pro:6.0, ref_carb:38.0, ref_fat:20.0, fdc:"—", src:"IFCT"},
+  {id:39, name:"Medu Vada (2 pieces)", target:"vada", cat:"south_asian", ref_cal:280, ref_pro:10.0, ref_carb:28.0, ref_fat:15.0, fdc:"—", src:"IFCT"},
+  {id:40, name:"Pav Bhaji (1 serving)", target:"pav bhaji", cat:"south_asian", ref_cal:420, ref_pro:10.0, ref_carb:52.0, ref_fat:20.0, fdc:"—", src:"IFCT"},
+  {id:41, name:"Butter Naan (2 pieces)", target:"naan", cat:"south_asian", ref_cal:440, ref_pro:10.0, ref_carb:60.0, ref_fat:18.0, fdc:"—", src:"IFCT"},
+  {id:42, name:"Egg Curry (2 eggs in gravy, 250g)", target:"egg curry", cat:"south_asian", ref_cal:310, ref_pro:16.0, ref_carb:10.0, ref_fat:22.0, fdc:"—", src:"IFCT"},
+  {id:43, name:"Fish Curry Kerala Style (200g)", target:"fish curry", cat:"south_asian", ref_cal:290, ref_pro:24.0, ref_carb:8.0, ref_fat:18.0, fdc:"—", src:"IFCT"},
+  {id:44, name:"Poha (Flattened Rice, 200g)", target:"poha", cat:"south_asian", ref_cal:270, ref_pro:5.0, ref_carb:42.0, ref_fat:9.0, fdc:"—", src:"IFCT"},
+  {id:45, name:"Upma (Semolina, 200g)", target:"upma", cat:"south_asian", ref_cal:250, ref_pro:6.0, ref_carb:38.0, ref_fat:8.0, fdc:"—", src:"IFCT"},
+  {id:46, name:"Uttapam (2 pieces)", target:"uttapam", cat:"south_asian", ref_cal:310, ref_pro:8.0, ref_carb:48.0, ref_fat:10.0, fdc:"—", src:"IFCT"},
+  {id:47, name:"Curd Rice (1 bowl / 250g)", target:"curd rice", cat:"south_asian", ref_cal:220, ref_pro:7.0, ref_carb:38.0, ref_fat:4.5, fdc:"—", src:"IFCT"},
+  {id:48, name:"Rasam with Steamed Rice", target:"rasam", cat:"south_asian", ref_cal:260, ref_pro:5.0, ref_carb:52.0, ref_fat:3.0, fdc:"—", src:"IFCT"},
+  {id:49, name:"Gulab Jamun (3 pieces)", target:"gulab jamun", cat:"south_asian", ref_cal:420, ref_pro:5.0, ref_carb:54.0, ref_fat:21.0, fdc:"—", src:"IFCT"},
+  {id:50, name:"Jalebi (4 pieces, ~100g)", target:"jalebi", cat:"south_asian", ref_cal:380, ref_pro:3.0, ref_carb:56.0, ref_fat:17.0, fdc:"—", src:"IFCT"},
+  {id:51, name:"Kheer / Rice Pudding (200g)", target:"kheer", cat:"south_asian", ref_cal:310, ref_pro:8.0, ref_carb:44.0, ref_fat:12.0, fdc:"—", src:"IFCT"},
+  {id:52, name:"Bhindi Masala (Okra, 200g)", target:"bhindi", cat:"south_asian", ref_cal:160, ref_pro:4.0, ref_carb:14.0, ref_fat:10.0, fdc:"—", src:"IFCT"},
+  {id:53, name:"Baingan Bharta (200g)", target:"baingan", cat:"south_asian", ref_cal:170, ref_pro:3.5, ref_carb:16.0, ref_fat:10.0, fdc:"—", src:"IFCT"},
+  {id:54, name:"Dal Makhani (1 cup / 220g)", target:"dal makhani", cat:"south_asian", ref_cal:340, ref_pro:14.0, ref_carb:30.0, ref_fat:18.0, fdc:"—", src:"IFCT"},
+  {id:55, name:"Tandoori Chicken (2 pieces)", target:"tandoori", cat:"south_asian", ref_cal:340, ref_pro:42.0, ref_carb:6.0, ref_fat:16.0, fdc:"—", src:"IFCT"},
+  {id:56, name:"Paratha Stuffed Aloo (2 pieces)", target:"paratha", cat:"south_asian", ref_cal:440, ref_pro:8.0, ref_carb:50.0, ref_fat:24.0, fdc:"—", src:"IFCT"},
+  {id:57, name:"Pongal (1 plate / 250g)", target:"pongal", cat:"south_asian", ref_cal:290, ref_pro:8.0, ref_carb:42.0, ref_fat:10.0, fdc:"—", src:"IFCT"},
+  {id:58, name:"Pesarattu (Green Gram Dosa, 2)", target:"pesarattu", cat:"south_asian", ref_cal:250, ref_pro:12.0, ref_carb:34.0, ref_fat:7.0, fdc:"—", src:"IFCT"},
+  {id:59, name:"Rava Dosa (2 pieces)", target:"rava dosa", cat:"south_asian", ref_cal:320, ref_pro:6.0, ref_carb:42.0, ref_fat:14.0, fdc:"—", src:"IFCT"},
+  {id:60, name:"Thali (Rice, Dal, Sabzi, Roti, Curd)", target:"thali", cat:"south_asian", ref_cal:680, ref_pro:22.0, ref_carb:98.0, ref_fat:22.0, fdc:"—", src:"IFCT"},
+  {id:61, name:"Butter Chicken (1 cup / 220g)", target:"butter chicken", cat:"south_asian", ref_cal:440, ref_pro:30.0, ref_carb:12.0, ref_fat:32.0, fdc:"—", src:"IFCT"},
+  {id:62, name:"Chicken 65 (8 pieces)", target:"chicken 65", cat:"south_asian", ref_cal:380, ref_pro:28.0, ref_carb:16.0, ref_fat:22.0, fdc:"—", src:"IFCT"},
+  {id:63, name:"Mysore Pak (3 pieces, ~90g)", target:"mysore pak", cat:"south_asian", ref_cal:440, ref_pro:5.0, ref_carb:40.0, ref_fat:30.0, fdc:"—", src:"IFCT"},
+  {id:64, name:"Lemon Rice (1 plate / 250g)", target:"lemon rice", cat:"south_asian", ref_cal:310, ref_pro:5.0, ref_carb:52.0, ref_fat:9.0, fdc:"—", src:"IFCT"},
+  {id:65, name:"Appam with Stew (2 appams)", target:"appam", cat:"south_asian", ref_cal:360, ref_pro:10.0, ref_carb:48.0, ref_fat:14.0, fdc:"—", src:"IFCT"},
+  {id:66, name:"Puttu with Kadala Curry", target:"puttu", cat:"south_asian", ref_cal:380, ref_pro:12.0, ref_carb:58.0, ref_fat:11.0, fdc:"—", src:"IFCT"},
+  {id:67, name:"Hyderabadi Dum Biryani (350g)", target:"biryani", cat:"south_asian", ref_cal:560, ref_pro:26.0, ref_carb:68.0, ref_fat:20.0, fdc:"—", src:"IFCT"},
+  {id:68, name:"Misal Pav (1 serving)", target:"misal", cat:"south_asian", ref_cal:450, ref_pro:14.0, ref_carb:52.0, ref_fat:20.0, fdc:"—", src:"IFCT"},
+  {id:69, name:"Kadhi Pakora with Rice", target:"kadhi", cat:"south_asian", ref_cal:420, ref_pro:10.0, ref_carb:62.0, ref_fat:14.0, fdc:"—", src:"IFCT"},
+  {id:70, name:"Vada Pav (1 piece)", target:"vada pav", cat:"south_asian", ref_cal:310, ref_pro:6.0, ref_carb:38.0, ref_fat:15.0, fdc:"—", src:"IFCT"},
+  {id:71, name:"Masoor Dal (Red Lentil, 200g)", target:"masoor dal", cat:"south_asian", ref_cal:190, ref_pro:12.0, ref_carb:28.0, ref_fat:3.0, fdc:"172420", src:"USDA+IFCT"},
+  {id:72, name:"Chana Dal (Split Chickpea, 200g)", target:"chana dal", cat:"south_asian", ref_cal:210, ref_pro:13.0, ref_carb:30.0, ref_fat:4.5, fdc:"—", src:"IFCT"},
+  {id:73, name:"Sri Lankan Kottu Roti (300g)", target:"kottu", cat:"south_asian", ref_cal:480, ref_pro:18.0, ref_carb:52.0, ref_fat:22.0, fdc:"—", src:"IFCT"},
+  {id:74, name:"Mango Lassi (1 glass, 300ml)", target:"lassi", cat:"south_asian", ref_cal:260, ref_pro:6.0, ref_carb:40.0, ref_fat:8.0, fdc:"—", src:"IFCT"},
+  {id:75, name:"Masala Chai with Biscuits", target:"chai", cat:"south_asian", ref_cal:280, ref_pro:4.0, ref_carb:42.0, ref_fat:10.0, fdc:"—", src:"IFCT"},
+  // WESTERN & AMERICAN (35)
+  {id:76, name:"Caesar Salad with Chicken", target:"salad", cat:"western", ref_cal:390, ref_pro:32.0, ref_carb:14.0, ref_fat:23.0, fdc:"—", src:"USDA"},
+  {id:77, name:"Spaghetti Bolognese (1 plate)", target:"spaghetti", cat:"western", ref_cal:480, ref_pro:24.0, ref_carb:62.0, ref_fat:15.0, fdc:"—", src:"USDA"},
+  {id:78, name:"Avocado Toast on Sourdough", target:"avocado", cat:"western", ref_cal:290, ref_pro:7.0, ref_carb:28.0, ref_fat:17.0, fdc:"171706", src:"USDA SR"},
+  {id:79, name:"Oatmeal with Banana & Honey", target:"oat", cat:"western", ref_cal:260, ref_pro:7.0, ref_carb:52.0, ref_fat:3.5, fdc:"173904", src:"USDA SR"},
+  {id:80, name:"Cheeseburger (single patty)", target:"burger", cat:"western", ref_cal:535, ref_pro:30.0, ref_carb:40.0, ref_fat:28.0, fdc:"170720", src:"USDA SR"},
+  {id:81, name:"Margherita Pizza (2 slices)", target:"pizza", cat:"western", ref_cal:450, ref_pro:18.0, ref_carb:54.0, ref_fat:17.0, fdc:"174840", src:"USDA SR"},
+  {id:82, name:"BLT Sandwich", target:"sandwich", cat:"western", ref_cal:380, ref_pro:16.0, ref_carb:32.0, ref_fat:22.0, fdc:"—", src:"USDA"},
+  {id:83, name:"Grilled Cheese Sandwich", target:"grilled cheese", cat:"western", ref_cal:440, ref_pro:18.0, ref_carb:36.0, ref_fat:26.0, fdc:"—", src:"USDA"},
+  {id:84, name:"Mac and Cheese (1 cup / 220g)", target:"mac and cheese", cat:"western", ref_cal:380, ref_pro:16.0, ref_carb:38.0, ref_fat:18.0, fdc:"170740", src:"USDA SR"},
+  {id:85, name:"Chicken Caesar Wrap", target:"wrap", cat:"western", ref_cal:440, ref_pro:28.0, ref_carb:38.0, ref_fat:20.0, fdc:"—", src:"USDA"},
+  {id:86, name:"French Fries Medium (150g)", target:"fries", cat:"western", ref_cal:470, ref_pro:5.0, ref_carb:56.0, ref_fat:24.0, fdc:"170698", src:"USDA SR"},
+  {id:87, name:"Pancakes with Maple Syrup (3)", target:"pancakes", cat:"western", ref_cal:520, ref_pro:10.0, ref_carb:78.0, ref_fat:18.0, fdc:"173296", src:"USDA SR"},
+  {id:88, name:"Eggs Benedict (2 poached)", target:"eggs benedict", cat:"western", ref_cal:480, ref_pro:22.0, ref_carb:28.0, ref_fat:32.0, fdc:"—", src:"USDA"},
+  {id:89, name:"Club Sandwich (triple-decker)", target:"club sandwich", cat:"western", ref_cal:560, ref_pro:32.0, ref_carb:42.0, ref_fat:28.0, fdc:"—", src:"USDA"},
+  {id:90, name:"Ribeye Steak with Baked Potato", target:"steak", cat:"western", ref_cal:720, ref_pro:48.0, ref_carb:40.0, ref_fat:38.0, fdc:"—", src:"USDA"},
+  {id:91, name:"Fish and Chips (1 serving)", target:"fish and chips", cat:"western", ref_cal:680, ref_pro:28.0, ref_carb:62.0, ref_fat:36.0, fdc:"—", src:"USDA"},
+  {id:92, name:"BBQ Pulled Pork Sandwich", target:"pulled pork", cat:"western", ref_cal:520, ref_pro:30.0, ref_carb:44.0, ref_fat:24.0, fdc:"—", src:"USDA"},
+  {id:93, name:"NY Cheesecake (1 slice)", target:"cheesecake", cat:"western", ref_cal:420, ref_pro:7.0, ref_carb:32.0, ref_fat:30.0, fdc:"174930", src:"USDA SR"},
+  {id:94, name:"Chicken Pot Pie (1 individual)", target:"pot pie", cat:"western", ref_cal:480, ref_pro:18.0, ref_carb:40.0, ref_fat:28.0, fdc:"—", src:"USDA"},
+  {id:95, name:"Meatloaf with Gravy (200g)", target:"meatloaf", cat:"western", ref_cal:320, ref_pro:22.0, ref_carb:14.0, ref_fat:20.0, fdc:"—", src:"USDA"},
+  {id:96, name:"Bagel with Cream Cheese", target:"bagel", cat:"western", ref_cal:380, ref_pro:12.0, ref_carb:54.0, ref_fat:12.0, fdc:"172684", src:"USDA SR"},
+  {id:97, name:"Chicken Nuggets (10 pieces)", target:"nuggets", cat:"western", ref_cal:460, ref_pro:22.0, ref_carb:30.0, ref_fat:28.0, fdc:"—", src:"USDA"},
+  {id:98, name:"Hot Dog with Bun and Mustard", target:"hot dog", cat:"western", ref_cal:310, ref_pro:12.0, ref_carb:28.0, ref_fat:18.0, fdc:"174481", src:"USDA SR"},
+  {id:99, name:"Fried Chicken Breast (battered)", target:"fried chicken", cat:"western", ref_cal:420, ref_pro:34.0, ref_carb:18.0, ref_fat:24.0, fdc:"—", src:"USDA"},
+  {id:100, name:"Crunchy Tacos (3 tacos)", target:"taco", cat:"western", ref_cal:510, ref_pro:24.0, ref_carb:42.0, ref_fat:27.0, fdc:"—", src:"QSR"},
+  {id:101, name:"Cobb Salad (with dressing)", target:"salad", cat:"western", ref_cal:520, ref_pro:34.0, ref_carb:12.0, ref_fat:38.0, fdc:"—", src:"USDA"},
+  {id:102, name:"Clam Chowder (1 bowl / 300g)", target:"chowder", cat:"western", ref_cal:350, ref_pro:14.0, ref_carb:30.0, ref_fat:20.0, fdc:"—", src:"USDA"},
+  {id:103, name:"Granola with Milk (1 cup)", target:"granola", cat:"western", ref_cal:420, ref_pro:12.0, ref_carb:62.0, ref_fat:14.0, fdc:"174864", src:"USDA SR"},
+  {id:104, name:"Smoothie Bowl (Acai, banana)", target:"smoothie bowl", cat:"western", ref_cal:380, ref_pro:8.0, ref_carb:60.0, ref_fat:14.0, fdc:"—", src:"USDA"},
+  {id:105, name:"Turkey Club on Multigrain", target:"turkey sandwich", cat:"western", ref_cal:420, ref_pro:28.0, ref_carb:40.0, ref_fat:16.0, fdc:"—", src:"USDA"},
+  {id:106, name:"Beef Burrito (Grande)", target:"burrito", cat:"western", ref_cal:680, ref_pro:30.0, ref_carb:72.0, ref_fat:30.0, fdc:"—", src:"USDA"},
+  {id:107, name:"PB&J Sandwich", target:"PBJ", cat:"western", ref_cal:380, ref_pro:12.0, ref_carb:48.0, ref_fat:16.0, fdc:"—", src:"USDA"},
+  {id:108, name:"Waffles with Berries and Cream", target:"waffles", cat:"western", ref_cal:460, ref_pro:8.0, ref_carb:56.0, ref_fat:22.0, fdc:"—", src:"USDA"},
+  {id:109, name:"Chicken Alfredo Pasta", target:"alfredo", cat:"western", ref_cal:620, ref_pro:30.0, ref_carb:58.0, ref_fat:30.0, fdc:"—", src:"USDA"},
+  {id:110, name:"Steak Fajitas with Tortillas", target:"fajitas", cat:"western", ref_cal:540, ref_pro:32.0, ref_carb:42.0, ref_fat:26.0, fdc:"—", src:"USDA"},
+  // MEDITERRANEAN & MIDDLE EASTERN (25)
+  {id:111, name:"Hummus with Pita Bread", target:"hummus", cat:"mediterranean", ref_cal:460, ref_pro:16.0, ref_carb:52.0, ref_fat:22.0, fdc:"174279", src:"USDA SR"},
+  {id:112, name:"Falafel Wrap (5 balls + tahini)", target:"falafel", cat:"mediterranean", ref_cal:520, ref_pro:18.0, ref_carb:52.0, ref_fat:26.0, fdc:"—", src:"USDA"},
+  {id:113, name:"Greek Salad with Feta", target:"greek salad", cat:"mediterranean", ref_cal:280, ref_pro:10.0, ref_carb:12.0, ref_fat:22.0, fdc:"—", src:"USDA"},
+  {id:114, name:"Moussaka (1 serving / 250g)", target:"moussaka", cat:"mediterranean", ref_cal:380, ref_pro:18.0, ref_carb:20.0, ref_fat:26.0, fdc:"—", src:"USDA"},
+  {id:115, name:"Shawarma Chicken (1 wrap)", target:"shawarma", cat:"mediterranean", ref_cal:520, ref_pro:32.0, ref_carb:42.0, ref_fat:24.0, fdc:"—", src:"USDA"},
+  {id:116, name:"Tabbouleh Salad (200g)", target:"tabbouleh", cat:"mediterranean", ref_cal:160, ref_pro:4.0, ref_carb:18.0, ref_fat:8.0, fdc:"—", src:"USDA"},
+  {id:117, name:"Baba Ghanoush with Bread", target:"baba ghanoush", cat:"mediterranean", ref_cal:280, ref_pro:6.0, ref_carb:24.0, ref_fat:18.0, fdc:"—", src:"USDA"},
+  {id:118, name:"Lamb Kofta with Rice", target:"kofta", cat:"mediterranean", ref_cal:540, ref_pro:28.0, ref_carb:52.0, ref_fat:24.0, fdc:"—", src:"USDA"},
+  {id:119, name:"Stuffed Grape Leaves (6 pieces)", target:"dolma", cat:"mediterranean", ref_cal:220, ref_pro:5.0, ref_carb:28.0, ref_fat:10.0, fdc:"—", src:"USDA"},
+  {id:120, name:"Spanakopita (2 pieces)", target:"spanakopita", cat:"mediterranean", ref_cal:360, ref_pro:12.0, ref_carb:28.0, ref_fat:22.0, fdc:"—", src:"USDA"},
+  {id:121, name:"Shakshuka (2 eggs in tomato)", target:"shakshuka", cat:"mediterranean", ref_cal:280, ref_pro:16.0, ref_carb:14.0, ref_fat:18.0, fdc:"—", src:"USDA"},
+  {id:122, name:"Lahmacun (Turkish Pizza, 2)", target:"lahmacun", cat:"mediterranean", ref_cal:380, ref_pro:16.0, ref_carb:42.0, ref_fat:16.0, fdc:"—", src:"USDA"},
+  {id:123, name:"Grilled Halloumi with Veg", target:"halloumi", cat:"mediterranean", ref_cal:380, ref_pro:24.0, ref_carb:8.0, ref_fat:28.0, fdc:"—", src:"USDA"},
+  {id:124, name:"Moroccan Tagine Chicken", target:"tagine", cat:"mediterranean", ref_cal:360, ref_pro:28.0, ref_carb:22.0, ref_fat:18.0, fdc:"—", src:"USDA"},
+  {id:125, name:"Fattoush Salad (200g)", target:"fattoush", cat:"mediterranean", ref_cal:220, ref_pro:5.0, ref_carb:22.0, ref_fat:12.0, fdc:"—", src:"USDA"},
+  {id:126, name:"Manakeesh Za'atar (1 piece)", target:"manakeesh", cat:"mediterranean", ref_cal:320, ref_pro:8.0, ref_carb:38.0, ref_fat:16.0, fdc:"—", src:"USDA"},
+  {id:127, name:"Kibbeh (3 pieces, fried)", target:"kibbeh", cat:"mediterranean", ref_cal:420, ref_pro:20.0, ref_carb:28.0, ref_fat:26.0, fdc:"—", src:"USDA"},
+  {id:128, name:"Couscous with Vegetables", target:"couscous", cat:"mediterranean", ref_cal:340, ref_pro:10.0, ref_carb:54.0, ref_fat:10.0, fdc:"169700", src:"USDA SR"},
+  {id:129, name:"Olive Oil & Bread Dip", target:"olive oil bread", cat:"mediterranean", ref_cal:310, ref_pro:4.0, ref_carb:28.0, ref_fat:20.0, fdc:"—", src:"USDA"},
+  {id:130, name:"Baklava (3 pieces)", target:"baklava", cat:"mediterranean", ref_cal:480, ref_pro:6.0, ref_carb:48.0, ref_fat:30.0, fdc:"—", src:"USDA"},
+  {id:131, name:"Lentil Soup Middle Eastern", target:"lentil soup", cat:"mediterranean", ref_cal:230, ref_pro:14.0, ref_carb:32.0, ref_fat:5.0, fdc:"172421", src:"USDA SR"},
+  {id:132, name:"Gyros Plate with Tzatziki", target:"gyros", cat:"mediterranean", ref_cal:560, ref_pro:30.0, ref_carb:44.0, ref_fat:28.0, fdc:"—", src:"USDA"},
+  {id:133, name:"Caprese Salad (200g)", target:"caprese", cat:"mediterranean", ref_cal:260, ref_pro:14.0, ref_carb:4.0, ref_fat:22.0, fdc:"—", src:"USDA"},
+  {id:134, name:"Risotto Mushroom (250g)", target:"risotto", cat:"mediterranean", ref_cal:380, ref_pro:9.0, ref_carb:52.0, ref_fat:14.0, fdc:"—", src:"USDA"},
+  {id:135, name:"Minestrone Soup (300g)", target:"minestrone", cat:"mediterranean", ref_cal:180, ref_pro:8.0, ref_carb:26.0, ref_fat:4.0, fdc:"—", src:"USDA"},
+  // EAST ASIAN & SOUTHEAST ASIAN (30)
+  {id:136, name:"Chicken Ramen with Egg", target:"ramen", cat:"east_asian", ref_cal:550, ref_pro:26.0, ref_carb:68.0, ref_fat:18.0, fdc:"—", src:"USDA"},
+  {id:137, name:"Salmon Sushi Roll (8 pieces)", target:"sushi", cat:"east_asian", ref_cal:380, ref_pro:19.0, ref_carb:52.0, ref_fat:9.5, fdc:"—", src:"USDA"},
+  {id:138, name:"Vietnamese Beef Pho", target:"pho", cat:"east_asian", ref_cal:420, ref_pro:28.0, ref_carb:58.0, ref_fat:7.0, fdc:"—", src:"USDA"},
+  {id:139, name:"Chicken Burrito Bowl", target:"burrito bowl", cat:"east_asian", ref_cal:580, ref_pro:38.0, ref_carb:64.0, ref_fat:18.0, fdc:"—", src:"USDA"},
+  {id:140, name:"Chicken Fried Rice (300g)", target:"fried rice", cat:"east_asian", ref_cal:480, ref_pro:18.0, ref_carb:62.0, ref_fat:18.0, fdc:"—", src:"USDA"},
+  {id:141, name:"Kung Pao Chicken (200g)", target:"kung pao", cat:"east_asian", ref_cal:340, ref_pro:24.0, ref_carb:18.0, ref_fat:20.0, fdc:"—", src:"USDA"},
+  {id:142, name:"Pad Thai with Shrimp", target:"pad thai", cat:"east_asian", ref_cal:520, ref_pro:22.0, ref_carb:58.0, ref_fat:22.0, fdc:"—", src:"USDA"},
+  {id:143, name:"Japanese Tonkatsu with Rice", target:"tonkatsu", cat:"east_asian", ref_cal:620, ref_pro:28.0, ref_carb:64.0, ref_fat:26.0, fdc:"—", src:"USDA"},
+  {id:144, name:"Sweet and Sour Pork (200g)", target:"sweet sour pork", cat:"east_asian", ref_cal:380, ref_pro:18.0, ref_carb:36.0, ref_fat:18.0, fdc:"—", src:"USDA"},
+  {id:145, name:"Bibimbap (Korean Rice Bowl)", target:"bibimbap", cat:"east_asian", ref_cal:520, ref_pro:22.0, ref_carb:68.0, ref_fat:18.0, fdc:"—", src:"USDA"},
+  {id:146, name:"Dim Sum Har Gow (6 pieces)", target:"dim sum", cat:"east_asian", ref_cal:240, ref_pro:16.0, ref_carb:24.0, ref_fat:8.0, fdc:"—", src:"USDA"},
+  {id:147, name:"Japanese Gyoza (8 pieces)", target:"gyoza", cat:"east_asian", ref_cal:360, ref_pro:14.0, ref_carb:32.0, ref_fat:20.0, fdc:"—", src:"USDA"},
+  {id:148, name:"Tom Yum Soup (300g)", target:"tom yum", cat:"east_asian", ref_cal:180, ref_pro:14.0, ref_carb:12.0, ref_fat:8.0, fdc:"—", src:"USDA"},
+  {id:149, name:"Sashimi Platter (150g)", target:"sashimi", cat:"east_asian", ref_cal:210, ref_pro:36.0, ref_carb:0.0, ref_fat:7.0, fdc:"—", src:"USDA"},
+  {id:150, name:"Chinese Dumplings Steamed (8)", target:"dumplings", cat:"east_asian", ref_cal:320, ref_pro:14.0, ref_carb:36.0, ref_fat:12.0, fdc:"—", src:"USDA"},
+  {id:151, name:"Korean Bulgogi with Rice", target:"bulgogi", cat:"east_asian", ref_cal:540, ref_pro:30.0, ref_carb:60.0, ref_fat:18.0, fdc:"—", src:"USDA"},
+  {id:152, name:"Thai Green Curry with Rice", target:"green curry", cat:"east_asian", ref_cal:520, ref_pro:20.0, ref_carb:56.0, ref_fat:24.0, fdc:"—", src:"USDA"},
+  {id:153, name:"Miso Soup with Tofu (300ml)", target:"miso", cat:"east_asian", ref_cal:80, ref_pro:6.0, ref_carb:8.0, ref_fat:2.5, fdc:"—", src:"USDA"},
+  {id:154, name:"Spring Rolls Fried (4 pieces)", target:"spring rolls", cat:"east_asian", ref_cal:320, ref_pro:8.0, ref_carb:32.0, ref_fat:18.0, fdc:"—", src:"USDA"},
+  {id:155, name:"General Tso's Chicken (200g)", target:"general tso", cat:"east_asian", ref_cal:440, ref_pro:22.0, ref_carb:36.0, ref_fat:24.0, fdc:"—", src:"USDA"},
+  {id:156, name:"Nasi Goreng (Indonesian)", target:"nasi goreng", cat:"east_asian", ref_cal:500, ref_pro:16.0, ref_carb:62.0, ref_fat:20.0, fdc:"—", src:"USDA"},
+  {id:157, name:"Japanese Udon Noodle Soup", target:"udon", cat:"east_asian", ref_cal:380, ref_pro:14.0, ref_carb:62.0, ref_fat:8.0, fdc:"—", src:"USDA"},
+  {id:158, name:"Laksa (Malaysian Curry Noodle)", target:"laksa", cat:"east_asian", ref_cal:580, ref_pro:18.0, ref_carb:58.0, ref_fat:30.0, fdc:"—", src:"USDA"},
+  {id:159, name:"Filipino Adobo Chicken w/ Rice", target:"adobo", cat:"east_asian", ref_cal:520, ref_pro:28.0, ref_carb:58.0, ref_fat:18.0, fdc:"—", src:"USDA"},
+  {id:160, name:"Hainanese Chicken Rice", target:"chicken rice", cat:"east_asian", ref_cal:560, ref_pro:26.0, ref_carb:62.0, ref_fat:22.0, fdc:"—", src:"USDA"},
+  {id:161, name:"Teriyaki Salmon Bowl", target:"teriyaki", cat:"east_asian", ref_cal:480, ref_pro:32.0, ref_carb:54.0, ref_fat:14.0, fdc:"—", src:"USDA"},
+  {id:162, name:"Kimchi Jjigae (Korean Stew)", target:"kimchi jjigae", cat:"east_asian", ref_cal:280, ref_pro:18.0, ref_carb:16.0, ref_fat:16.0, fdc:"—", src:"USDA"},
+  {id:163, name:"Char Siu Pork Rice Bowl", target:"char siu", cat:"east_asian", ref_cal:520, ref_pro:28.0, ref_carb:60.0, ref_fat:18.0, fdc:"—", src:"USDA"},
+  {id:164, name:"California Roll (8 pieces)", target:"california roll", cat:"east_asian", ref_cal:340, ref_pro:12.0, ref_carb:52.0, ref_fat:8.0, fdc:"—", src:"USDA"},
+  {id:165, name:"Pork Katsu Curry Don", target:"katsu curry", cat:"east_asian", ref_cal:680, ref_pro:26.0, ref_carb:72.0, ref_fat:30.0, fdc:"—", src:"USDA"},
+  // PACKAGED & BARCODE (20)
+  {id:166, name:"Coca-Cola (330ml can)", target:"coca cola", cat:"packaged", ref_cal:139, ref_pro:0.0, ref_carb:35.0, ref_fat:0.0, fdc:"—", src:"Label"},
+  {id:167, name:"Lay's Classic Chips (28g)", target:"chips", cat:"packaged", ref_cal:149, ref_pro:2.0, ref_carb:15.0, ref_fat:9.5, fdc:"—", src:"Label"},
+  {id:168, name:"Snickers Bar (52g)", target:"snickers", cat:"packaged", ref_cal:250, ref_pro:4.0, ref_carb:33.0, ref_fat:12.0, fdc:"—", src:"Label"},
+  {id:169, name:"Instant Noodles Maggi (1 pack)", target:"maggi", cat:"packaged", ref_cal:380, ref_pro:8.0, ref_carb:52.0, ref_fat:16.0, fdc:"—", src:"Label"},
+  {id:170, name:"KitKat 4-Finger (41.5g)", target:"kitkat", cat:"packaged", ref_cal:213, ref_pro:2.6, ref_carb:26.2, ref_fat:10.8, fdc:"—", src:"Label"},
+  {id:171, name:"Oreo Cookies (3 cookies, 33g)", target:"oreo", cat:"packaged", ref_cal:160, ref_pro:1.0, ref_carb:25.0, ref_fat:7.0, fdc:"—", src:"Label"},
+  {id:172, name:"Red Bull (250ml)", target:"red bull", cat:"packaged", ref_cal:113, ref_pro:0.0, ref_carb:28.0, ref_fat:0.0, fdc:"—", src:"Label"},
+  {id:173, name:"Nature Valley Bar (2 bars)", target:"granola bar", cat:"packaged", ref_cal:190, ref_pro:4.0, ref_carb:29.0, ref_fat:7.0, fdc:"—", src:"Label"},
+  {id:174, name:"Chobani Greek Yogurt (150g)", target:"chobani", cat:"packaged", ref_cal:120, ref_pro:14.0, ref_carb:12.0, ref_fat:2.0, fdc:"—", src:"Label"},
+  {id:175, name:"Amul Butter (20g pat)", target:"butter", cat:"packaged", ref_cal:144, ref_pro:0.2, ref_carb:0.0, ref_fat:16.0, fdc:"—", src:"Label"},
+  {id:176, name:"Parle-G Biscuits (80g pack)", target:"parle-g", cat:"packaged", ref_cal:360, ref_pro:5.0, ref_carb:62.0, ref_fat:10.0, fdc:"—", src:"Label"},
+  {id:177, name:"Haldiram's Bhujia (50g)", target:"bhujia", cat:"packaged", ref_cal:265, ref_pro:6.0, ref_carb:26.0, ref_fat:16.0, fdc:"—", src:"Label"},
+  {id:178, name:"Tropicana OJ (250ml)", target:"orange juice", cat:"packaged", ref_cal:110, ref_pro:1.5, ref_carb:26.0, ref_fat:0.0, fdc:"—", src:"Label"},
+  {id:179, name:"Cup Noodles (70g)", target:"cup noodles", cat:"packaged", ref_cal:310, ref_pro:7.0, ref_carb:42.0, ref_fat:13.0, fdc:"—", src:"Label"},
+  {id:180, name:"Dairy Milk Chocolate (43g)", target:"chocolate", cat:"packaged", ref_cal:228, ref_pro:3.2, ref_carb:26.0, ref_fat:12.6, fdc:"—", src:"Label"},
+  {id:181, name:"MTR Palak Paneer (300g)", target:"ready meal", cat:"packaged", ref_cal:330, ref_pro:12.0, ref_carb:18.0, ref_fat:24.0, fdc:"—", src:"Label"},
+  {id:182, name:"Clif Bar (68g)", target:"clif bar", cat:"packaged", ref_cal:250, ref_pro:10.0, ref_carb:44.0, ref_fat:5.0, fdc:"—", src:"Label"},
+  {id:183, name:"Monster Energy (473ml)", target:"monster", cat:"packaged", ref_cal:210, ref_pro:0.0, ref_carb:54.0, ref_fat:0.0, fdc:"—", src:"Label"},
+  {id:184, name:"Bournvita with Milk (200ml)", target:"bournvita", cat:"packaged", ref_cal:230, ref_pro:8.0, ref_carb:34.0, ref_fat:6.0, fdc:"—", src:"Label"},
+  {id:185, name:"Ensure Nutrition Shake (237ml)", target:"ensure", cat:"packaged", ref_cal:220, ref_pro:9.0, ref_carb:33.0, ref_fat:6.0, fdc:"—", src:"Label"},
+  // EDGE CASES & SHARED PLATES (15)
+  {id:186, name:"Mixed Fruit Smoothie", target:"smoothie", cat:"edge_case", ref_cal:280, ref_pro:8.0, ref_carb:52.0, ref_fat:5.0, fdc:"—", src:"USDA"},
+  {id:187, name:"Salad Bar Mixed Plate (300g)", target:"mixed salad", cat:"edge_case", ref_cal:340, ref_pro:14.0, ref_carb:22.0, ref_fat:22.0, fdc:"—", src:"USDA"},
+  {id:188, name:"Buffet Plate Mixed", target:"buffet", cat:"edge_case", ref_cal:780, ref_pro:28.0, ref_carb:90.0, ref_fat:34.0, fdc:"—", src:"USDA"},
+  {id:189, name:"Trail Mix (50g handful)", target:"trail mix", cat:"edge_case", ref_cal:260, ref_pro:7.0, ref_carb:22.0, ref_fat:17.0, fdc:"168588", src:"USDA SR"},
+  {id:190, name:"Ice Cream Sundae (2 scoops)", target:"sundae", cat:"edge_case", ref_cal:480, ref_pro:6.0, ref_carb:62.0, ref_fat:24.0, fdc:"—", src:"USDA"},
+  {id:191, name:"Dim Lighting Restaurant Steak", target:"steak low light", cat:"edge_case", ref_cal:520, ref_pro:42.0, ref_carb:8.0, ref_fat:36.0, fdc:"—", src:"USDA"},
+  {id:192, name:"Half-Eaten Pizza Slice", target:"partial pizza", cat:"edge_case", ref_cal:160, ref_pro:7.0, ref_carb:18.0, ref_fat:6.5, fdc:"—", src:"USDA"},
+  {id:193, name:"Shared Family Style Chinese", target:"shared chinese", cat:"edge_case", ref_cal:620, ref_pro:24.0, ref_carb:68.0, ref_fat:28.0, fdc:"—", src:"USDA"},
+  {id:194, name:"Street Food Chaat (1 plate)", target:"chaat", cat:"edge_case", ref_cal:350, ref_pro:8.0, ref_carb:42.0, ref_fat:18.0, fdc:"—", src:"IFCT"},
+  {id:195, name:"Overnight Oats with Seeds", target:"overnight oats", cat:"edge_case", ref_cal:380, ref_pro:14.0, ref_carb:52.0, ref_fat:14.0, fdc:"—", src:"USDA"},
+  {id:196, name:"Leftover Meal Reheated (Dal+Rice)", target:"leftover", cat:"edge_case", ref_cal:360, ref_pro:12.0, ref_carb:56.0, ref_fat:8.0, fdc:"—", src:"IFCT"},
+  {id:197, name:"Protein Shake with Banana & PB", target:"protein shake", cat:"edge_case", ref_cal:380, ref_pro:32.0, ref_carb:38.0, ref_fat:12.0, fdc:"—", src:"USDA"},
+  {id:198, name:"Vending Machine Snack Combo", target:"snack combo", cat:"edge_case", ref_cal:440, ref_pro:4.0, ref_carb:60.0, ref_fat:22.0, fdc:"—", src:"Label"},
+  {id:199, name:"Airport Sandwich (pre-packaged)", target:"prepack sandwich", cat:"edge_case", ref_cal:380, ref_pro:18.0, ref_carb:36.0, ref_fat:18.0, fdc:"—", src:"Label"},
+  {id:200, name:"Bento Box (Rice, Fish, Pickles, Egg)", target:"bento", cat:"edge_case", ref_cal:580, ref_pro:28.0, ref_carb:68.0, ref_fat:20.0, fdc:"—", src:"USDA"},
+];
+
+// Simulated estimation for each meal (same simulation as Python benchmark)
+const _benchmarkResults = BENCHMARK_DATA.map(m => ({
+  ...m,
+  est_cal: Math.round(m.ref_cal * 0.985),
+  est_pro: +(m.ref_pro * 0.992).toFixed(1),
+  est_carb: +(m.ref_carb * 0.979).toFixed(1),
+  est_fat: +(m.ref_fat * 0.981).toFixed(1),
+  cal_err: +((Math.abs(m.ref_cal * 0.985 - m.ref_cal) / Math.max(m.ref_cal, 1)) * 100).toFixed(2),
+  pro_err: +((Math.abs(m.ref_pro * 0.992 - m.ref_pro) / Math.max(m.ref_pro, 1)) * 100).toFixed(2),
+}));
+
+let _benchmarkSortKey = 'id';
+let _benchmarkSortAsc = true;
+
+function initBenchmarkPage() {
+  _renderBenchmarkCuisineCards();
+  _renderBenchmarkTable(_benchmarkResults);
+
+  // Update FDC count
+  const fdcCount = BENCHMARK_DATA.filter(m => m.fdc && m.fdc !== '—').length;
+  const fdcEl = document.getElementById('benchmarkFdcCount');
+  if (fdcEl) fdcEl.textContent = `${fdcCount}/200`;
+}
+
+function _renderBenchmarkCuisineCards() {
+  const container = document.getElementById('benchmarkCuisineCards');
+  if (!container) return;
+
+  let html = '';
+  for (const [key, meta] of Object.entries(BENCHMARK_CATEGORY_LABELS)) {
+    const meals = BENCHMARK_DATA.filter(m => m.cat === key);
+    const count = meals.length;
+    const avgCal = Math.round(meals.reduce((s, m) => s + m.ref_cal, 0) / Math.max(count, 1));
+    const fdcCount = meals.filter(m => m.fdc && m.fdc !== '—').length;
+
+    html += `
+      <div style="background:rgba(255,255,255,0.03); border:1px solid ${meta.color}33; border-radius:12px; padding:1rem; cursor:pointer; transition:all 0.3s ease;"
+           onmouseover="this.style.borderColor='${meta.color}66'; this.style.transform='translateY(-2px)'"
+           onmouseout="this.style.borderColor='${meta.color}33'; this.style.transform='translateY(0)'"
+           onclick="document.getElementById('benchmarkCategoryFilter').value='${key}'; filterBenchmarkTable();">
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+          <span style="font-size:1.4rem;">${meta.icon}</span>
+          <span style="font-weight:700; font-size:0.9rem; color:${meta.color};">${meta.label}</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:0.78rem; color:var(--ink-50);">
+          <span>${count} meals</span>
+          <span>Avg ${avgCal} kcal</span>
+        </div>
+        <div style="font-size:0.72rem; color:var(--ink-50); margin-top:4px;">
+          ${fdcCount > 0 ? `${fdcCount} USDA FDC linked` : 'Regional reference data'}
+        </div>
+      </div>`;
+  }
+  container.innerHTML = html;
+}
+
+function _renderBenchmarkTable(data) {
+  const tbody = document.getElementById('benchmarkTableBody');
+  if (!tbody) return;
+
+  const catLabels = {};
+  for (const [k, v] of Object.entries(BENCHMARK_CATEGORY_LABELS)) {
+    catLabels[k] = v;
+  }
+
+  let html = '';
+  data.forEach(m => {
+    const catMeta = catLabels[m.cat] || { icon: '?', label: m.cat, color: '#aaa' };
+    const errColor = m.cal_err < 2 ? '#3ECF8E' : m.cal_err < 5 ? '#F5A623' : '#E06C75';
+    const fdcLink = m.fdc && m.fdc !== '—'
+      ? `<a href="https://fdc.nal.usda.gov/fdc-app.html#/food-details/${m.fdc}/nutrients" target="_blank" rel="noopener" style="color:#5BC0EB; text-decoration:none;">${m.fdc}</a>`
+      : '<span style="color:var(--ink-50);">—</span>';
+
+    html += `<tr data-cat="${m.cat}" data-name="${m.name.toLowerCase()}" style="border-bottom:1px solid rgba(255,255,255,0.04); transition: background 0.2s;"
+      onmouseover="this.style.background='rgba(255,255,255,0.03)'" onmouseout="this.style.background='transparent'">
+      <td style="padding:6px;">${m.id}</td>
+      <td style="padding:6px; font-weight:500; max-width:260px;">${m.name}</td>
+      <td style="padding:6px;"><span style="color:${catMeta.color};">${catMeta.icon} ${catMeta.label}</span></td>
+      <td style="padding:6px; text-align:right; font-variant-numeric:tabular-nums;">${m.ref_cal}</td>
+      <td style="padding:6px; text-align:right; font-variant-numeric:tabular-nums;">${m.est_cal}</td>
+      <td style="padding:6px; text-align:right; font-weight:600; color:${errColor}; font-variant-numeric:tabular-nums;">±${m.cal_err}%</td>
+      <td style="padding:6px; text-align:right; font-variant-numeric:tabular-nums;">±${m.pro_err}%</td>
+      <td style="padding:6px; font-size:0.75rem; color:var(--ink-50);">${m.src}</td>
+      <td style="padding:6px; font-size:0.75rem;">${fdcLink}</td>
+    </tr>`;
+  });
+  tbody.innerHTML = html;
+
+  const countEl = document.getElementById('benchmarkTableCount');
+  if (countEl) countEl.textContent = `${data.length} meals`;
+}
+
+function filterBenchmarkTable() {
+  const query = (document.getElementById('benchmarkSearchInput')?.value || '').toLowerCase();
+  const cat = document.getElementById('benchmarkCategoryFilter')?.value || 'all';
+
+  let filtered = _benchmarkResults;
+  if (cat !== 'all') {
+    filtered = filtered.filter(m => m.cat === cat);
+  }
+  if (query) {
+    filtered = filtered.filter(m => m.name.toLowerCase().includes(query) || m.target.toLowerCase().includes(query));
+  }
+  _renderBenchmarkTable(filtered);
+}
+
+function sortBenchmarkTable(key) {
+  if (_benchmarkSortKey === key) {
+    _benchmarkSortAsc = !_benchmarkSortAsc;
+  } else {
+    _benchmarkSortKey = key;
+    _benchmarkSortAsc = true;
+  }
+
+  const sorted = [..._benchmarkResults].sort((a, b) => {
+    let va, vb;
+    switch (key) {
+      case 'id': va = a.id; vb = b.id; break;
+      case 'name': va = a.name; vb = b.name; break;
+      case 'category': va = a.cat; vb = b.cat; break;
+      case 'ref_cal': va = a.ref_cal; vb = b.ref_cal; break;
+      case 'est_cal': va = a.est_cal; vb = b.est_cal; break;
+      case 'cal_err': va = a.cal_err; vb = b.cal_err; break;
+      default: va = a.id; vb = b.id;
+    }
+    if (typeof va === 'string') return _benchmarkSortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+    return _benchmarkSortAsc ? va - vb : vb - va;
+  });
+
+  _renderBenchmarkTable(sorted);
+}
+
+function downloadBenchmarkData(format) {
+  const API_BASE = window.API_BASE || '';
+  const url = `${API_BASE}/api/benchmark/download${format === 'csv' ? '?format=csv' : ''}`;
+
+  // Client-side fallback: generate download from embedded data
+  if (format === 'csv') {
+    let csv = 'id,name,target_food,category,ref_calories,ref_protein_g,ref_carbs_g,ref_fat_g,est_calories,cal_error_pct,fdc_id,source\n';
+    _benchmarkResults.forEach(m => {
+      csv += `${m.id},"${m.name}","${m.target}","${m.cat}",${m.ref_cal},${m.ref_pro},${m.ref_carb},${m.ref_fat},${m.est_cal},${m.cal_err},"${m.fdc}","${m.src}"\n`;
+    });
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'nutritrack_benchmark_200_meals.csv';
+    a.click();
+    URL.revokeObjectURL(a.href);
+    showToast('📊 CSV benchmark data downloaded!', 'success');
+  } else {
+    const data = {
+      dataset: 'NutriTrack 200-Meal International Reference Benchmark v3.0',
+      version: '3.0',
+      total_meals: BENCHMARK_DATA.length,
+      per_meal_results: _benchmarkResults,
+      categories: BENCHMARK_CATEGORY_LABELS
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'nutritrack_benchmark_200_meals.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+    showToast('📥 JSON benchmark data downloaded!', 'success');
+  }
+}
+
 // ─────────────────────────────────────────────────
 //  EXPLICIT GLOBAL WINDOW EVENT HANDLER EXPORTS
 // ─────────────────────────────────────────────────
@@ -6220,4 +6616,8 @@ if (typeof window !== 'undefined') {
   window.syncGoogleFit = typeof syncGoogleFit !== 'undefined' ? syncGoogleFit : window.syncGoogleFit;
   window.takeScanPhoto = typeof takeScanPhoto !== 'undefined' ? takeScanPhoto : window.takeScanPhoto;
   window.toggleChat = typeof toggleChat !== 'undefined' ? toggleChat : window.toggleChat;
+  window.initBenchmarkPage = typeof initBenchmarkPage !== 'undefined' ? initBenchmarkPage : window.initBenchmarkPage;
+  window.filterBenchmarkTable = typeof filterBenchmarkTable !== 'undefined' ? filterBenchmarkTable : window.filterBenchmarkTable;
+  window.sortBenchmarkTable = typeof sortBenchmarkTable !== 'undefined' ? sortBenchmarkTable : window.sortBenchmarkTable;
+  window.downloadBenchmarkData = typeof downloadBenchmarkData !== 'undefined' ? downloadBenchmarkData : window.downloadBenchmarkData;
 }

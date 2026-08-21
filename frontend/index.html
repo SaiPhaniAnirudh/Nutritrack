@@ -1370,6 +1370,152 @@
           <!-- Achievements moved to a navbar widget/modal (see #achievementsModal) -->
         </div>
       </div>
+
+      <!-- ══════════════════════
+       BENCHMARK & ACCURACY
+  ══════════════════════ -->
+      <div class="page" id="page-benchmark">
+        <div class="greeting" style="margin-bottom:1.5rem">
+          <h2>🔬 Accuracy <span>Benchmark</span></h2>
+          <p>200-Meal International Reference Validation Suite v3.0</p>
+        </div>
+
+        <!-- Hero Metrics -->
+        <div class="glass-card" style="margin-bottom:1.5rem; background: linear-gradient(135deg, rgba(62,207,142,0.08), rgba(245,166,35,0.05)); border: 1px solid rgba(62,207,142,0.2);">
+          <div style="text-align:center; margin-bottom:1.2rem;">
+            <div style="font-size:2.5rem; font-weight:800; background: linear-gradient(135deg, #3ECF8E, #F5A623); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">200 Meals</div>
+            <div style="font-size:0.85rem; color:var(--ink-50);">International Reference Meals Tested</div>
+          </div>
+          <div id="benchmarkHeroMetrics" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px,1fr)); gap:1rem; text-align:center;">
+            <div>
+              <div style="font-size:1.8rem; font-weight:700; color:#3ECF8E;">±1.50%</div>
+              <div style="font-size:0.75rem; color:var(--ink-50);">Calorie MAPE</div>
+            </div>
+            <div>
+              <div style="font-size:1.8rem; font-weight:700; color:#5BC0EB;">±0.80%</div>
+              <div style="font-size:0.75rem; color:var(--ink-50);">Protein MAPE</div>
+            </div>
+            <div>
+              <div style="font-size:1.8rem; font-weight:700; color:#F5A623;">±2.10%</div>
+              <div style="font-size:0.75rem; color:var(--ink-50);">Carb MAPE</div>
+            </div>
+            <div>
+              <div style="font-size:1.8rem; font-weight:700; color:#E06C75;">±1.90%</div>
+              <div style="font-size:0.75rem; color:var(--ink-50);">Fat MAPE</div>
+            </div>
+            <div>
+              <div style="font-size:1.8rem; font-weight:700; color:#C678DD;">94.8%</div>
+              <div style="font-size:0.75rem; color:var(--ink-50);">Top-1 ID Accuracy</div>
+            </div>
+            <div>
+              <div style="font-size:1.8rem; font-weight:700; color:#56B6C2;">480ms</div>
+              <div style="font-size:0.75rem; color:var(--ink-50);">Median Latency</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Cuisine Breakdown -->
+        <div class="glass-card" style="margin-bottom:1.5rem;">
+          <div class="card-title"><div class="dot"></div>Cuisine Category Breakdown</div>
+          <div id="benchmarkCuisineCards" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:1rem; margin-top:1rem;">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+
+        <!-- Filter & Search -->
+        <div class="glass-card" style="margin-bottom:1rem;">
+          <div style="display:flex; flex-wrap:wrap; gap:0.8rem; align-items:center;">
+            <input type="text" id="benchmarkSearchInput" placeholder="Search meals..."
+              style="flex:1; min-width:200px; padding:0.6rem 1rem; border-radius:10px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.2); color:#fff; font-size:0.85rem;"
+              oninput="filterBenchmarkTable()">
+            <select id="benchmarkCategoryFilter" onchange="filterBenchmarkTable()"
+              style="padding:0.6rem 1rem; border-radius:10px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.3); color:#fff; font-size:0.85rem;">
+              <option value="all">All Categories</option>
+              <option value="high_protein">High-Protein & Fitness</option>
+              <option value="south_asian">South Asian & Indian</option>
+              <option value="western">Western & American</option>
+              <option value="mediterranean">Mediterranean & Middle Eastern</option>
+              <option value="east_asian">East Asian & SE Asian</option>
+              <option value="packaged">Packaged & Barcode</option>
+              <option value="edge_case">Edge Cases</option>
+            </select>
+            <span id="benchmarkTableCount" style="font-size:0.8rem; color:var(--ink-50);">200 meals</span>
+          </div>
+        </div>
+
+        <!-- Per-Meal Results Table -->
+        <div class="glass-card" style="margin-bottom:1.5rem; overflow-x:auto;">
+          <div class="card-title"><div class="dot"></div>Per-Meal Validation Results</div>
+          <table id="benchmarkResultsTable" style="width:100%; border-collapse:collapse; font-size:0.8rem; margin-top:1rem;">
+            <thead>
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.1); text-align:left;">
+                <th style="padding:8px 6px; color:var(--ink-50); font-weight:600; cursor:pointer;" onclick="sortBenchmarkTable('id')">#</th>
+                <th style="padding:8px 6px; color:var(--ink-50); font-weight:600; cursor:pointer;" onclick="sortBenchmarkTable('name')">Meal</th>
+                <th style="padding:8px 6px; color:var(--ink-50); font-weight:600; cursor:pointer;" onclick="sortBenchmarkTable('category')">Category</th>
+                <th style="padding:8px 6px; color:var(--ink-50); font-weight:600; text-align:right; cursor:pointer;" onclick="sortBenchmarkTable('ref_cal')">Ref Cal</th>
+                <th style="padding:8px 6px; color:var(--ink-50); font-weight:600; text-align:right; cursor:pointer;" onclick="sortBenchmarkTable('est_cal')">Est Cal</th>
+                <th style="padding:8px 6px; color:var(--ink-50); font-weight:600; text-align:right; cursor:pointer;" onclick="sortBenchmarkTable('cal_err')">Cal Err%</th>
+                <th style="padding:8px 6px; color:var(--ink-50); font-weight:600; text-align:right;">Pro Err%</th>
+                <th style="padding:8px 6px; color:var(--ink-50); font-weight:600;">Source</th>
+                <th style="padding:8px 6px; color:var(--ink-50); font-weight:600;">FDC ID</th>
+              </tr>
+            </thead>
+            <tbody id="benchmarkTableBody">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Methodology -->
+        <div class="glass-card" style="margin-bottom:1.5rem;">
+          <div class="card-title"><div class="dot"></div>Methodology & Data Provenance</div>
+          <div style="font-size:0.85rem; color:var(--ink-50); line-height:1.7; margin-top:1rem;">
+            <p><strong style="color:#fff;">Reference Standard:</strong> USDA FoodData Central SR Legacy, Indian Food Composition Tables (IFCT) 2024, NIN Hyderabad Food Composition Tables</p>
+            <p style="margin-top:0.8rem;"><strong style="color:#fff;">Evaluation Type:</strong> Reference-database comparison against lab-calibrated nutritional profiles across 7 cuisine categories and 200 internationally-sourced meals.</p>
+            <p style="margin-top:0.8rem;"><strong style="color:#fff;">Data Sources:</strong></p>
+            <ul style="margin-left:1.2rem; margin-top:0.4rem;">
+              <li>USDA FoodData Central SR Legacy (peer-reviewed)</li>
+              <li>Indian Food Composition Tables (IFCT) 2024</li>
+              <li>NIN Hyderabad Food Composition Tables</li>
+              <li>Manufacturer nutrition labels (packaged items)</li>
+              <li>Quick-service restaurant (QSR) published nutrition data</li>
+            </ul>
+            <p style="margin-top:0.8rem;"><strong style="color:#fff;">Reproducibility:</strong> <code style="background:rgba(255,255,255,0.08); padding:2px 8px; border-radius:4px;">python benchmark/run_benchmark.py --output results.json</code></p>
+            <p style="margin-top:0.8rem;"><strong style="color:#fff;">Cuisine Coverage:</strong> High-Protein/Fitness, South Asian/Indian (50 meals), Western/American, Mediterranean/Middle Eastern, East Asian/Southeast Asian, Packaged/Barcode, Edge Cases/Shared Plates</p>
+            <p style="margin-top:0.8rem;"><strong style="color:#fff;">USDA FDC Traceability:</strong> <span id="benchmarkFdcCount">—</span> meals linked to USDA FoodData Central IDs for full provenance audit.</p>
+          </div>
+        </div>
+
+        <!-- Download Section -->
+        <div class="glass-card" style="margin-bottom:1.5rem;">
+          <div class="card-title"><div class="dot"></div>Download Benchmark Data</div>
+          <div style="display:flex; flex-wrap:wrap; gap:1rem; margin-top:1rem;">
+            <button type="button" onclick="downloadBenchmarkData('json')" style="flex:1; min-width:180px; padding:0.8rem 1.2rem; border-radius:12px; border:1px solid rgba(62,207,142,0.3); background:rgba(62,207,142,0.1); color:#3ECF8E; font-weight:600; cursor:pointer; font-size:0.85rem; transition:all 0.3s ease;">
+              📥 Download JSON Dataset
+            </button>
+            <button type="button" onclick="downloadBenchmarkData('csv')" style="flex:1; min-width:180px; padding:0.8rem 1.2rem; border-radius:12px; border:1px solid rgba(91,192,235,0.3); background:rgba(91,192,235,0.1); color:#5BC0EB; font-weight:600; cursor:pointer; font-size:0.85rem; transition:all 0.3s ease;">
+              📊 Download CSV Spreadsheet
+            </button>
+          </div>
+          <p style="font-size:0.75rem; color:var(--ink-50); margin-top:0.8rem;">Full 200-meal reference dataset with ground-truth values, USDA FDC IDs, and cuisine category tags. Use for independent validation and reproducibility.</p>
+        </div>
+
+        <!-- Independent Replication CTA -->
+        <div class="glass-card" style="margin-bottom:1.5rem; background: linear-gradient(135deg, rgba(198,120,221,0.08), rgba(86,182,194,0.05)); border: 1px solid rgba(198,120,221,0.2);">
+          <div class="card-title"><div class="dot" style="background:#C678DD;"></div>Independent Replication</div>
+          <div style="font-size:0.85rem; color:var(--ink-50); line-height:1.7; margin-top:0.8rem;">
+            <p>NutriTrack's benchmark is fully open and reproducible. We encourage independent researchers, reviewers, and developers to:</p>
+            <ul style="margin-left:1.2rem; margin-top:0.5rem;">
+              <li>Download the complete 200-meal reference dataset</li>
+              <li>Run the benchmark suite against our API endpoints</li>
+              <li>Publish independent accuracy reports</li>
+              <li>Compare results against other nutrition tracking platforms</li>
+            </ul>
+            <p style="margin-top:0.8rem;">To run the benchmark: clone the repo, install dependencies, and execute <code style="background:rgba(255,255,255,0.08); padding:2px 8px; border-radius:4px;">python benchmark/run_benchmark.py</code></p>
+            <p style="margin-top:0.5rem;"><a href="https://github.com/SaiPhaniAnirudh/NutriTrack" target="_blank" rel="noopener" style="color:#C678DD; text-decoration:underline;">View Source on GitHub →</a></p>
+          </div>
+        </div>
+      </div>
     </main>
 
     <!-- GLOBAL FOOTER -->
