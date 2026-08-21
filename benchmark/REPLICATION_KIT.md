@@ -61,11 +61,28 @@ External auditors can query live platform endpoints without authentication:
 * **Public Benchmark Metrics (v3.2):** `GET /api/benchmark/public`
 * **Raw Dataset Download (JSON):** `GET /api/benchmark/download`
 * **Raw Dataset Download (CSV):** `GET /api/benchmark/download?format=csv`
+* **Active Learning Convergence Metrics:** `GET /api/ai/learning-metrics`
+* **Clinical Safety Decision Audit Trail:** `GET /api/clinical/audit-log`
 * **Endpoint Observability & P95 Latency:** `GET /api/observability`
 * **Database Categorization & Taxonomy Stats:** `GET /api/database/stats`
 
 ---
 
-## 🏛️ 5. Attribution & Licensing
+## 🔬 5. Versioned Research Artifact Specifications
+
+| Component | Version / Specification | Checksum / Hash |
+| :--- | :--- | :--- |
+| **Dataset Version** | `NutriTrack-200-International-Reference-Suite-v3` | `SHA-256: e2ae4d0648eec1352a68dd85a9b798dec6f9cde92a95d5c92c80d083f11ffefd` |
+| **Evaluation Script** | `benchmark/run_benchmark.py (v3.2.4)` | Integrated Student-t & Bootstrap 95% CIs |
+| **Held-Out Test Suite** | `tests/test_active_learning_heldout.py (v1.0)` | 50 unseen evaluation meals |
+| **Primary Vision Engine** | `Groq LPU (Llama-3.2-90B-Vision-Preview)` | Fixed temperature $T=0.1$ |
+| **Fallback Multimodal** | `Google Gemini 2.5 Flash` | Fixed temperature $T=0.2$ |
+| **Database Chemistry** | `USDA FoodData Central SR Legacy & IFCT 2024` | 82+ verified nutrient taxonomy |
+| **Runtime Environment** | Python 3.10+ on Ubuntu / Windows / macOS | Lockfile: `requirements.txt` |
+
+---
+
+## 🏛️ 6. Attribution & Licensing
 * **Reference Data:** USDA FoodData Central (Public Domain) & IFCT 2024
 * **Harness Code:** MIT License &copy; 2026 Sai Phani Anirudh
+

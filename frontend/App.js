@@ -6579,9 +6579,51 @@ function downloadBenchmarkData(format) {
 }
 
 // ─────────────────────────────────────────────────
+//  CLINICIAN OVERRIDE & MEDICAL SAFETY HANDLER
+// ─────────────────────────────────────────────────
+async function saveClinicianOverride() {
+  const license = document.getElementById('clinicianLicenseInput')?.value?.trim();
+  const cals = parseInt(document.getElementById('clinicianCalFloorInput')?.value, 10);
+  const prot = parseInt(document.getElementById('clinicianProteinCapInput')?.value, 10);
+
+  if (!license) {
+    showToast('⚠️ Please enter a valid Clinician License ID', 'error');
+    return;
+  }
+
+  const payload = {
+    clinician_license_id: license,
+    custom_calorie_floor: isNaN(cals) ? null : cals,
+    custom_protein_cap_g: isNaN(prot) ? null : prot,
+    notes: 'Clinician individualized safety lock applied from NutriTrack Profile'
+  };
+
+  try {
+    const API_BASE = window.API_BASE || '';
+    const res = await fetch(`${API_BASE}/api/clinical/override`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast('✅ Clinician safety override saved & locked!', 'success');
+      localStorage.setItem('nutritrack_clinician_override', JSON.stringify(data.override));
+    } else {
+      showToast('⚠️ Failed to save clinician override', 'error');
+    }
+  } catch (err) {
+    // Client-side fallback save
+    localStorage.setItem('nutritrack_clinician_override', JSON.stringify(payload));
+    showToast('✅ Clinician override saved locally!', 'success');
+  }
+}
+
+// ─────────────────────────────────────────────────
 //  EXPLICIT GLOBAL WINDOW EVENT HANDLER EXPORTS
 // ─────────────────────────────────────────────────
 if (typeof window !== 'undefined') {
+  window.saveClinicianOverride = saveClinicianOverride;
   window.openCoachingModal = openCoachingModal;
   window.closeCoachingModal = closeCoachingModal;
   window.applyCoachingTargets = applyCoachingTargets;
