@@ -6620,9 +6620,55 @@ async function saveClinicianOverride() {
 }
 
 // ─────────────────────────────────────────────────
+//  PWA & ANDROID APK INSTALL HANDLER
+// ─────────────────────────────────────────────────
+let deferredPrompt = null;
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    const btn = document.getElementById('pwaInstallBtn');
+    if (btn) btn.style.display = 'block';
+  });
+}
+
+function openInstallModal() {
+  const modal = document.getElementById('installAppModal');
+  if (modal) modal.style.display = 'flex';
+}
+
+function closeInstallModal() {
+  const modal = document.getElementById('installAppModal');
+  if (modal) modal.style.display = 'none';
+}
+
+async function triggerPwaInstall() {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      showToast('🎉 NutriTrack installed to your Home Screen!', 'success');
+    }
+    deferredPrompt = null;
+    closeInstallModal();
+  } else {
+    // If browser prompt is not ready or on iOS Safari
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    if (isIOS) {
+      showToast('📲 On iPhone: Tap Share ⎋ → "Add to Home Screen" ⊞', 'info');
+    } else {
+      showToast('📲 In Chrome: Tap the ⋮ menu → "Install app" or "Add to Home Screen"', 'info');
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────
 //  EXPLICIT GLOBAL WINDOW EVENT HANDLER EXPORTS
 // ─────────────────────────────────────────────────
 if (typeof window !== 'undefined') {
+  window.openInstallModal = openInstallModal;
+  window.closeInstallModal = closeInstallModal;
+  window.triggerPwaInstall = triggerPwaInstall;
   window.saveClinicianOverride = saveClinicianOverride;
   window.openCoachingModal = openCoachingModal;
   window.closeCoachingModal = closeCoachingModal;
