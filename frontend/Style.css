@@ -5886,4 +5886,247 @@ body {
     opacity: 1;
     filter: drop-shadow(0 0 6px #3ecf8e);
   }
-}
+}
+
+/* ══════════════════════════════════════════════════
+   NATIVE MOBILE UI/UX MASTER REDESIGN
+   Elevating Mobile Experience to Tier-1 Consumer Standard
+   ══════════════════════════════════════════════════ */
+
+/* ── Mobile Quick Actions Bar ── */
+.mobile-quick-actions {
+  display: none; /* hidden on desktop */
+}
+
+@media (max-width: 900px) {
+  .mobile-quick-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 4px 2px 14px;
+    margin-bottom: 1rem;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .mobile-quick-actions::-webkit-scrollbar {
+    display: none;
+  }
+
+  .mob-quick-btn {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 50px;
+    color: #ffffff;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .mob-quick-btn:active {
+    transform: scale(0.94);
+  }
+
+  .mob-quick-btn.mob-quick-scan {
+    background: linear-gradient(135deg, rgba(62, 207, 142, 0.25), rgba(45, 158, 107, 0.15));
+    border-color: rgba(62, 207, 142, 0.45);
+    color: #3ecf8e;
+    box-shadow: 0 4px 12px rgba(62, 207, 142, 0.15);
+  }
+
+  .mob-quick-btn.mob-quick-water {
+    background: linear-gradient(135deg, rgba(91, 192, 235, 0.2), rgba(2, 136, 209, 0.12));
+    border-color: rgba(91, 192, 235, 0.4);
+    color: #5bc0eb;
+  }
+
+  .mq-icon {
+    font-size: 1rem;
+    line-height: 1;
+  }
+
+  /* ── Native Mobile Topbar ── */
+  .mobile-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: rgba(10, 15, 13, 0.88) !important;
+    backdrop-filter: blur(20px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+    border-bottom: 1px solid rgba(62, 207, 142, 0.15) !important;
+    position: sticky;
+    top: 0;
+    z-index: 900;
+  }
+
+  .mobile-topbar .nav-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* ── Native Floating Bottom Navigation Bar ── */
+  .mobile-nav {
+    display: flex !important;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 950;
+    background: rgba(10, 15, 13, 0.92) !important;
+    backdrop-filter: blur(28px) saturate(200%) !important;
+    -webkit-backdrop-filter: blur(28px) saturate(200%) !important;
+    border-top: 1px solid rgba(62, 207, 142, 0.2) !important;
+    box-shadow: 0 -10px 36px rgba(0, 0, 0, 0.7) !important;
+    padding: 6px 8px max(10px, env(safe-area-inset-bottom, 10px)) !important;
+    justify-content: space-around;
+  }
+
+  .mob-nav-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 6px 2px;
+    border-radius: 12px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .mob-nav-btn.active {
+    background: rgba(62, 207, 142, 0.12);
+  }
+
+  .mob-nav-btn.active .mob-nav-icon {
+    transform: translateY(-2px) scale(1.12);
+    filter: drop-shadow(0 2px 8px rgba(62, 207, 142, 0.5));
+  }
+
+  .mob-nav-btn.active .mob-nav-label {
+    color: #3ecf8e !important;
+    font-weight: 700;
+    text-shadow: 0 0 10px rgba(62, 207, 142, 0.4);
+  }
+
+  /* ── Mobile Layout & Card Aesthetics ── */
+  .page {
+    padding: 1rem 0.9rem calc(76px + env(safe-area-inset-bottom, 12px)) !important;
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+
+  .glass-card,
+  .stat-card,
+  .macro-3d-card {
+    border-radius: 18px !important;
+    padding: 1.15rem 1rem !important;
+    margin-bottom: 1rem !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    background: linear-gradient(145deg, rgba(18, 28, 22, 0.85), rgba(12, 18, 14, 0.95)) !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45) !important;
+  }
+
+  .greeting h2 {
+    font-size: 1.35rem !important;
+    line-height: 1.25;
+  }
+
+  /* ── Mobile Modal Bottom-Sheet Transformation ── */
+  .modal-overlay,
+  .dp-overlay {
+    align-items: flex-end !important;
+    justify-content: center !important;
+    padding: 0 !important;
+  }
+
+  .modal-box,
+  .dp-panel,
+  .recipe-modal-box,
+  .ach-modal-box {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 88dvh !important;
+    border-radius: 24px 24px 0 0 !important;
+    border-bottom: none !important;
+    margin: 0 !important;
+    animation: sheetSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) both !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding: 1.5rem 1.1rem max(1.5rem, env(safe-area-inset-bottom, 1.5rem)) !important;
+    position: relative;
+  }
+
+  .modal-box::before,
+  .dp-panel::before,
+  .recipe-modal-box::before {
+    content: '';
+    position: sticky;
+    top: -1.2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px;
+    height: 4px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.25);
+    display: block;
+    margin: 0 auto 12px;
+  }
+
+  /* ── Mobile Food Cards & Search Ergonomics ── */
+  .food-card {
+    padding: 12px 14px !important;
+    border-radius: 14px !important;
+  }
+
+  .food-card-action button,
+  .food-add-btn {
+    min-width: 44px !important;
+    min-height: 44px !important;
+    border-radius: 12px !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ── Mobile Viewfinder & Camera ── */
+  .cam-area {
+    border-radius: 18px !important;
+    min-height: 220px !important;
+  }
+
+  /* ── Assistant Floating Button Safe Area ── */
+  #nutribotBtn {
+    bottom: calc(76px + env(safe-area-inset-bottom, 10px)) !important;
+    right: 12px !important;
+    width: 52px !important;
+    height: 52px !important;
+    box-shadow: 0 8px 24px rgba(62, 207, 142, 0.4) !important;
+  }
+}
+
+@keyframes sheetSlideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0.5;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+

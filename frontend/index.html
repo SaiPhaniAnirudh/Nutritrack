@@ -592,6 +592,30 @@
           <div class="mdb-arrow">→</div>
         </div>
 
+        <!-- MOBILE QUICK ACTIONS BAR (Native App Feel) -->
+        <div class="mobile-quick-actions">
+          <button type="button" class="mob-quick-btn mob-quick-scan" onclick="showPage('track', document.querySelector('.nav-btn[onclick*=track]')); setTimeout(startScanCamera, 100);">
+            <span class="mq-icon">📸</span>
+            <span class="mq-text">AI Scanner</span>
+          </button>
+          <button type="button" class="mob-quick-btn" onclick="showPage('track', document.querySelector('.nav-btn[onclick*=track]')); document.getElementById('foodSearch')?.focus();">
+            <span class="mq-icon">🔍</span>
+            <span class="mq-text">Search</span>
+          </button>
+          <button type="button" class="mob-quick-btn mob-quick-water" onclick="logWater(250)">
+            <span class="mq-icon">💧</span>
+            <span class="mq-text">+250ml</span>
+          </button>
+          <button type="button" class="mob-quick-btn" onclick="showPage('track', document.querySelector('.nav-btn[onclick*=track]')); setTimeout(startVoiceLog, 100);">
+            <span class="mq-icon">🎙️</span>
+            <span class="mq-text">Voice</span>
+          </button>
+          <button type="button" class="mob-quick-btn" onclick="showPage('benchmark', null);">
+            <span class="mq-icon">🔬</span>
+            <span class="mq-text">Accuracy</span>
+          </button>
+        </div>
+
 
         <div class="stats-row">
           <div class="stat-card stat-card-ring" style="--accent: #F5A623">
