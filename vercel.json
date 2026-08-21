@@ -8,6 +8,7 @@
     { "source": "/i18n.js", "destination": "/frontend/i18n.js" },
     { "source": "/logo-nav.png", "destination": "/frontend/logo-nav.png" },
     { "source": "/icons/(.*)", "destination": "/frontend/icons/$1" },
+    { "source": "/api/(.*)", "destination": "/api/index.py" },
     { "source": "/(.*)", "destination": "/frontend/index.html" }
   ]
 }
