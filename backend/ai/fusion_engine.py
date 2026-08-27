@@ -20,7 +20,7 @@ from . import groq_engine
 from . import gemini_engine
 from ..nutrition.nutrients import parse_usda_nutrients, USDA_NUTRIENT_MAP
 
-CONFIDENCE_THRESHOLD = 85  # Above this, Groq's fast result is accepted directly
+CONFIDENCE_THRESHOLD = 70  # Prioritize Groq's sub-second fast-path for all confident identifications
 
 
 def analyze_food_image(image_base64, db_lookup_fn=None):
