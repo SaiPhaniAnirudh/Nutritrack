@@ -1797,15 +1797,14 @@ function _showScanPreview(dataUrl) {
 }
 
 function clearScan() {
-  // Cancel any in-flight AI request so the result doesn't appear after clearing
   if (_scanAbortCtrl) { _scanAbortCtrl.abort(); _scanAbortCtrl = null; }
-  // change #5: nullify image immediately
   scanImageB64 = null;
   const preview = document.getElementById('scanPreview');
   preview.src = ''; preview.style.display = 'none';
   const area = document.getElementById('camArea');
   area.style.display = ''; area.style.minHeight = '';
   area.classList.remove('has-media');
+  document.querySelectorAll('.ai-bbox-overlay').forEach(el => el.remove());
   document.getElementById('camPlaceholder').style.display = 'flex';
   document.getElementById('scanActionRow').style.display = 'flex';
   document.getElementById('scanReadyRow').style.display = 'none';
@@ -1845,7 +1844,6 @@ async function _callLLMAPI(imageB64, signal) {
 
   for (const url of urls) {
     try {
-      // Direct high-speed JSON request (avoids failed SSE streaming roundtrips)
       const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1878,7 +1876,7 @@ function _compressImage(b64, maxBytes = 40000) {
     img.onload = () => {
       const cvs = document.getElementById('scanCanvas') || document.createElement('canvas');
       let w = img.width, h = img.height;
-      const MAX = 400; // Optimal resolution for Groq/Gemini LPU Vision (sub-second transmission)
+      const MAX = 400;
       if (w > MAX || h > MAX) {
         if (w > h) { h = Math.round((h * MAX) / w); w = MAX; }
         else { w = Math.round((w * MAX) / h); h = MAX; }
@@ -1909,6 +1907,7 @@ async function scanWithAI() {
 
   setScanning(true);
   showScanStatus('⚡ Groq LPU Vision scanning…', 'info');
+  document.querySelectorAll('.ai-bbox-overlay').forEach(el => el.remove());
 
   document.getElementById('scanResult').innerHTML = `
     <div class="scan-result-placeholder" style="padding:1.8rem 1rem;">
@@ -1930,13 +1929,14 @@ async function scanWithAI() {
     const result = await _callLLMAPI(imageToSend, signal);
     clearInterval(statusInterval);
 
-    if (result.description === 'not_food' || result.not_food === true || !result.items || result.items.length === 0) {
+    if (result.description === 'not_food' || result.not_food === true || !result.items || result.items.length === 0 || result.scan_failed === true) {
+      document.querySelectorAll('.ai-bbox-overlay').forEach(el => el.remove());
       hideScanStatus(); setScanning(false); showNonFoodModal();
       document.getElementById('scanResult').innerHTML = `
         <div class="scan-result-placeholder">
           <div style="font-size:2.5rem">🚫</div>
           <div style="font-size:0.85rem;font-weight:500;margin-top:0.5rem;color:#F4613A">No food detected</div>
-          <div style="font-size:0.72rem;opacity:0.45;margin-top:0.3rem">Please try a clear food photo</div>
+          <div style="font-size:0.72rem;opacity:0.45;margin-top:0.3rem">Please try a clear photo of food</div>
         </div>`;
       return;
     }
@@ -1948,6 +1948,7 @@ async function scanWithAI() {
   } catch (e) {
     clearInterval(statusInterval);
     setScanning(false);
+    document.querySelectorAll('.ai-bbox-overlay').forEach(el => el.remove());
     if (e.name === 'AbortError') return;
     const isServerErr = e.message && e.message.startsWith('SERVER_ERROR:');
     const offline = !isServerErr && (e.message === 'LLM_OFFLINE'
@@ -1988,6 +1989,17 @@ function _renderAIBoundingOverlays(items) {
   if (!area) return;
   area.querySelectorAll('.ai-bbox-overlay').forEach(el => el.remove());
 
+  // Filter out any non-food or scan unavailable items
+  const validItems = (items || []).filter(f => 
+    f.name && 
+    !f.name.toLowerCase().includes('unavailable') && 
+    !f.name.toLowerCase().includes('unknown') && 
+    !f.name.toLowerCase().includes('no food') &&
+    (f.cal > 0 || f.pro > 0 || f.carb > 0)
+  );
+
+  if (validItems.length === 0) return;
+
   const positions = [
     { top: '12%', left: '10%', width: '42%', height: '40%', color: '#3ecf8e' },
     { top: '16%', left: '54%', width: '38%', height: '38%', color: '#f5a623' },
@@ -1995,7 +2007,7 @@ function _renderAIBoundingOverlays(items) {
     { top: '54%', left: '60%', width: '34%', height: '36%', color: '#f4613a' },
   ];
 
-  items.forEach((f, idx) => {
+  validItems.forEach((f, idx) => {
     const pos = positions[idx % positions.length];
     const overlay = document.createElement('div');
     overlay.className = 'ai-bbox-overlay';
