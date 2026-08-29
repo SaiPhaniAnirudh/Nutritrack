@@ -1352,7 +1352,7 @@ function initApp() {
   document.getElementById('editIronGoal').value = g.iron || 18;
   document.getElementById('editFolateGoal').value = g.folate || 400;
 
-  buildCatFilters();
+  if (typeof buildCatFilters === 'function') buildCatFilters();
   autoSelectMeal();
   loadApiKey();
   refreshDashboard();

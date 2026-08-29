@@ -2,11 +2,18 @@
   "rewrites": [
     { "source": "/sitemap.xml", "destination": "/frontend/sitemap.xml" },
     { "source": "/robots.txt", "destination": "/frontend/robots.txt" },
+    { "source": "/manifest.json", "destination": "/frontend/manifest.json" },
+    { "source": "/sw.js", "destination": "/frontend/sw.js" },
+    { "source": "/llms.txt", "destination": "/frontend/llms.txt" },
     { "source": "/App.js", "destination": "/frontend/App.js" },
     { "source": "/Style.css", "destination": "/frontend/Style.css" },
     { "source": "/Foods.js", "destination": "/frontend/Foods.js" },
     { "source": "/i18n.js", "destination": "/frontend/i18n.js" },
     { "source": "/logo-nav.png", "destination": "/frontend/logo-nav.png" },
+    { "source": "/logo-nav.svg", "destination": "/frontend/logo-nav.svg" },
+    { "source": "/logo-auth.svg", "destination": "/frontend/logo-auth.svg" },
+    { "source": "/logo-loader.svg", "destination": "/frontend/logo-loader.svg" },
+    { "source": "/google48fa25baafab220f.html", "destination": "/frontend/google48fa25baafab220f.html" },
     { "source": "/icons/(.*)", "destination": "/frontend/icons/$1" },
     { "source": "/api/(.*)", "destination": "/api/index.py" },
     { "source": "/(.*)", "destination": "/frontend/index.html" }
