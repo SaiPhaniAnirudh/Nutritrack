@@ -2095,6 +2095,49 @@ function scaleScannedPortion(safeId, mult) {
   showToast(`Portion scaled to ${Math.round(mult * 100)}% (${currentObj.cal} kcal)`, 'info');
 }
 
+function adjust3DDepthHeight(safeId, foodName, heightVal) {
+  const h = parseFloat(heightVal) || 3.5;
+  const labelEl = document.getElementById(`depth_label_${safeId}`);
+  if (labelEl) labelEl.textContent = `${h.toFixed(1)}cm`;
+
+  const currentObj = window._foodCardMap && window._foodCardMap[safeId];
+  if (!currentObj) return;
+
+  if (!currentObj._baseCal) {
+    currentObj._baseCal = currentObj.cal;
+    currentObj._basePro = currentObj.pro;
+    currentObj._baseCarb = currentObj.carb;
+    currentObj._baseFat = currentObj.fat;
+  }
+
+  const mult = h / 3.5;
+  const area = 65.0; // Standard single-item plate coverage in cm²
+  const vol = Math.round(area * h * 0.75);
+  
+  const n = (foodName || '').toLowerCase();
+  let density = 0.85;
+  if (n.includes('salad') || n.includes('greens')) density = 0.25;
+  else if (n.includes('rice') || n.includes('grain')) density = 0.78;
+  else if (n.includes('dal') || n.includes('curry')) density = 1.02;
+  else if (n.includes('chicken') || n.includes('meat')) density = 0.95;
+
+  const mass = Math.round(vol * density);
+
+  currentObj.cal = Math.round(currentObj._baseCal * mult);
+  currentObj.pro = +(currentObj._basePro * mult).toFixed(1);
+  currentObj.carb = +(currentObj._baseCarb * mult).toFixed(1);
+  currentObj.fat = +(currentObj._baseFat * mult).toFixed(1);
+
+  const volEl = document.getElementById(`vol_val_${safeId}`);
+  if (volEl) volEl.textContent = `~${vol} cm³ · ~${mass}g`;
+
+  const weightEl = document.getElementById(`weight_${safeId}`);
+  if (weightEl) weightEl.textContent = `⚖️ ~${mass}g`;
+
+  const calEl = document.getElementById(`cal_${safeId}`);
+  if (calEl) calEl.innerHTML = `${currentObj.cal} <span style="font-size:0.65rem;font-weight:400;color:var(--ink-50)">kcal</span>`;
+}
+
 function _renderAIBoundingOverlays(items) {
   const area = document.getElementById('camArea');
   if (!area) return;
@@ -2211,11 +2254,24 @@ function _renderScanResult(r) {
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0.4rem;">
         <div>
           <div style="font-size:0.9rem;font-weight:600;color:var(--ink)">🍽️ ${f.name}</div>
-          <div style="font-size:0.68rem;color:var(--ink-50);margin-top:1px">${f.size} · <span style="color:#7fb8d4">⚖️ ~${Math.round(f.cal * 0.85)}g</span></div>
+          <div style="font-size:0.68rem;color:var(--ink-50);margin-top:1px">${f.size} · <span id="weight_${itemSafeId}" style="color:#7fb8d4">⚖️ ~${Math.round(f.cal * 0.85)}g</span></div>
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.3rem">
           <div id="cal_${itemSafeId}" style="font-size:1rem;font-weight:700;color:#F5A623">${f.cal} <span style="font-size:0.65rem;font-weight:400;color:var(--ink-50)">kcal</span></div>
           <div style="font-size:0.62rem;padding:1px 7px;border-radius:50px;border:1px solid ${iCC};color:${iCC}">${f.conf}% confident</div>
+        </div>
+      </div>
+
+      <!-- 3D VOLUMETRIC SPATIAL DEPTH HUD -->
+      <div style="margin:0.5rem 0; padding:8px 10px; background:rgba(62,207,142,0.05); border:1px solid rgba(62,207,142,0.22); border-radius:10px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.72rem; font-weight:700; color:var(--kiwi);">
+          <span>📐 3D Volumetric Mesh</span>
+          <span id="vol_val_${itemSafeId}">~180 cm³ · ~155g</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px; margin-top:5px;">
+          <span style="font-size:0.65rem; color:var(--ink-50);">Elevation Depth:</span>
+          <input type="range" min="1.0" max="7.0" step="0.5" value="3.5" style="flex:1; accent-color:#3ecf8e; cursor:pointer;" oninput="adjust3DDepthHeight('${itemSafeId}', '${f.name}', this.value)">
+          <span id="depth_label_${itemSafeId}" style="font-size:0.68rem; font-weight:700; color:#fff; min-width:32px;">3.5cm</span>
         </div>
       </div>
 

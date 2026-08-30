@@ -2240,6 +2240,32 @@ def analyze_nutrition_label_route():
 
 
 # ══════════════════════════════════════════════════
+#  3D VOLUMETRIC & DENSITY CALIBRATION
+# ══════════════════════════════════════════════════
+
+@app.route('/api/ai/volume-calibrate', methods=['POST'])
+@jwt_required(optional=True)
+def volume_calibrate():
+    """
+    Computes 3D cubic volume (cm³) and USDA empirical mass (grams)
+    from spatial surface area, elevation height, and food category density.
+    """
+    data = request.get_json() or {}
+    food_name = data.get('food_name', 'Mixed Food')
+    area = float(data.get('surface_area_cm2', 65.0))
+    height = float(data.get('height_cm', 3.5))
+    shape = data.get('shape_type', 'mound')
+
+    try:
+        from nutrition import density
+    except ImportError:
+        from backend.nutrition import density
+
+    result = density.calculate_3d_volumetric_mass(food_name, area, height, shape)
+    return jsonify(result)
+
+
+# ══════════════════════════════════════════════════
 #  AI FOOD ANALYSIS
 # ══════════════════════════════════════════════════
 
