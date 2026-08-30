@@ -1,33 +1,33 @@
-# 🚀 NutriTrack Community Launch & Peer-Review Toolkit
+# 🚀 NutriTrack Community Launch & Replication Toolkit
 
-This toolkit provides copy-paste ready launch copy, social threads, Reddit posts, and email submission templates to drive real-world user engagement, collect reviews, and secure third-party peer reviews.
+This toolkit provides copy-paste ready launch copy, social threads, Reddit posts, and email submission templates to drive real-world user engagement, collect reviews, and share your open-source research dataset.
 
 ---
 
-## 📬 1. Direct Peer-Review & Lab Outreach Emails
+## 📬 1. Direct Outreach & Research Sharing
 
-### Email 1: University Nutrition & Health AI Labs
+### Email: University Nutrition & Health AI Labs
 **Subject:** `[Open Research] 200-Meal Nutrition AI Benchmark Dataset & Replication Kit (NutriTrack)`
 ```text
 Dear Prof. / Dr. [Name],
 
-I am reaching out from the NutriTrack team to share our open-source 200-meal international reference validation suite for automated dietary assessment and multimodal portion estimation.
+I am reaching out to share our open-source 200-meal reference dataset and replication kit for automated dietary assessment and multimodal portion estimation.
 
-Key Findings from our Lab Calibration:
+Key Technical Highlights:
 • 94.8% Top-1 identification across 7 global cuisine categories (including complex South Asian thalis).
 • ±1.50% Calorie MAPE with deterministic USDA FoodData Central & IFCT 2024 chemistry.
-• 90.1% error reduction (15.5% -> 1.54%) verified on a strictly held-out test of 50 unseen meals.
-• Comprehensive tracking of 67+ Clinical Nutrients (BCAAs, Fatty Acids, Phytochemicals).
+• 87+ Clinical Nutrients tracked (NIH DRI vitamins, trace minerals, phytosterols, and full fatty acid profiles).
+• Real-time WHO/FAO DIAAS Protein Quality & Amino Acid Completeness calculation.
+• Sub-500ms inference with Groq LPU Vision and Google Gemini Flash fallback.
 
-Our entire replication suite is cryptographically frozen (SHA-256: 45bf701e...) and executable in 2 minutes:
-Replication Kit: https://github.com/SaiPhaniAnirudh/NutriTrack/blob/main/benchmark/REPLICATION_KIT.md
-Live Web App: https://nutritrack-rho-rust.vercel.app/
-
-We would be honored if your research group would consider reviewing or citing this benchmark in upcoming dietary AI evaluations.
+Replication Kit & Dataset:
+• Hugging Face Hub: https://huggingface.co/datasets/EnergyVenom/nutritrack-200-meal-reference-suite
+• GitHub Repo: https://github.com/SaiPhaniAnirudh/NutriTrack
+• Live Web App: https://nutritrack-rho-rust.vercel.app/
 
 Warm regards,
 Sai Phani Anirudh
-Lead Developer, NutriTrack
+Developer, NutriTrack
 ```
 
 ---
@@ -35,7 +35,7 @@ Lead Developer, NutriTrack
 ## 💬 2. Reddit Community Launch Posts
 
 ### Subreddit: `r/fitness` & `r/nutrition`
-**Title:** `I built a free AI food tracker that scans whole meals, tracks 67+ clinical nutrients (BCAAs, Omega-3s), and works 100% offline`
+**Title:** `I built a free AI food tracker that scans whole meals, calculates WHO DIAAS protein quality, tracks 87+ nutrients, and works 100% offline`
 ```markdown
 Hey everyone! 👋
 
@@ -44,23 +44,23 @@ Most food tracking apps stop at standard calories, protein, carbs, and fat—oft
 Over the last several months, I built **NutriTrack**—a free, private, and open nutrition intelligence platform:
 
 ✨ **What makes it different:**
-1. 📸 **Multi-Item AI Camera:** Scans whole plates at once and identifies each ingredient with bounding boxes.
-2. 🧬 **67+ Clinical Micronutrients:** Deep breakdown of 13 Vitamins, 9 Minerals, Omega-3/6 fatty acid profiles, 19 Amino Acids (Leucine, Isoleucine, Valine), and Polyphenols.
-3. 🔬 **Scientifically Audited:** Built a 200-meal international reference benchmark with USDA FoodData Central and Indian IFCT 2024 chemistry (±1.50% Calorie MAPE).
-4. 🧠 **Adaptive Learning:** The AI learns your personal plate size and portion biases as you make edits ($15.5\% \rightarrow 1.54\%$ error reduction on held-out meals).
+1. 📸 **Multi-Item AI Camera & Label OCR:** Scans whole plates with bounding boxes, or snaps physical Nutrition Facts labels on packages.
+2. 🧬 **87+ Clinical Micronutrients:** Deep breakdown of 18 Vitamins, 16 Minerals, Omega-3/6 fatty acids, 19 Amino Acids, and Phytosterols.
+3. 🔬 **WHO/FAO DIAAS Protein Quality:** Evaluates your amino acid completeness and identifies any limiting amino acids (e.g. Lysine, Methionine) in real time.
+4. ✋ **Visual Portion Scaler:** Calibrate portion sizes in 1 tap with visual hand/fist multipliers.
 5. ⚡ **Metabolic Coach:** Rolling 14-day adaptive TDEE expenditure engine.
 6. 🌐 **100% Free & Offline PWA:** Works completely offline with 550+ cached foods and can be installed to your Home Screen in 1 tap.
 
-Try it live (No credit card or paywalls):
+Try it live (100% free, no credit cards or paywalls):
 👉 **https://nutritrack-rho-rust.vercel.app/**
 
-I would love to hear your feedback, feature requests, or any dishes you'd like added to the database!
+I would love to hear your feedback, feature requests, or any dishes you'd like added!
 ```
 
 ---
 
 ### Subreddit: `r/SideProject` & `r/selfhosted`
-**Title:** `NutriTrack — Open-source, reproducible AI food tracker with Groq LPU Vision (480ms), 67+ nutrients, and offline PWA`
+**Title:** `NutriTrack — Open-source AI food tracker with Groq LPU Vision (480ms), 87+ nutrients, WHO DIAAS engine, and offline PWA`
 ```markdown
 Hey r/SideProject! 🚀
 
@@ -68,16 +68,19 @@ I wanted to share **NutriTrack**, a high-performance food intelligence platform 
 
 🛠️ **Tech Stack:**
 • **Vision Engine:** Groq LPU (Llama 3.2 90B Vision) fast-path ($480\text{ms}$ latency) + Google Gemini 2.5 Flash fallback.
-• **Database:** USDA FoodData Central SR Legacy + Indian Food Composition Tables (IFCT 2024).
-• **PWA & Offline:** Vanilla JS + IndexedDB for 0ms client-side search across 15,000+ foods.
-• **Scientific Rigor:** Canonical 200-meal benchmark suite with 95% Confidence Intervals and automated CLI verifier.
+• **Label OCR:** Instant physical Nutrition Facts extraction.
+• **Database:** USDA FoodData Central SR Legacy + Indian Food Composition Tables (IFCT 2024) across 87+ verified nutrients.
+• **Protein Science:** WHO/FAO DIAAS Amino Acid Completeness scoring engine.
+• **PWA & Offline:** Vanilla JS + IndexedDB with SHA-256 image hash caching for 0ms repeated recalls.
+• **Public Dataset:** Published on Hugging Face at `EnergyVenom/nutritrack-200-meal-reference-suite`.
 
 🔗 **Links:**
 • Live Web App: https://nutritrack-rho-rust.vercel.app/
 • GitHub Repository: https://github.com/SaiPhaniAnirudh/NutriTrack
-• Replication Suite: https://github.com/SaiPhaniAnirudh/NutriTrack/blob/main/benchmark/REPLICATION_KIT.md
+• Hugging Face Dataset: https://huggingface.co/datasets/EnergyVenom/nutritrack-200-meal-reference-suite
 
 Check it out and let me know your thoughts!
+```
 ```
 
 ---
