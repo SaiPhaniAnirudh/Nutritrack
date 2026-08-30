@@ -88,8 +88,10 @@ python benchmark/run_benchmark.py
 - **Live Deployment:** [https://nutritrack-rho-rust.vercel.app/](https://nutritrack-rho-rust.vercel.app/) — auto-deployed via Vercel
 - **Auth Tab Switcher:** Sign In ↔ Sign Up tabs work with smooth sliding indicator
 - **Universal Progress Rings:** All 11 primary & secondary nutrition stats display animated circular rings
-- **Service Worker:** Cache bumped to `nutritrack-v27`
-- **All features preserved:** Dashboard, Track Food, History, Profile, AI Scanner, Barcode Camera, Water Tracker, Workout Tracker, Achievements, Diet Planner — all working
+- **Service Worker & PWA:** Cache bumped to `nutritrack-v36` with cache-busted asset requests
+- **Mobile Ergonomics:** Safe-area insets for notches & punchholes (`env(safe-area-inset-top/bottom)`), bottom sheet modal animations, $\ge 44\text{px}$ touch targets
+- **Native Android:** Added `CAMERA`, `READ_MEDIA_IMAGES`, and `READ_EXTERNAL_STORAGE` permissions in `AndroidManifest.xml` and synced assets via `cap sync`
+- **All features preserved:** Dashboard, Track Food, History, Profile, AI Scanner, Barcode Camera, Water Tracker, Workout Tracker, Achievements, Diet Planner — 100% working
 
 ---
 
