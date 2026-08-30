@@ -9,6 +9,7 @@ This document provides independent reviewers, academic researchers, and third-pa
 | Property | Value |
 | :--- | :--- |
 | **Dataset Name** | `NutriTrack-200-International-Reference-Suite-v3` |
+| **Hugging Face Hub** | [EnergyVenom/nutritrack-200-meal-reference-suite](https://huggingface.co/datasets/EnergyVenom/nutritrack-200-meal-reference-suite) |
 | **Sample Size ($n$)** | 200 lab-calibrated reference meals |
 | **Cuisine Categories** | 7 global categories (South Asian, High-Protein, Western, Mediterranean, East Asian, Packaged, Edge Cases) |
 | **Ground Truth Sources** | USDA FoodData Central SR Legacy, IFCT 2024, NIN Hyderabad |

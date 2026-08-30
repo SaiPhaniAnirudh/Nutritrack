@@ -7,10 +7,12 @@
 [![Backend](https://img.shields.io/badge/Backend-Flask-blue)](https://flask.palletsprojects.com/)
 [![PWA](https://img.shields.io/badge/PWA-ready-purple)](https://web.dev/progressive-web-apps/)
 [![CI](https://github.com/SaiPhaniAnirudh/Nutritrack/actions/workflows/ci.yml/badge.svg)](https://github.com/SaiPhaniAnirudh/Nutritrack/actions/workflows/ci.yml)
+[![Hugging Face Dataset](https://img.shields.io/badge/%F0%9F%A4%97%20Dataset-nutritrack--200--meal--suite-ffd21e)](https://huggingface.co/datasets/EnergyVenom/nutritrack-200-meal-reference-suite)
 [![Monitored with Sentry](https://img.shields.io/badge/monitored%20with-Sentry-362d59?logo=sentry&logoColor=white)](https://sentry.io)
 [![License](https://img.shields.io/badge/License-MIT-lightgrey)](LICENSE)
 
 **Live app:** https://nutritrack-rho-rust.vercel.app/
+**Hugging Face Dataset:** https://huggingface.co/datasets/EnergyVenom/nutritrack-200-meal-reference-suite
 **Try it:** first load can take up to ~60s — the free-tier backend spins down when idle.
 
 ---

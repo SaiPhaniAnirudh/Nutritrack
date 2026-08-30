@@ -5,6 +5,7 @@
   "paper_url": "https://github.com/SaiPhaniAnirudh/Nutritrack/blob/main/benchmark/REPLICATION_KIT.md",
   "code_url": "https://github.com/SaiPhaniAnirudh/Nutritrack",
   "dataset_name": "NutriTrack-200-Meal-Reference-Suite",
+  "dataset_url": "https://huggingface.co/datasets/EnergyVenom/nutritrack-200-meal-reference-suite",
   "tasks": [
     {
       "task_name": "Food Recognition & Calorie Estimation",
