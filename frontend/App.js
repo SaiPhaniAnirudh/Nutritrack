@@ -1483,11 +1483,74 @@ function sumLogs(logs) {
 }
 
 // ─────────────────────────────────────────────────
+//  DUAL THEME ENGINE & FIGMA DATE SCROLLER
+// ─────────────────────────────────────────────────
+let _selectedLogDate = todayStr();
+
+function initTheme() {
+  const saved = localStorage.getItem('nutritrack_theme') || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  setTheme(saved);
+}
+
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme') || 'light';
+  const next = current === 'dark' ? 'light' : 'dark';
+  setTheme(next);
+}
+
+function setTheme(mode) {
+  document.documentElement.setAttribute('data-theme', mode);
+  localStorage.setItem('nutritrack_theme', mode);
+  
+  const iconEl = document.getElementById('themeToggleIcon');
+  const textEl = document.getElementById('themeToggleText');
+  if (iconEl) iconEl.textContent = mode === 'dark' ? '🌙' : '☀️';
+  if (textEl) textEl.textContent = mode === 'dark' ? 'Dark' : 'Light';
+}
+
+function renderDateScroller() {
+  const el = document.getElementById('figmaDateScroller');
+  if (!el) return;
+  
+  const today = new Date();
+  const days = [];
+  for (let i = -3; i <= 3; i++) {
+    const d = new Date();
+    d.setDate(today.getDate() + i);
+    days.push(d);
+  }
+
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  el.innerHTML = days.map(d => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const dayNum = String(d.getDate()).padStart(2, '0');
+    const dateStr = `${y}-${m}-${dayNum}`;
+    const isActive = dateStr === (_selectedLogDate || todayStr());
+    const monthName = months[d.getMonth()];
+
+    return `
+      <div class="figma-date-pill ${isActive ? 'active' : ''}" onclick="selectDateFilter('${dateStr}')">
+        <span class="fdp-month">${monthName}</span>
+        <span class="fdp-day">${d.getDate()}</span>
+      </div>
+    `;
+  }).join('');
+}
+
+function selectDateFilter(dateStr) {
+  _selectedLogDate = dateStr;
+  renderDateScroller();
+  refreshDashboard();
+}
+
+// ─────────────────────────────────────────────────
 //  DASHBOARD
 // ─────────────────────────────────────────────────
 function refreshDashboard() {
-  const today = todayStr();
-  const logs = window._foodLogs.filter(l => l.date === today);
+  const activeDate = _selectedLogDate || todayStr();
+  const logs = window._foodLogs.filter(l => l.date === activeDate);
   const totals = sumLogs(logs);
   const goals = currentUser.goals || { calories: 2000, protein: 150, carbs: 275, fat: 78, fiber: 28, sugar: 50, sodium: 2300, chol: 300 };
 
@@ -1496,6 +1559,37 @@ function refreshDashboard() {
 
   const dashBurnEl = document.getElementById('dashWorkoutBurn');
   if (dashBurnEl) dashBurnEl.textContent = Math.round(workoutBurn);
+
+  // Update Figma Semicircular Arc & Goals
+  const dashGoalCalsEl = document.getElementById('dashGoalCals');
+  if (dashGoalCalsEl) dashGoalCalsEl.textContent = (goals.calories || 2000).toLocaleString();
+
+  const goalProEl = document.getElementById('goalProVal');
+  if (goalProEl) goalProEl.textContent = goals.protein || 150;
+
+  const goalFatEl = document.getElementById('goalFatVal');
+  if (goalFatEl) goalFatEl.textContent = goals.fat || 78;
+
+  const goalCarbEl = document.getElementById('goalCarbVal');
+  if (goalCarbEl) goalCarbEl.textContent = goals.carbs || 275;
+
+  // Semicircular Arc SVG stroke-dashoffset (circumference = 236)
+  const arcEl = document.getElementById('figmaArcFill');
+  if (arcEl) {
+    const calRatio = Math.min(1.0, Math.max(0, totals.cal / (goals.calories || 2000)));
+    const offset = 236 * (1 - calRatio);
+    arcEl.style.strokeDashoffset = offset;
+  }
+
+  // 3-Macro Progress Bar Widths
+  const proBarEl = document.getElementById('fmiProBar');
+  if (proBarEl) proBarEl.style.width = `${Math.min(100, Math.round((totals.pro / (goals.protein || 1)) * 100))}%`;
+
+  const fatBarEl = document.getElementById('fmiFatBar');
+  if (fatBarEl) fatBarEl.style.width = `${Math.min(100, Math.round((totals.fat / (goals.fat || 1)) * 100))}%`;
+
+  const carbBarEl = document.getElementById('fmiCarbBar');
+  if (carbBarEl) carbBarEl.style.width = `${Math.min(100, Math.round((totals.carb / (goals.carbs || 1)) * 100))}%`;
 
   [['dashCals', 'calBar', totals.cal, goals.calories, '#F5A623'],
   ['dashProtein', 'protBar', totals.pro, goals.protein, '#7fb8d4'],
@@ -1524,35 +1618,50 @@ function refreshDashboard() {
 
   const logEl = document.getElementById('dashFoodLog');
   if (logs.length === 0) {
-    logEl.innerHTML = `<div class="empty-log"><div class="empty-icon">🍽️</div><p>No meals logged today.<br>Head to Track Food to get started.</p></div>`;
+    logEl.innerHTML = `<div class="empty-log"><div class="empty-icon">🍽️</div><p>No meals logged for this date.<br>Head to Track Food to get started.</p></div>`;
   } else {
     logEl.innerHTML = logs.map(l => {
       const safeName = String(l.name).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
       return `
-      <div class="log-item">
-        <div class="log-item-left">
-          <div class="food-emoji">${l.emoji || '🍽️'}</div>
-          <div>
-            <div class="log-item-name">${safeName}</div>
-            <div class="log-item-meta">${l.mealType} · ${l.pro}g P · ${l.carb}g C · ${l.fat}g F</div>
-            <div class="nutrient-pills">
-              ${l.fiber ? `<span class="npill fiber">🌿 ${l.fiber}g fiber</span>` : ''}
-              ${l.sugar ? `<span class="npill sugar">🍬 ${l.sugar}g sugar</span>` : ''}
-              ${l.sodium ? `<span class="npill sodium">🧂 ${l.sodium}mg salt</span>` : ''}<!-- change #13 -->
-              ${l.chol ? `<span class="npill chol">❤️ ${l.chol}mg chol</span>` : ''}
-              ${l.vit_d ? `<span class="npill vit_d" style="background:rgba(245,166,35,0.1);color:#F5A623;border-color:rgba(245,166,35,0.2)">☀️ ${l.vit_d}mcg VitD</span>` : ''}
-              ${l.iron ? `<span class="npill iron" style="background:rgba(208,2,27,0.1);color:#D0021B;border-color:rgba(208,2,27,0.2)">🥩 ${l.iron}mg Iron</span>` : ''}
-              ${l.folate ? `<span class="npill folate" style="background:rgba(126,211,33,0.1);color:#7ED321;border-color:rgba(126,211,33,0.2)">🥬 ${l.folate}mcg Fol</span>` : ''}
+      <div class="figma-food-card">
+        <div class="ffc-top">
+          <div class="ffc-left">
+            <div class="ffc-thumb">${l.emoji || '🍽️'}</div>
+            <div>
+              <div class="ffc-name">${safeName}</div>
+              <div class="ffc-sub">🔥 ${l.cal} kcal · ${l.mealType || 'Meal'}</div>
             </div>
           </div>
+          <button type="button" class="ffc-action-btn" title="Remove food item" onclick="removeLog('${l.id || ''}', '${String(l.name).replace(/'/g, "\\'")}_${l.date}_${l.mealType}')">✕</button>
         </div>
-        <div style="display:flex;align-items:center;gap:0.5rem">
-          <div class="log-item-cal">${l.cal} kcal</div>
-          <button class="remove-item-btn" title="Remove food item" onclick="removeLog('${l.id || ''}', '${String(l.name).replace(/'/g, "\\'")}_${l.date}_${l.mealType}')">✕</button>
+        <div class="ffc-macros">
+          <div class="ffc-macro-pill">
+            <div class="ffc-pill-bar pro"></div>
+            <div class="ffc-pill-text">
+              <span class="ffc-pill-val">${l.pro}g</span>
+              <span class="ffc-pill-label">Protein</span>
+            </div>
+          </div>
+          <div class="ffc-macro-pill">
+            <div class="ffc-pill-bar fat"></div>
+            <div class="ffc-pill-text">
+              <span class="ffc-pill-val">${l.fat}g</span>
+              <span class="ffc-pill-label">Fats</span>
+            </div>
+          </div>
+          <div class="ffc-macro-pill">
+            <div class="ffc-pill-bar carb"></div>
+            <div class="ffc-pill-text">
+              <span class="ffc-pill-val">${l.carb}g</span>
+              <span class="ffc-pill-label">Carbs</span>
+            </div>
+          </div>
         </div>
       </div>
     `}).join('');
   }
+
+  renderDateScroller();
   renderMacroChart(totals.pro, totals.carb, totals.fat, totals.fiber, totals.sugar, totals.sodium, totals.chol, totals.cal);
   renderMicroGrid();
 }
@@ -7015,4 +7124,10 @@ if (typeof window !== 'undefined') {
   window.filterBenchmarkTable = typeof filterBenchmarkTable !== 'undefined' ? filterBenchmarkTable : window.filterBenchmarkTable;
   window.sortBenchmarkTable = typeof sortBenchmarkTable !== 'undefined' ? sortBenchmarkTable : window.sortBenchmarkTable;
   window.downloadBenchmarkData = typeof downloadBenchmarkData !== 'undefined' ? downloadBenchmarkData : window.downloadBenchmarkData;
+  window.toggleTheme = typeof toggleTheme !== 'undefined' ? toggleTheme : window.toggleTheme;
+  window.initTheme = typeof initTheme !== 'undefined' ? initTheme : window.initTheme;
+  window.selectDateFilter = typeof selectDateFilter !== 'undefined' ? selectDateFilter : window.selectDateFilter;
+
+  // Auto-init Theme on load
+  try { initTheme(); } catch (e) {}
 }

@@ -585,9 +585,83 @@
        DASHBOARD
   ══════════════════════ -->
       <div class="page active" id="page-dashboard">
-        <div class="greeting">
-          <h2>Good <span id="timeGreet">morning</span>, <span id="greetName">there</span> 👋</h2>
-          <p id="greetDate"></p>
+        
+        <!-- FIGMA TOP USER GREETING & THEME TOGGLE -->
+        <div class="figma-header-row">
+          <div class="figma-user-wrap">
+            <div class="figma-user-avatar" id="dashUserAvatar" onclick="showPage('profile', document.querySelector('.nav-btn[onclick*=profile]'))" style="cursor:pointer;">A</div>
+            <div class="figma-greeting-text">
+              <span class="figma-greeting-sub">Welcome,</span>
+              <span class="figma-greeting-name" id="greetName">Member</span>
+            </div>
+          </div>
+          <div class="figma-header-actions">
+            <button type="button" class="theme-toggle-pill" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle Light / Dark Theme">
+              <span id="themeToggleIcon">☀️</span>
+              <span id="themeToggleText">Light</span>
+            </button>
+            <button type="button" class="figma-icon-btn" onclick="showPage('track', document.querySelector('.nav-btn[onclick*=track]')); document.getElementById('foodSearch')?.focus();" title="Search food">🔍</button>
+            <button type="button" class="figma-icon-btn" onclick="openDietModal()" title="Diet Plan">🔔</button>
+          </div>
+        </div>
+
+        <!-- FIGMA HERO CALORIE SEMICIRCULAR ARC CARD -->
+        <div class="figma-hero-card">
+          <div class="figma-hero-top">
+            <div class="figma-arc-container">
+              <svg class="figma-arc-svg" viewBox="0 0 200 115">
+                <defs>
+                  <linearGradient id="arcGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#F26E50" />
+                    <stop offset="60%" stop-color="#F5A623" />
+                    <stop offset="100%" stop-color="#3ECF8E" />
+                  </linearGradient>
+                </defs>
+                <!-- Background Arc: radius 75, circumference 235.6 -->
+                <path class="figma-arc-bg" d="M 25 100 A 75 75 0 0 1 175 100" />
+                <!-- Dynamic Fill Arc -->
+                <path id="figmaArcFill" class="figma-arc-fill" d="M 25 100 A 75 75 0 0 1 175 100" style="stroke-dasharray: 236; stroke-dashoffset: 236;" />
+              </svg>
+              <div class="figma-arc-center">
+                <div class="figma-arc-flame">🔥</div>
+                <div class="figma-arc-cals"><span id="dashCals">0</span></div>
+                <div class="figma-arc-sub">of <span id="dashGoalCals">2,000</span> kcal</div>
+              </div>
+            </div>
+            <div class="figma-hero-avocado-wrap">
+              <img src="/icons/avocado_hero.jpg" alt="Organic Fresh Avocado" class="figma-hero-avocado-img" onerror="this.style.display='none'" />
+            </div>
+          </div>
+
+          <!-- 3-Macro Color-Coded Progress Bars -->
+          <div class="figma-macro-row">
+            <div class="figma-macro-item">
+              <span class="fmi-label">Protein</span>
+              <div class="fmi-bar-wrap">
+                <div class="fmi-bar pro" id="fmiProBar" style="width:0%;"></div>
+              </div>
+              <span class="fmi-val" id="fmiProVal"><span id="dashProtein">0</span> / <span id="goalProVal">150</span>g</span>
+            </div>
+            <div class="figma-macro-item">
+              <span class="fmi-label">Fats</span>
+              <div class="fmi-bar-wrap">
+                <div class="fmi-bar fat" id="fmiFatBar" style="width:0%;"></div>
+              </div>
+              <span class="fmi-val" id="fmiFatVal"><span id="dashFat">0</span> / <span id="goalFatVal">78</span>g</span>
+            </div>
+            <div class="figma-macro-item">
+              <span class="fmi-label">Carbs</span>
+              <div class="fmi-bar-wrap">
+                <div class="fmi-bar carb" id="fmiCarbBar" style="width:0%;"></div>
+              </div>
+              <span class="fmi-val" id="fmiCarbVal"><span id="dashCarbs">0</span> / <span id="goalCarbVal">275</span>g</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- FIGMA HORIZONTAL CALENDAR DATE SCROLLER (SCREEN 3) -->
+        <div class="figma-date-scroller" id="figmaDateScroller">
+          <!-- Populated dynamically via App.js -->
         </div>
 
         <!-- MOBILE DIET PLAN BANNER (Visible on mobile/tablet only) -->

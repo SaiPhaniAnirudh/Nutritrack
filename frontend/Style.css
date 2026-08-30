@@ -1,47 +1,101 @@
 /* ═══════════════════════════════════════════════════
-   NutriTrack — style.css  v3.0
-   New UI: Fresh · Vibrant · Fruit-forward · Modern
-   Fonts: Plus Jakarta Sans + Fraunces
-   Palette: White/cream base, vivid fruit accents
+   NutriTrack — style.css v4.0
+   Figma Mobile Design System & Dual Theme Engine
+   Light Mode: Warm Porcelain / Organic Fresh
+   Dark Mode: Obsidian Organic Glassmorphism
 ═══════════════════════════════════════════════════ */
-:root {
+
+/* ── DEFAULT THEME (LIGHT / WARM ORGANIC PORCELAIN) ── */
+:root,
+[data-theme="light"] {
+  --bg-main: #FBF8F5;
+  --bg-gradient: #FBF8F5;
+  --bg-card: #FFFFFF;
+  --bg-card-subtle: #F6F2EC;
+  --bg-card-hover: #F2EBE2;
+  --bg-card-glass: rgba(255, 255, 255, 0.95);
+  
+  --ink: #19211C;
+  --ink-80: rgba(25, 33, 28, 0.85);
+  --ink-50: rgba(25, 33, 28, 0.60);
+  --ink-30: rgba(25, 33, 28, 0.38);
+  --ink-10: rgba(25, 33, 28, 0.08);
+  --mist: #64748B;
+  --smoke: #F8F5F0;
+  --parchment: #FBF8F5;
+  --white: #FFFFFF;
+  --border: rgba(0, 0, 0, 0.08);
+  --border-soft: rgba(0, 0, 0, 0.04);
+  
   --kiwi: #3ECF8E;
   --kiwi-deep: #2D9E6B;
-  --kiwi-light: rgba(62, 207, 142, 0.15);
+  --kiwi-light: rgba(62, 207, 142, 0.14);
   --citrus: #F5A623;
   --citrus-deep: #D48806;
-  --citrus-light: rgba(245, 166, 35, 0.15);
+  --citrus-light: rgba(245, 166, 35, 0.14);
+  --coral: #F26E50;
+  --coral-deep: #D64F30;
+  --coral-light: rgba(242, 110, 80, 0.14);
+  --mango: #F5A623;
   --berry: #E05698;
-  --berry-deep: #B83B76;
-  --berry-light: rgba(224, 86, 152, 0.15);
-  --coral: #F4613A;
-  --coral-light: rgba(244, 97, 58, 0.15);
   --grape: #9B72CF;
-  --grape-light: rgba(155, 114, 207, 0.15);
-  --mango: #FF8C42;
-  --ink: #FFFFFF;
-  --ink-80: rgba(255, 255, 255, 0.92);
-  --ink-50: rgba(255, 255, 255, 0.78);
-  --ink-30: rgba(255, 255, 255, 0.58);
-  --ink-10: rgba(255, 255, 255, 0.15);
-  --mist: #d4d4d8;
-  --smoke: #0F1712;
-  --parchment: #0A0F0D;
-  --white: rgba(255, 255, 255, 0.05);
-  --border: rgba(255, 255, 255, 0.12);
-  --border-soft: rgba(255, 255, 255, 0.07);
+  
   --fiber-color: #3ECF8E;
-  --sugar-color: #F4613A;
+  --sugar-color: #F26E50;
   --sodium-color: #9B72CF;
   --chol-color: #F5A623;
-  --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.5);
-  --shadow-xl: 0 24px 64px rgba(0, 0, 0, 0.6);
-  --radius-sm: 10px;
-  --radius-md: 16px;
-  --radius-lg: 22px;
-  --radius-xl: 32px;
+  
+  --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 16px 36px rgba(0, 0, 0, 0.08);
+  --shadow-xl: 0 24px 64px rgba(0, 0, 0, 0.10);
+  --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.03), 0 1px 3px rgba(0, 0, 0, 0.02);
+  
+  --radius-sm: 12px;
+  --radius-md: 18px;
+  --radius-lg: 26px;
+  --radius-xl: 36px;
+}
+
+/* ── DARK THEME (OBSIDIAN ORGANIC GLASS) ── */
+[data-theme="dark"] {
+  --bg-main: #0A0F0D;
+  --bg-gradient: linear-gradient(135deg, #0A0F0D 0%, #0F1712 50%, #080C0A 100%);
+  --bg-card: rgba(255, 255, 255, 0.04);
+  --bg-card-subtle: rgba(255, 255, 255, 0.03);
+  --bg-card-hover: rgba(255, 255, 255, 0.07);
+  --bg-card-glass: rgba(15, 23, 18, 0.88);
+  
+  --ink: #FFFFFF;
+  --ink-80: rgba(255, 255, 255, 0.92);
+  --ink-50: rgba(255, 255, 255, 0.75);
+  --ink-30: rgba(255, 255, 255, 0.45);
+  --ink-10: rgba(255, 255, 255, 0.12);
+  --mist: #B8C9BA;
+  --smoke: #0F1712;
+  --parchment: #0A0F0D;
+  --white: rgba(255, 255, 255, 0.06);
+  --border: rgba(255, 255, 255, 0.11);
+  --border-soft: rgba(255, 255, 255, 0.06);
+  
+  --kiwi: #3ECF8E;
+  --kiwi-deep: #2D9E6B;
+  --kiwi-light: rgba(62, 207, 142, 0.18);
+  --citrus: #F5A623;
+  --citrus-deep: #D48806;
+  --citrus-light: rgba(245, 166, 35, 0.18);
+  --coral: #F4613A;
+  --coral-deep: #D64F30;
+  --coral-light: rgba(244, 97, 58, 0.18);
+  --mango: #FF8C42;
+  --berry: #E05698;
+  --grape: #9B72CF;
+  
+  --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.55);
+  --shadow-xl: 0 24px 64px rgba(0, 0, 0, 0.65);
+  --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 
 * {
@@ -52,11 +106,504 @@
 
 body {
   font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  background: linear-gradient(135deg, #0a0f0d 0%, #0f1712 50%, #080c0a 100%);
+  background: var(--bg-gradient);
+  background-color: var(--bg-main);
   color: var(--ink);
   min-height: 100vh;
   overflow-x: hidden;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
+
+/* ═══════════════════════════════════════════════════
+   FIGMA-INSPIRED MOBILE DESIGN SYSTEM COMPONENTS
+═══════════════════════════════════════════════════ */
+
+/* ── HEADER USER GREETING & THEME TOGGLE ── */
+.figma-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.2rem;
+  padding: 0.2rem 0;
+}
+
+.figma-user-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.figma-user-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #F26E50, #F5A623);
+  color: #fff;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  box-shadow: 0 4px 14px rgba(242, 110, 80, 0.25);
+  overflow: hidden;
+  border: 2px solid var(--white);
+}
+
+.figma-greeting-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.figma-greeting-sub {
+  font-size: 0.72rem;
+  color: var(--ink-50);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.figma-greeting-name {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--ink);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  line-height: 1.2;
+}
+
+.figma-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.figma-icon-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s ease;
+  font-size: 1rem;
+}
+
+.figma-icon-btn:hover {
+  transform: translateY(-2px);
+  border-color: var(--kiwi);
+}
+
+.theme-toggle-pill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 50px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 700;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s ease;
+}
+
+.theme-toggle-pill:hover {
+  border-color: var(--kiwi);
+  transform: translateY(-1px);
+}
+
+/* ── HERO CALORIE SEMICIRCLE ARC CARD ── */
+.figma-hero-card {
+  background: var(--bg-card);
+  border-radius: 28px;
+  padding: 1.4rem;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-card);
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 1.3rem;
+  transition: all 0.3s ease;
+}
+
+.figma-hero-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+}
+
+.figma-arc-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  min-height: 155px;
+}
+
+.figma-arc-svg {
+  width: 220px;
+  height: 125px;
+  overflow: visible;
+}
+
+.figma-arc-bg {
+  fill: none;
+  stroke: var(--ink-10);
+  stroke-width: 14;
+  stroke-linecap: round;
+}
+
+.figma-arc-fill {
+  fill: none;
+  stroke: url(#arcGradient);
+  stroke-width: 14;
+  stroke-linecap: round;
+  stroke-dasharray: 283;
+  stroke-dashoffset: 80;
+  transition: stroke-dashoffset 1s ease-in-out;
+}
+
+.figma-arc-center {
+  position: absolute;
+  top: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.figma-arc-flame {
+  font-size: 1.4rem;
+  margin-bottom: 2px;
+  animation: flamePulse 2s infinite ease-in-out;
+}
+
+@keyframes flamePulse {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 4px rgba(242, 110, 80, 0.4)); }
+  50% { transform: scale(1.12); filter: drop-shadow(0 0 10px rgba(242, 110, 80, 0.8)); }
+}
+
+.figma-arc-cals {
+  font-size: 1.9rem;
+  font-weight: 800;
+  color: var(--ink);
+  line-height: 1;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  letter-spacing: -0.02em;
+}
+
+.figma-arc-sub {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--ink-50);
+  margin-top: 4px;
+}
+
+.figma-hero-avocado-wrap {
+  width: 110px;
+  height: 110px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.figma-hero-avocado-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.12));
+  animation: floatAvocado 4s ease-in-out infinite;
+}
+
+@keyframes floatAvocado {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-6px) rotate(2deg); }
+}
+
+/* ── FIGMA 3-MACRO PROGRESS BAR ROW ── */
+.figma-macro-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+  margin-top: 1.1rem;
+  padding-top: 1.1rem;
+  border-top: 1px solid var(--border);
+}
+
+.figma-macro-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.fmi-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 5px;
+}
+
+.fmi-bar-wrap {
+  height: 5px;
+  background: var(--ink-10);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 5px;
+}
+
+.fmi-bar {
+  height: 100%;
+  border-radius: 10px;
+  transition: width 0.8s ease;
+}
+
+.fmi-bar.pro { background: #3ECF8E; }
+.fmi-bar.fat { background: #F26E50; }
+.fmi-bar.carb { background: #F5A623; }
+
+.fmi-val {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--ink-50);
+}
+
+/* ── DIET JOURNEY WAVE CHART CARD ── */
+.figma-journey-card {
+  background: var(--bg-card);
+  border-radius: 28px;
+  padding: 1.4rem;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-card);
+  margin-bottom: 1.3rem;
+}
+
+.figma-journey-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+
+.figma-journey-sub {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #F26E50;
+  margin-top: 2px;
+  margin-bottom: 1rem;
+}
+
+/* ── HORIZONTAL CALENDAR DATE SCROLLER (SCREEN 3) ── */
+.figma-date-scroller {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 4px 2px 12px 2px;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 1.1rem;
+}
+
+.figma-date-scroller::-webkit-scrollbar {
+  display: none;
+}
+
+.figma-date-pill {
+  flex: 0 0 68px;
+  height: 78px;
+  border-radius: 22px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.25s ease;
+}
+
+.figma-date-pill:hover {
+  transform: translateY(-2px);
+  border-color: var(--coral);
+}
+
+.figma-date-pill.active {
+  background: #F26E50 !important;
+  border-color: #F26E50 !important;
+  box-shadow: 0 8px 20px rgba(242, 110, 80, 0.35) !important;
+}
+
+.figma-date-pill .fdp-month {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--ink-50);
+}
+
+.figma-date-pill.active .fdp-month {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.figma-date-pill .fdp-day {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--ink);
+  margin-top: 2px;
+}
+
+.figma-date-pill.active .fdp-day {
+  color: #FFFFFF;
+}
+
+/* ── FIGMA MEAL FILTER PILLS ── */
+.figma-meal-chips {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  margin-bottom: 1.1rem;
+  scrollbar-width: none;
+}
+
+.figma-meal-chips::-webkit-scrollbar { display: none; }
+
+.figma-chip {
+  padding: 8px 18px;
+  border-radius: 50px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--ink-50);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.figma-chip.active {
+  background: var(--ink) !important;
+  color: var(--bg-main) !important;
+  border-color: var(--ink) !important;
+}
+
+/* ── FIGMA MODERN FOOD LOG CARDS ── */
+.figma-food-card {
+  background: var(--bg-card);
+  border-radius: 20px;
+  padding: 1.1rem;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-card);
+  margin-bottom: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.figma-food-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.ffc-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.75rem;
+}
+
+.ffc-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ffc-thumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: var(--bg-card-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.ffc-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.2;
+}
+
+.ffc-sub {
+  font-size: 0.72rem;
+  color: #F26E50;
+  font-weight: 600;
+  margin-top: 3px;
+}
+
+.ffc-action-btn {
+  background: none;
+  border: 1px solid var(--border);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: var(--ink-50);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+}
+
+.ffc-macros {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.ffc-macro-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ffc-pill-bar {
+  width: 3px;
+  height: 22px;
+  border-radius: 4px;
+}
+
+.ffc-pill-bar.pro { background: #3ECF8E; }
+.ffc-pill-bar.fat { background: #F26E50; }
+.ffc-pill-bar.carb { background: #F5A623; }
+
+.ffc-pill-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.ffc-pill-val {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--ink);
+  line-height: 1.1;
+}
+
+.ffc-pill-label {
+  font-size: 0.65rem;
+  color: var(--ink-50);
+  font-weight: 600;
+}
+
 
 /* ── LOADER ── */
 .page-loader {
