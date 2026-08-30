@@ -1,0 +1,51 @@
+Nutrient Count Discrepancy — "82+" vs actual 67
+=================================================
+
+Status: RESOLVED (2026-08-30)
+
+What happened
+-------------
+Several UI strings (README.md, frontend/App.js, frontend/index.html) claimed
+NutriTrack tracks "82+ nutrients." The actual NUTRIENT_META dict in
+backend/nutrition/nutrients.py defines 67 nutrients:
+
+    9  macronutrients (energy, protein, fat, carbs, fiber, sugars ×2, sodium, cholesterol)
+    4  fat sub-fractions (saturated, mono, poly, trans)
+    3  omega fatty acids (ALA, EPA, DHA)
+   13  vitamins (A, D, E, K, C, B1–B6, B9, B12, choline)
+    9  minerals (Ca, Fe, Mg, P, K, Zn, Cu, Mn, Se)
+   19  amino acids
+    6  carotenoids / phytochemicals (beta-carotene, alpha-carotene, retinol,
+       beta-cryptoxanthin, lycopene, lutein+zeaxanthin)
+    4  other (water, caffeine, alcohol, betaine)
+   --
+   67  total
+
+Origin of "82+"
+----------------
+The "82+" figure likely included planned-but-not-yet-mapped nutrients
+(iodine, fluoride, chromium, molybdenum, biotin, phytosterols, etc.)
+that never made it into NUTRIENT_META. The number was carried forward
+in marketing copy without being re-audited.
+
+Fix applied
+-----------
+All user-visible strings updated from "82+" → "67+":
+
+  - README.md line 3/21 — already said "67+" in the rewrite
+  - frontend/App.js   line 1916 — "67+ nutrient RAG"
+  - frontend/App.js   line 1925 — "Finalizing 67+ nutrient breakdown…"
+  - frontend/index.html line 749  — "67+ Clinical Nutrient & Micronutrient Adequacy"
+  - frontend/index.html line 1376 — "67+ micronutrients in Apple HealthKit format"
+
+Code comments left as-is (non-user-visible):
+  - frontend/App.js   line 5553 — // 82+ CLINICAL MICRONUTRIENT …
+  - frontend/Foods.js line 899  — // AUTO-INJECT 82+ …
+  - frontend/index.html line 744 — <!-- 82+ CLINICAL MICRONUTRIENT … -->
+
+Regression guard
+----------------
+backend/tests/test_nutrients.py::test_nutrient_count_regression_guard
+asserts nutrient_count() >= 67, so any future removal will fail CI.
+If new nutrients are added and the count exceeds 67, update the
+user-facing "67+" strings and this file together.

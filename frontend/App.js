@@ -1913,7 +1913,7 @@ async function scanWithAI() {
     <div class="scan-result-placeholder" style="padding:1.8rem 1rem;">
       <div class="scanning-pulse" style="font-size:2.8rem; filter:drop-shadow(0 0 16px rgba(62,207,142,0.6));">⚡</div>
       <div style="font-size:0.95rem; font-weight:700; color:#fff; margin-top:0.8rem;">Multimodal Vision Engine Active</div>
-      <div style="font-size:0.75rem; color:#3ecf8e; margin-top:0.3rem; font-weight:600;">Sub-second food identification & 82+ nutrient RAG</div>
+      <div style="font-size:0.75rem; color:#3ecf8e; margin-top:0.3rem; font-weight:600;">Sub-second food identification & 67+ nutrient RAG</div>
     </div>`;
 
   const imageToSend = await _compressImage(scanImageB64, 35000);
@@ -1922,7 +1922,7 @@ async function scanWithAI() {
   const statusInterval = setInterval(() => {
     scanSec += 1;
     if (scanSec === 2) showScanStatus('🔬 Deconstructing plate & matching USDA / IFCT chemistry…', 'info');
-    if (scanSec === 5) showScanStatus('✨ Finalizing 82+ nutrient breakdown…', 'info');
+    if (scanSec === 5) showScanStatus('✨ Finalizing 67+ nutrient breakdown…', 'info');
   }, 1000);
 
   try {

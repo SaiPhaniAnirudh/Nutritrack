@@ -1,0 +1,16 @@
+name: Keep Render backend awake
+
+on:
+  schedule:
+    # Every 10 minutes. Render's free-tier idle timeout is ~15 min,
+    # so this keeps the instance from ever fully spinning down.
+    - cron: '*/10 * * * *'
+  workflow_dispatch: {}   # lets you trigger it manually from the Actions tab
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping backend health endpoint
+        run: |
+          curl -s -o /dev/null -w "Status: %{http_code}\n" https://nutritrack-k96f.onrender.com/ || true
