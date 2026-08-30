@@ -1,11 +1,11 @@
 """
 NutriTrack — Unit & Integration Tests: Extended Nutrients & Three-Way Fusion Engine
 Tests:
-- 82+ USDA Nutrient mapping and metadata accuracy
+- 67+ USDA Nutrient mapping and metadata accuracy
 - Three-way fusion engine pipeline
 - FoodLog model serialization with JSONB extended nutrients
 - Logs summary aggregation with extended nutrients
-- Clinical-grade CSV export with all 82+ nutrient columns
+- Clinical-grade CSV export with all 67+ nutrient columns
 """
 
 import os

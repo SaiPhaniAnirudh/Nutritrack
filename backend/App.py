@@ -460,7 +460,7 @@ class FoodLog(db.Model):
     iron   = db.Column(db.Float, default=0)
     folate = db.Column(db.Float, default=0)
 
-    # Extended Nutrients (82+ USDA panel stored as JSON)
+    # Extended Nutrients (67+ USDA panel stored as JSON)
     extended_nutrients = db.Column(db.JSON, default=dict)
     nutrient_source    = db.Column(db.String(100), default='manual')
     serving_size       = db.Column(db.String(100), default='1 serving')
@@ -1800,7 +1800,7 @@ def challenge_leaderboard(challenge_id):
 @jwt_required()
 @db_retry
 def export_logs_csv():
-    """Download food logs as a clinical-grade CSV spreadsheet covering all 82+ nutrients."""
+    """Download food logs as a clinical-grade CSV spreadsheet covering all 67+ nutrients."""
     uid = get_jwt_identity()
     logs = FoodLog.query.filter_by(user_id=uid).order_by(FoodLog.date.desc(), FoodLog.id.desc()).all()
 
@@ -1935,7 +1935,7 @@ def ai_chat():
     """
     NutriBot — High-Speed Conversational AI Nutritionist.
     Powered by Groq (Llama 3.3 70B) with Gemini fallback, aware of
-    user's goals, today's logged food, remaining macros, and 82+ micronutrient gaps.
+    user's goals, today's logged food, remaining macros, and 67+ micronutrient gaps.
     """
     data = request.get_json() or {}
     message = (data.get('message') or '').strip()
@@ -2113,7 +2113,7 @@ def save_scan_correction():
 @db_retry
 def export_apple_health():
     """
-    Exports food logs and 82+ micronutrients in Apple HealthKit JSON format.
+    Exports food logs and 67+ micronutrients in Apple HealthKit JSON format.
     """
     uid = get_jwt_identity()
     today = _today()
@@ -2221,7 +2221,7 @@ def ai_analyze():
     Three-Way Fusion Food Image Analyzer:
     1. Groq (Llama 3.2 Vision) ultra-fast 0.5s path
     2. Gemini (2.0/1.5 Flash) high-accuracy verification path
-    3. USDA FoodData Central scientific RAG enrichment for 82+ verified nutrients
+    3. USDA FoodData Central scientific RAG enrichment for 67+ verified nutrients
     """
     data  = request.get_json() or {}
     image = data.get('image', '')

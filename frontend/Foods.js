@@ -896,7 +896,7 @@ const RDI = {
 };
 
 // ─────────────────────────────────────────────────
-//  AUTO-INJECT 82+ EXTENDED MICRONUTRIENTS (OFFLINE)
+//  AUTO-INJECT 67+ EXTENDED MICRONUTRIENTS (OFFLINE)
 // ─────────────────────────────────────────────────
 if (typeof FOODS !== 'undefined' && Array.isArray(FOODS)) {
   FOODS.forEach(f => {

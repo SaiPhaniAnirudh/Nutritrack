@@ -2,7 +2,7 @@
 NutriTrack — Master Integration Test:
 1. Adaptive TDEE & GLP-1 Coaching
 2. Apple Health & Garmin Wearable Sync
-3. Client-side Foods.js 82+ Extended Nutrients
+3. Client-side Foods.js 67+ Extended Nutrients
 4. Endpoints & Route Health
 """
 

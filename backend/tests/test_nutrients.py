@@ -102,11 +102,8 @@ def test_get_nutrient_display_returns_none_for_unknown_field():
 def test_nutrient_count_regression_guard():
     """
     Pins the actual nutrient count so future edits can't silently drop
-    coverage. NOTE: as of this writing NUTRIENT_META tracks 67 nutrients,
-    not the 82+ advertised in the frontend UI (App.js) and README — see
-    the discrepancy noted in nutrient-count-discrepancy.txt. Update this
-    assertion (and the marketing copy, in one direction or the other)
-    together when that gap is resolved.
+    coverage. NUTRIENT_META tracks 67 nutrients (the historical 82+ marketing
+    claim has been resolved across the codebase — see nutrient-count-discrepancy.txt).
     """
     assert nutrient_count() >= 67
 

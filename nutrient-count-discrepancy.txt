@@ -38,10 +38,12 @@ All user-visible strings updated from "82+" → "67+":
   - frontend/index.html line 749  — "67+ Clinical Nutrient & Micronutrient Adequacy"
   - frontend/index.html line 1376 — "67+ micronutrients in Apple HealthKit format"
 
-Code comments left as-is (non-user-visible):
-  - frontend/App.js   line 5553 — // 82+ CLINICAL MICRONUTRIENT …
-  - frontend/Foods.js line 899  — // AUTO-INJECT 82+ …
-  - frontend/index.html line 744 — <!-- 82+ CLINICAL MICRONUTRIENT … -->
+All code comments, internal scripts, and backend docstrings also updated:
+  - backend/App.py, backend/nutrition/nutrients.py, backend/ai/fusion_engine.py
+  - backend/ai/chatbot_engine.py, backend/integrations/apple_health.py
+  - scripts/import_extended_usda.py, scripts/enrich_foods_js.py
+  - frontend/App.js, frontend/Foods.js, frontend/index.html
+  - tests/test_fusion_and_nutrients.py, tests/test_all_three_features.py
 
 Regression guard
 ----------------

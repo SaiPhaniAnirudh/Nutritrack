@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-NutriTrack — Extended USDA FoodData Central Importer (82+ Nutrients)
+NutriTrack — Extended USDA FoodData Central Importer (67+ Nutrients)
 Downloads and imports SR Legacy + Foundation food datasets with full
 micronutrient, vitamin, mineral, fatty acid, and amino acid profiles.
 
@@ -127,7 +127,7 @@ def import_extended_foods(max_items=100):
             """, records_to_insert)
             conn.commit()
             imported_count += len(records_to_insert)
-            print(f"  ✅ Saved {len(records_to_insert)} foods with 82+ nutrient profiles (Total: {imported_count})")
+            print(f"  ✅ Saved {len(records_to_insert)} foods with 67+ nutrient profiles (Total: {imported_count})")
 
         page += 1
         time.sleep(1.0)  # USDA rate limiting guard

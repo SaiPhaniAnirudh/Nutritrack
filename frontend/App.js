@@ -5550,7 +5550,7 @@ window.updateRecipeIngredientQty = updateRecipeIngredientQty;
 window.saveCustomRecipe = saveCustomRecipe;
 
 // ─────────────────────────────────────────────────
-//  82+ CLINICAL MICRONUTRIENT & ADEQUACY PANEL
+//  67+ CLINICAL MICRONUTRIENT & ADEQUACY PANEL
 // ─────────────────────────────────────────────────
 
 const _MICRO_DEFINITIONS = {

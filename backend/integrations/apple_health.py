@@ -1,6 +1,6 @@
 """
 NutriTrack — Apple HealthKit Integration Adapter
-Supports exporting food logs, macros, and 82+ micronutrients into HealthKit JSON/XML,
+Supports exporting food logs, macros, and 67+ micronutrients into HealthKit JSON/XML,
 and importing raw Apple Health export archives.
 """
 

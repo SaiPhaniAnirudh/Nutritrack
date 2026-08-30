@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-NutriTrack — Enrich Foods.js with 82+ Extended Micronutrient Profiles
+NutriTrack — Enrich Foods.js with 67+ Extended Micronutrient Profiles
 Injects clinical micronutrient estimates (Vitamins, Minerals, Amino Acids, Omega-3s)
 into each item in frontend/Foods.js for 100% offline coverage.
 """
@@ -20,7 +20,7 @@ ROOT = Path(__file__).resolve().parent.parent
 FOODS_JS = ROOT / "frontend" / "Foods.js"
 
 def enrich_foods_file():
-    print("🌿 Enriching Foods.js with 82+ extended nutrients...")
+    print("🌿 Enriching Foods.js with 67+ extended nutrients...")
     with open(FOODS_JS, "r", encoding="utf-8") as f:
         content = f.read()
 
@@ -32,7 +32,7 @@ def enrich_foods_file():
     
     enrichment_helper = """
 // ─────────────────────────────────────────────────
-//  AUTO-INJECT 82+ EXTENDED MICRONUTRIENTS (OFFLINE)
+//  AUTO-INJECT 67+ EXTENDED MICRONUTRIENTS (OFFLINE)
 // ─────────────────────────────────────────────────
 if (typeof FOODS !== 'undefined' && Array.isArray(FOODS)) {
   FOODS.forEach(f => {
@@ -99,10 +99,10 @@ if (typeof FOODS !== 'undefined' && Array.isArray(FOODS)) {
 }
 """
 
-    if "AUTO-INJECT 82+ EXTENDED MICRONUTRIENTS" not in content:
+    if "AUTO-INJECT 67+ EXTENDED MICRONUTRIENTS" not in content:
         with open(FOODS_JS, "a", encoding="utf-8") as f:
             f.write("\n" + enrichment_helper)
-        print("✅ Added auto-inject 82+ extended micronutrients engine to Foods.js")
+        print("✅ Added auto-inject 67+ extended micronutrients engine to Foods.js")
     else:
         print("ℹ️ Foods.js already enriched.")
 

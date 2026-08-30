@@ -3,7 +3,7 @@ NutriTrack — NutriBot Conversational AI Nutritionist & App Navigator
 Powered by Groq (Llama 3.3 70B Versatile) for sub-second advice + Gemini fallback.
 
 Capabilities:
-1. Real-time context awareness of user's live 82+ nutrient intake for today.
+1. Real-time context awareness of user's live 67+ nutrient intake for today.
 2. Clinical advice for macronutrient balancing, meal suggestions, and micronutrient deficiencies.
 3. GLP-1 therapy nutrition guidance (muscle mass preservation >=100g protein, hydration reminders).
 4. Comprehensive knowledge of ALL NutriTrack app features, tools, and troubleshooting.
@@ -33,15 +33,15 @@ NUTRITRACK APPLICATION KNOWLEDGE & FEATURE GUIDE:
 - 🥗 Plan My Diet: Complete personalized nutrition planning with customized macro splits for Non-Veg, Veg, Vegan, and Eggetarian diets.
 - ⚡ Adaptive Metabolic Coach & TDEE Engine: Rolling 14-day energy balance analysis (Intake vs. Weight trend) that continuously calculates true metabolic expenditure and provides weekly target check-ins. Click 'Metabolic Coach' in the sidebar to open the check-in modal.
 - 💊 GLP-1 Medication Mode: Specialized protection for users taking Ozempic, Wegovy, Mounjaro, or Zepbound. Enforces a >=100g daily protein safety baseline, 2,500ml hydration tracking, and clinical alerts to prevent lean muscle wasting.
-- 🧬 82+ Clinical Micronutrients: Expandable dashboard panel with 5 tabs: Vitamins (13), Minerals (9), Fat Profile & Omega-3, Amino Acids & BCAAs (19), and Phytochemicals. Calculates real-time % RDA adequacy from logged meals.
+- 🧬 67+ Clinical Micronutrients: Expandable dashboard panel with 5 tabs: Vitamins (13), Minerals (9), Fat Profile & Omega-3, Amino Acids & BCAAs (19), and Phytochemicals. Calculates real-time % RDA adequacy from logged meals.
 - 🍲 Custom Recipe Builder: Allows searching ingredients, scaling custom gram quantities, and saving combos with auto-calculated macros. Accessible via the recipe modal.
 - 📋 Restaurant Menu Scanner: Snaps a picture of physical restaurant menus and extracts dishes with verified nutrition estimates.
 - 💧 Water Logger: Quick logging (250ml, 500ml, custom) with daily hydration progress ring.
 - 🏋️ Workout Tracker: Logs exercise sessions and active calories burned. Supports syncing with Garmin Connect and Oura Ring.
 - 📈 Body Weight Progress Tracker: Interactive weight chart with weekly trend rate calculations.
 - 🏅 Achievements & Streaks: Milestone badges and consecutive logging streak tracking.
-- 📤 Exports: 82-column clinical CSV spreadsheets and Apple HealthKit JSON/XML exports (Profile page).
-- 🌐 100% Offline PWA: Works completely offline with 550+ pre-cached foods and full 82+ nutrient estimates.
+- 📤 Exports: 67-column clinical CSV spreadsheets and Apple HealthKit JSON/XML exports (Profile page).
+- 🌐 100% Offline PWA: Works completely offline with 550+ pre-cached foods and full 67+ nutrient estimates.
 """
 
 

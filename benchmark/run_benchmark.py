@@ -4,7 +4,7 @@ NutriTrack — Automated 200-Meal AI Accuracy Benchmarking Suite
 Measures:
 1. Food Identification Accuracy (% correct items identified)
 2. Calorie & Macro Mean Absolute Percentage Error (MAPE)
-3. 82+ Nutrient Enrichment Match Rate (% foods matched to USDA SR Legacy)
+3. 67+ Nutrient Enrichment Match Rate (% foods matched to USDA SR Legacy)
 4. Pipeline Inference Latency (ms) across Groq vs Gemini vs Self-Hosted
 5. Per-meal provenance with USDA FDC IDs
 
@@ -477,7 +477,7 @@ def run_benchmark(output_file=None, verify_checksum=False):
     print(f"  ⚖️ Calorie Mean Signed Bias:    {mean_bias_cal:.2f}% (No systemic over- or under-estimation)")
     print(f"  ⚡ Median Response Latency:      {avg_latency:.0f}ms   (Target: <1000ms)")
     print(f"  🧬 USDA SR Legacy Match Rate:    {(rag_matches/len(BENCHMARK_MEALS))*100:.1f}%")
-    print(f"  📦 82+ Nutrient Fields Tracked:  {len(NUTRIENT_META)} fields")
+    print(f"  📦 67+ Nutrient Fields Tracked:  {len(NUTRIENT_META)} fields")
     print()
     print("  📊 Stratified Calorie MAPE by Meal Complexity:")
     for comp in ["simple", "moderate", "complex"]:

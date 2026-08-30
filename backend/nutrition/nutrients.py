@@ -1,6 +1,6 @@
 """
 NutriTrack — Extended Nutrient Constants
-82+ nutrients mapped to USDA FoodData Central nutrient IDs
+67+ nutrients mapped to USDA FoodData Central nutrient IDs
 
 This module defines the complete nutrient taxonomy used across NutriTrack:
 - USDA nutrient ID → internal field name mapping
@@ -19,7 +19,7 @@ All RDA values are for adults 19-50, based on NIH DRI tables.
 # Value: internal field name (str)
 #
 # The existing NutriTrack schema has 11 "core" nutrients stored as
-# individual columns on FoodLog. All 82+ nutrients below will be
+# individual columns on FoodLog. All 67+ nutrients below will be
 # stored in a JSONB `extended_nutrients` column. The core 11 are
 # kept as individual columns for backward compat and fast aggregation.
 

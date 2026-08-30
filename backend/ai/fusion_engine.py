@@ -1,6 +1,6 @@
 """
 NutriTrack — Three-Way Fusion Vision Engine
-Fuses Groq (0.5s speed) + Gemini (95%+ accuracy) + USDA (82+ lab-verified nutrients)
+Fuses Groq (0.5s speed) + Gemini (95%+ accuracy) + USDA (67+ lab-verified nutrients)
 
 Execution Pipeline:
 1. Try Groq Llama 3.2 Vision (ultra-fast 0.5s)
@@ -9,7 +9,7 @@ Execution Pipeline:
    - If Groq is uncertain (<85%), rate-limited, or unavailable -> Call Gemini 2.0/1.5 Flash
 3. Fallback: If both cloud APIs fail -> Call self-hosted HF LLM (llava-phi3 / Moondream2)
 4. USDA RAG Enrichment: Look up identified foods in Supabase base_foods (USDA SR Legacy / Foundation)
-   and enrich items with 82+ lab-measured nutrients and verified source flags.
+   and enrich items with 67+ lab-measured nutrients and verified source flags.
 """
 
 import os
