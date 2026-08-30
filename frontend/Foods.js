@@ -896,7 +896,7 @@ const RDI = {
 };
 
 // ─────────────────────────────────────────────────
-//  AUTO-INJECT 67+ EXTENDED MICRONUTRIENTS (OFFLINE)
+//  AUTO-INJECT 85+ EXTENDED MICRONUTRIENTS (OFFLINE)
 // ─────────────────────────────────────────────────
 if (typeof FOODS !== 'undefined' && Array.isArray(FOODS)) {
   FOODS.forEach(f => {
@@ -907,6 +907,7 @@ if (typeof FOODS !== 'undefined' && Array.isArray(FOODS)) {
       const isDairy = f.cat === 'dairy';
       const isGrain = f.cat === 'grain';
       const isNut = f.cat === 'snack' || f.name?.toLowerCase().includes('nut') || f.name?.toLowerCase().includes('seed');
+      const isFish = isProtein && f.name?.toLowerCase().includes('fish');
 
       f.extended_nutrients = {
         energy_kcal: f.cal || 0,
@@ -921,21 +922,30 @@ if (typeof FOODS !== 'undefined' && Array.isArray(FOODS)) {
         iron_mg: f.iron || 0,
         folate_mcg: f.folate || 0,
 
-        // Vitamins
+        // Fat-Soluble Vitamins & Tocopherols
         vitamin_a_mcg_rae: isFruit ? 45 : isVeg ? 180 : isDairy ? 85 : 12,
-        vitamin_c_mg: isFruit ? 35 : isVeg ? 28 : 2,
+        vitamin_d_mcg: f.vit_d || (isDairy ? 1.2 : isFish ? 5.0 : 0.0),
         vitamin_e_mg: isNut ? 4.5 : isVeg ? 1.2 : 0.4,
         vitamin_k_mcg: isVeg ? 85 : 4,
+        vitamin_k2_mcg: isDairy ? 8.0 : isProtein ? 4.0 : 0.0,
+        gamma_tocopherol_mg: isNut ? 3.8 : 0.3,
+        delta_tocopherol_mg: isNut ? 1.0 : 0.1,
+        beta_tocopherol_mg: isNut ? 0.7 : 0.05,
+
+        // Water-Soluble Vitamins
+        vitamin_c_mg: isFruit ? 35 : isVeg ? 28 : 2,
         thiamin_b1_mg: isGrain ? 0.3 : 0.1,
         riboflavin_b2_mg: isDairy ? 0.4 : isProtein ? 0.25 : 0.08,
         niacin_b3_mg: isProtein ? 6.5 : isGrain ? 2.5 : 0.8,
         pantothenic_acid_b5_mg: isProtein ? 1.2 : 0.4,
         vitamin_b6_mg: isProtein ? 0.6 : isFruit ? 0.3 : 0.1,
+        biotin_b7_mcg: isDairy ? 6.0 : isProtein ? 7.5 : isNut ? 9.0 : 1.5,
         vitamin_b12_mcg: isProtein ? 1.5 : isDairy ? 0.8 : 0.0,
         choline_mg: isProtein ? 85 : isDairy ? 35 : 15,
 
-        // Minerals
+        // Major & Trace Minerals
         calcium_mg: isDairy ? 250 : isVeg ? 45 : 18,
+        iron_mg: f.iron || (isVeg ? 2.0 : isProtein ? 1.5 : 0.4),
         magnesium_mg: isNut ? 65 : isGrain ? 45 : isVeg ? 25 : 15,
         phosphorus_mg: isProtein ? 220 : isDairy ? 180 : 40,
         potassium_mg: isFruit ? 280 : isVeg ? 320 : isProtein ? 260 : 90,
@@ -943,20 +953,57 @@ if (typeof FOODS !== 'undefined' && Array.isArray(FOODS)) {
         copper_mg: isNut ? 0.3 : 0.08,
         manganese_mg: isGrain ? 0.8 : isVeg ? 0.3 : 0.05,
         selenium_mcg: isProtein ? 24 : isGrain ? 12 : 1.5,
+        iodine_mcg: isDairy ? 40 : isFish ? 60 : 6,
+        fluoride_mcg: isVeg ? 40 : 12,
+        chromium_mcg: isGrain ? 8.0 : isProtein ? 5.5 : 1.2,
+        molybdenum_mcg: isGrain ? 16.0 : isVeg ? 8.0 : 2.0,
+        boron_mcg: isFruit ? 110 : isNut ? 160 : 20,
+        nickel_mcg: isGrain ? 12 : isNut ? 30 : 3,
+        sulfur_mg: isProtein ? 200 : isDairy ? 100 : 30,
 
-        // Amino Acids (BCAAs)
+        // Essential Amino Acids (All 9 EAAs + conditional)
         leucine_g: isProtein ? +(f.pro * 0.08).toFixed(2) : +(f.pro * 0.04).toFixed(2),
         isoleucine_g: isProtein ? +(f.pro * 0.05).toFixed(2) : +(f.pro * 0.03).toFixed(2),
         valine_g: isProtein ? +(f.pro * 0.06).toFixed(2) : +(f.pro * 0.03).toFixed(2),
         lysine_g: isProtein ? +(f.pro * 0.07).toFixed(2) : +(f.pro * 0.02).toFixed(2),
         methionine_g: isProtein ? +(f.pro * 0.03).toFixed(2) : +(f.pro * 0.01).toFixed(2),
+        cystine_g: isProtein ? +(f.pro * 0.018).toFixed(2) : +(f.pro * 0.01).toFixed(2),
+        phenylalanine_g: +(f.pro * 0.042).toFixed(2),
+        tyrosine_g: +(f.pro * 0.030).toFixed(2),
+        threonine_g: +(f.pro * 0.040).toFixed(2),
+        tryptophan_g: +(f.pro * 0.013).toFixed(2),
+        histidine_g: +(f.pro * 0.026).toFixed(2),
         arginine_g: isProtein ? +(f.pro * 0.06).toFixed(2) : +(f.pro * 0.03).toFixed(2),
+        alanine_g: +(f.pro * 0.05).toFixed(2),
+        aspartic_acid_g: +(f.pro * 0.08).toFixed(2),
+        glutamic_acid_g: +(f.pro * 0.16).toFixed(2),
+        glycine_g: +(f.pro * 0.04).toFixed(2),
+        proline_g: +(f.pro * 0.05).toFixed(2),
+        serine_g: +(f.pro * 0.04).toFixed(2),
+        hydroxyproline_g: +(f.pro * 0.005).toFixed(2),
 
-        // Fats
+        // Fats & Essential Lipids
         saturated_fat_g: +(f.fat * (isDairy ? 0.6 : isProtein ? 0.35 : 0.15)).toFixed(1),
         monounsaturated_fat_g: +(f.fat * 0.45).toFixed(1),
         polyunsaturated_fat_g: +(f.fat * 0.30).toFixed(1),
-        omega3_ala_g: isNut ? +(f.fat * 0.15).toFixed(2) : 0.05
+        omega3_ala_g: isNut ? +(f.fat * 0.15).toFixed(2) : 0.05,
+        omega3_epa_g: isFish ? 0.25 : 0.0,
+        omega3_dha_g: isFish ? 0.25 : 0.0,
+        omega3_dpa_g: isFish ? 0.08 : 0.0,
+        omega6_linoleic_g: +(f.fat * (isNut ? 0.35 : 0.15)).toFixed(1),
+        omega6_arachidonic_g: isProtein ? +(f.fat * 0.03).toFixed(2) : 0.0,
+
+        // Phytosterols & Bioactives
+        beta_carotene_mcg: isVeg ? 1100 : isFruit ? 200 : 0,
+        alpha_carotene_mcg: isVeg ? 400 : 0,
+        lycopene_mcg: isVeg ? 500 : 0,
+        lutein_zeaxanthin_mcg: isVeg ? 800 : 0,
+        phytosterols_total_mg: isNut ? 60 : isGrain ? 25 : isVeg ? 10 : 0,
+        beta_sitosterol_mg: isNut ? 35 : isGrain ? 15 : isVeg ? 6 : 0,
+        campesterol_mg: isNut ? 10 : isGrain ? 5 : isVeg ? 2 : 0,
+        stigmasterol_mg: isNut ? 7 : isGrain ? 3 : isVeg ? 1 : 0,
+        caffeine_mg: 0,
+        theobromine_mg: 0
       };
     }
   });

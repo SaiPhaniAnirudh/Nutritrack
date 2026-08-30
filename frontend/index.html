@@ -741,12 +741,12 @@
           </div>
         </div>
 
-        <!-- 67+ CLINICAL MICRONUTRIENT & ADEQUACY PANEL -->
+        <!-- 85+ CLINICAL MICRONUTRIENT & ADEQUACY PANEL -->
         <div class="glass-card" id="micronutrientPanel" style="margin-bottom: 1.5rem; border: 1px solid rgba(62,207,142,0.18);">
           <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleMicroPanel()">
             <div class="card-title" style="margin-bottom:0;">
               <div class="dot" style="background:#3ecf8e; box-shadow:0 0 8px #3ecf8e;"></div>
-              🧬 67+ Clinical Nutrient & Micronutrient Adequacy
+              🧬 85+ Clinical Nutrient & Micronutrient Adequacy
             </div>
             <div style="display:flex; align-items:center; gap:8px;">
               <span class="badge badge-emerald" style="font-size:0.7rem; font-weight:700;">USDA SR Legacy</span>
@@ -755,13 +755,16 @@
           </div>
           
           <div id="microPanelBody" style="display:none; margin-top:1.2rem; border-top:1px solid rgba(255,255,255,0.06); padding-top:1rem;">
+            <!-- Real-time Protein Quality & DIAAS Banner -->
+            <div id="diaasScoreBanner"></div>
+
             <!-- Category Tabs -->
             <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:1rem;" id="microTabs">
-              <button type="button" class="cat-chip active" onclick="switchMicroTab('vitamins', this)">💊 Vitamins (13)</button>
-              <button type="button" class="cat-chip" onclick="switchMicroTab('minerals', this)">⚡ Minerals (9)</button>
-              <button type="button" class="cat-chip" onclick="switchMicroTab('fats', this)">🥑 Fat Profile & Omega-3</button>
-              <button type="button" class="cat-chip" onclick="switchMicroTab('amino_acids', this)">🧬 Amino Acids (19)</button>
-              <button type="button" class="cat-chip" onclick="switchMicroTab('phytochemicals', this)">🌿 Phytochemicals</button>
+              <button type="button" class="cat-chip active" onclick="switchMicroTab('vitamins', this)">💊 Vitamins (18)</button>
+              <button type="button" class="cat-chip" onclick="switchMicroTab('minerals', this)">⚡ Minerals (16)</button>
+              <button type="button" class="cat-chip" onclick="switchMicroTab('fats', this)">🥑 Fat Profile & Omegas (10)</button>
+              <button type="button" class="cat-chip" onclick="switchMicroTab('amino_acids', this)">🧬 Amino Acids & DIAAS (19)</button>
+              <button type="button" class="cat-chip" onclick="switchMicroTab('phytochemicals', this)">🌿 Phytosterols & Bioactives (10)</button>
             </div>
             
             <!-- Dynamic Grid Container -->

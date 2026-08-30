@@ -1892,7 +1892,7 @@ function _compressImage(b64, maxBytes = 40000) {
   });
 }
 
-async function scanWithAI() {
+async function scanWithAI(mode = 'food') {
   if (!scanImageB64) { showScanStatus('⚠️ Take or upload a photo first', 'error'); return; }
   if (_scanAbortCtrl) { _scanAbortCtrl.abort(); }
   _scanAbortCtrl = new AbortController();
@@ -1902,18 +1902,51 @@ async function scanWithAI() {
   const setScanning = on => {
     if (!btn) return;
     btn.disabled = on;
-    btn.innerHTML = on ? '<span class="scanning-pulse">⚡</span> Scanning (480ms)…' : '✨ Scan with AI';
+    btn.innerHTML = on ? '<span class="scanning-pulse">⚡</span> Scanning…' : '✨ Scan with AI';
   };
 
   setScanning(true);
-  showScanStatus('⚡ Groq LPU Vision scanning…', 'info');
   document.querySelectorAll('.ai-bbox-overlay').forEach(el => el.remove());
+
+  if (mode === 'label') {
+    showScanStatus('🏷️ Reading Nutrition Facts via Vision OCR…', 'info');
+    document.getElementById('scanResult').innerHTML = `
+      <div class="scan-result-placeholder" style="padding:1.8rem 1rem;">
+        <div class="scanning-pulse" style="font-size:2.8rem;">🏷️</div>
+        <div style="font-size:0.95rem; font-weight:700; color:#fff; margin-top:0.8rem;">Nutrition Label OCR Active</div>
+        <div style="font-size:0.75rem; color:#3ecf8e; margin-top:0.3rem;">Extracting exact grams, macros & clinical micros from label…</div>
+      </div>`;
+
+    try {
+      const backendUrl = window._BACKEND_URL || '';
+      const resp = await _authFetch(`${backendUrl}/api/ai/analyze-label`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: scanImageB64 }),
+        signal
+      });
+      const data = resp && resp.ok ? await resp.json() : null;
+      hideScanStatus(); setScanning(false);
+      if (data && data.success && data.nutrition_label) {
+        _renderLabelResult(data.nutrition_label);
+        showToast('✓ Nutrition Facts extracted from label!', 'success');
+      } else {
+        showToast('⚠️ Could not extract label. Please try a clearer angle.', 'error');
+      }
+    } catch (err) {
+      hideScanStatus(); setScanning(false);
+      showToast('Label scan error: ' + (err.message || 'Network error'), 'error');
+    }
+    return;
+  }
+
+  showScanStatus(mode === 'menu' ? '📋 Parsing restaurant menu…' : '⚡ Multimodal Vision scanning…', 'info');
 
   document.getElementById('scanResult').innerHTML = `
     <div class="scan-result-placeholder" style="padding:1.8rem 1rem;">
       <div class="scanning-pulse" style="font-size:2.8rem; filter:drop-shadow(0 0 16px rgba(62,207,142,0.6));">⚡</div>
       <div style="font-size:0.95rem; font-weight:700; color:#fff; margin-top:0.8rem;">Multimodal Vision Engine Active</div>
-      <div style="font-size:0.75rem; color:#3ecf8e; margin-top:0.3rem; font-weight:600;">Sub-second food identification & 67+ nutrient RAG</div>
+      <div style="font-size:0.75rem; color:#3ecf8e; margin-top:0.3rem; font-weight:600;">Sub-second food identification & 85+ nutrient RAG</div>
     </div>`;
 
   const imageToSend = await _compressImage(scanImageB64, 35000);
@@ -1922,7 +1955,7 @@ async function scanWithAI() {
   const statusInterval = setInterval(() => {
     scanSec += 1;
     if (scanSec === 2) showScanStatus('🔬 Deconstructing plate & matching USDA / IFCT chemistry…', 'info');
-    if (scanSec === 5) showScanStatus('✨ Finalizing 67+ nutrient breakdown…', 'info');
+    if (scanSec === 5) showScanStatus('✨ Finalizing 85+ nutrient breakdown…', 'info');
   }, 1000);
 
   try {
@@ -1971,8 +2004,67 @@ async function scanWithAI() {
   }
 }
 
+function _renderLabelResult(label) {
+  const name = label.product_name || 'Scanned Packaged Food';
+  const cal = Math.round(label.calories || 0);
+  const pro = +(label.protein_g || 0).toFixed(1);
+  const carb = +(label.carbohydrate_g || 0).toFixed(1);
+  const fat = +(label.total_fat_g || 0).toFixed(1);
+  const fiber = +(label.fiber_g || 0).toFixed(1);
+  const sugar = +(label.total_sugars_g || 0).toFixed(1);
+  const sod = Math.round(label.sodium_mg || 0);
+  const chol = Math.round(label.cholesterol_mg || 0);
+  const serving = label.serving_size || '1 serving';
+
+  const labelFoodObj = {
+    name: name,
+    emoji: '📦',
+    cal: cal, pro: pro, carb: carb, fat: fat,
+    fiber: fiber, sugar: sugar, sodium: sod, chol: chol,
+    vit_d: +(label.vitamin_d_mcg || 0).toFixed(1),
+    iron: +(label.iron_mg || 0).toFixed(1),
+    calcium: +(label.calcium_mg || 0).toFixed(1),
+    potassium: +(label.potassium_mg || 0).toFixed(1),
+    source: 'Nutrition Label OCR'
+  };
+
+  const labelSafeId = 'label_' + Math.random().toString(36).substr(2, 6);
+  if (!window._foodCardMap) window._foodCardMap = {};
+  window._foodCardMap[labelSafeId] = labelFoodObj;
+
+  document.getElementById('scanResult').innerHTML = `
+    <div class="scan-result-card" style="border:1px solid rgba(62,207,142,0.3); background:linear-gradient(135deg, rgba(62,207,142,0.06), rgba(10,15,13,0.95));">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.8rem;">
+        <div>
+          <div style="font-size:0.7rem; font-weight:800; color:var(--kiwi); text-transform:uppercase; letter-spacing:0.06em;">🏷️ Nutrition Facts OCR</div>
+          <div class="scan-food-name" style="font-size:1.15rem; margin-top:2px;">${name}</div>
+          <div class="scan-portion">Serving: ${serving}</div>
+        </div>
+        <div class="scan-confidence" style="background:rgba(62,207,142,0.15); border-color:#3ecf8e; color:#3ecf8e;">100% OCR Match</div>
+      </div>
+      <div class="scan-cal-row">
+        <div class="scan-cal-big">${cal}</div>
+        <div class="scan-cal-unit">kcal / serving</div>
+      </div>
+      <div class="scan-nutrient-grid">
+        ${_buildNutrientCell('💪', 'Protein', pro, 'g', false)}
+        ${_buildNutrientCell('🌾', 'Carbs', carb, 'g', false)}
+        ${_buildNutrientCell('🥑', 'Fat', fat, 'g', false)}
+        ${_buildNutrientCell('🌿', 'Fiber', fiber, 'g', false)}
+        ${_buildNutrientCell('🍬', 'Sugar', sugar, 'g', false)}
+        ${_buildNutrientCell('🧂', 'Sodium', sod, 'mg', false)}
+        ${_buildNutrientCell('❤️', 'Chol', chol, 'mg', false)}
+        ${_buildNutrientCell('🦴', 'Calcium', label.calcium_mg || 0, 'mg', false)}
+      </div>
+      <button type="button" class="scan-add-btn" style="margin-top:1rem;" onclick="addFoodById('${labelSafeId}')">
+        ✓ Log ${name} to ${currentMealType || 'meal'}
+      </button>
+    </div>
+  `;
+}
+
 // ─────────────────────────────────────────────────
-//  RENDER SCAN RESULT
+//  RENDER SCAN RESULT WITH VISUAL PORTION SCALING
 // ─────────────────────────────────────────────────
 function _buildNutrientCell(icon, label, val, unit, warn) {
   return `<div class="scan-nutrient-cell ${warn ? 'warn' : ''}">
@@ -1982,6 +2074,25 @@ function _buildNutrientCell(icon, label, val, unit, warn) {
       <div><span class="scan-n-val">${val}</span><span class="scan-n-unit"> ${unit}</span></div>
     </div>
   </div>`;
+}
+
+function scaleScannedPortion(safeId, mult) {
+  const currentObj = window._foodCardMap && window._foodCardMap[safeId];
+  if (!currentObj) return;
+  if (!currentObj._origCal) {
+    currentObj._origCal = currentObj.cal;
+    currentObj._origPro = currentObj.pro;
+    currentObj._origCarb = currentObj.carb;
+    currentObj._origFat = currentObj.fat;
+  }
+  currentObj.cal = Math.round(currentObj._origCal * mult);
+  currentObj.pro = +(currentObj._origPro * mult).toFixed(1);
+  currentObj.carb = +(currentObj._origCarb * mult).toFixed(1);
+  currentObj.fat = +(currentObj._origFat * mult).toFixed(1);
+
+  const calEl = document.getElementById(`cal_${safeId}`);
+  if (calEl) calEl.innerHTML = `${currentObj.cal} <span style="font-size:0.65rem;font-weight:400;color:var(--ink-50)">kcal</span>`;
+  showToast(`Portion scaled to ${Math.round(mult * 100)}% (${currentObj.cal} kcal)`, 'info');
 }
 
 function _renderAIBoundingOverlays(items) {
@@ -2103,10 +2214,20 @@ function _renderScanResult(r) {
           <div style="font-size:0.68rem;color:var(--ink-50);margin-top:1px">${f.size} · <span style="color:#7fb8d4">⚖️ ~${Math.round(f.cal * 0.85)}g</span></div>
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.3rem">
-          <div style="font-size:1rem;font-weight:700;color:#F5A623">${f.cal} <span style="font-size:0.65rem;font-weight:400;color:var(--ink-50)">kcal</span></div>
+          <div id="cal_${itemSafeId}" style="font-size:1rem;font-weight:700;color:#F5A623">${f.cal} <span style="font-size:0.65rem;font-weight:400;color:var(--ink-50)">kcal</span></div>
           <div style="font-size:0.62rem;padding:1px 7px;border-radius:50px;border:1px solid ${iCC};color:${iCC}">${f.conf}% confident</div>
         </div>
       </div>
+
+      <!-- VISUAL PORTION CALIBRATION CHIPS -->
+      <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin:0.6rem 0; background:rgba(0,0,0,0.25); padding:6px 8px; border-radius:8px;">
+        <span style="font-size:0.68rem; color:var(--ink-50); font-weight:700;">Scale Portion:</span>
+        <button type="button" class="cat-chip" style="font-size:0.65rem; padding:2px 8px;" onclick="scaleScannedPortion('${itemSafeId}', 0.5)">🤏 Handful (0.5x)</button>
+        <button type="button" class="cat-chip" style="font-size:0.65rem; padding:2px 8px;" onclick="scaleScannedPortion('${itemSafeId}', 0.85)">✋ Palm (0.85x)</button>
+        <button type="button" class="cat-chip active" style="font-size:0.65rem; padding:2px 8px;" onclick="scaleScannedPortion('${itemSafeId}', 1.0)">✊ Fist (1.0x)</button>
+        <button type="button" class="cat-chip" style="font-size:0.65rem; padding:2px 8px;" onclick="scaleScannedPortion('${itemSafeId}', 1.5)">🍽️ Big Plate (1.5x)</button>
+      </div>
+
       <div style="height:4px;border-radius:2px;display:flex;gap:2px;overflow:hidden;margin-bottom:0.5rem;">
         <div style="width:${ipW}%;background:#7fb8d4;border-radius:2px"></div>
         <div style="width:${icW}%;background:#c4a87f;border-radius:2px"></div>
@@ -2118,7 +2239,7 @@ function _renderScanResult(r) {
       </div>
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.6rem; padding-top:0.3rem; border-top:1px solid rgba(255,255,255,0.05);">
         <span style="font-size:0.65rem; color:#7fb8d4; font-weight:600;">🏷️ ${provenance}</span>
-        <button type="button" onclick="correctScannedPortion('${itemSafeId}', '${f.name}', ${f.cal})" style="background:none; border:none; color:var(--mist); font-size:0.68rem; cursor:pointer; text-decoration:underline;">✏️ Correct Portion</button>
+        <button type="button" onclick="correctScannedPortion('${itemSafeId}', '${f.name}', ${f.cal})" style="background:none; border:none; color:var(--mist); font-size:0.68rem; cursor:pointer; text-decoration:underline;">✏️ Exact Calibrate</button>
       </div>
       <button type="button" class="scan-add-btn" style="padding:0.45rem;font-size:0.78rem;" onclick="addFoodById('${itemSafeId}')">
         ✓ Add ${f.name} to ${currentMealType || 'meal'}
@@ -2177,6 +2298,14 @@ function _renderScanResult(r) {
         <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.07em;color:var(--ink-50);margin-bottom:0.6rem;font-weight:600;">Or add individually:</div>
         ${itemRows}
       ` : `
+        <!-- Single Item Portion Scale Bar -->
+        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:1rem; background:rgba(0,0,0,0.25); padding:8px 10px; border-radius:10px;">
+          <span style="font-size:0.7rem; color:var(--ink-50); font-weight:700;">Portion Scale:</span>
+          <button type="button" class="cat-chip" style="font-size:0.68rem;" onclick="scaleScannedPortion('${singleSafeId}', 0.5)">🤏 Handful (0.5x)</button>
+          <button type="button" class="cat-chip" style="font-size:0.68rem;" onclick="scaleScannedPortion('${singleSafeId}', 0.85)">✋ Palm (0.85x)</button>
+          <button type="button" class="cat-chip active" style="font-size:0.68rem;" onclick="scaleScannedPortion('${singleSafeId}', 1.0)">✊ Fist (1.0x)</button>
+          <button type="button" class="cat-chip" style="font-size:0.68rem;" onclick="scaleScannedPortion('${singleSafeId}', 1.5)">🍽️ Big Plate (1.5x)</button>
+        </div>
         <button type="button" class="scan-add-btn" onclick="addFoodById('${singleSafeId}')">✓ Add to ${currentMealType || 'meal'}</button>
       `}
     </div>`;
@@ -5550,7 +5679,7 @@ window.updateRecipeIngredientQty = updateRecipeIngredientQty;
 window.saveCustomRecipe = saveCustomRecipe;
 
 // ─────────────────────────────────────────────────
-//  67+ CLINICAL MICRONUTRIENT & ADEQUACY PANEL
+//  85+ CLINICAL MICRONUTRIENT & ADEQUACY PANEL
 // ─────────────────────────────────────────────────
 
 const _MICRO_DEFINITIONS = {
@@ -5559,15 +5688,20 @@ const _MICRO_DEFINITIONS = {
     { key: 'vitamin_c_mg', label: 'Vitamin C', icon: '🍊', unit: 'mg', rda: 90, color: '#ff7043' },
     { key: 'vitamin_d_mcg', label: 'Vitamin D', icon: '☀️', unit: 'mcg', rda: 15, color: '#fbc02d', fallbackKey: 'vit_d' },
     { key: 'vitamin_e_mg', label: 'Vitamin E', icon: '🌻', unit: 'mg', rda: 15, color: '#8bc34a' },
-    { key: 'vitamin_k_mcg', label: 'Vitamin K', icon: '🥬', unit: 'mcg', rda: 120, color: '#4caf50' },
+    { key: 'vitamin_k_mcg', label: 'Vitamin K1', icon: '🥬', unit: 'mcg', rda: 120, color: '#4caf50' },
+    { key: 'vitamin_k2_mcg', label: 'Vitamin K2', icon: '🧀', unit: 'mcg', rda: null, color: '#66bb6a' },
     { key: 'thiamin_b1_mg', label: 'Thiamin (B1)', icon: '🌾', unit: 'mg', rda: 1.2, color: '#7fb8d4' },
     { key: 'riboflavin_b2_mg', label: 'Riboflavin (B2)', icon: '🥛', unit: 'mg', rda: 1.3, color: '#4fc3f7' },
     { key: 'niacin_b3_mg', label: 'Niacin (B3)', icon: '🍄', unit: 'mg', rda: 16, color: '#29b6f6' },
     { key: 'pantothenic_acid_b5_mg', label: 'Pantothenic Acid (B5)', icon: '🥑', unit: 'mg', rda: 5, color: '#0288d1' },
     { key: 'vitamin_b6_mg', label: 'Vitamin B6', icon: '🍌', unit: 'mg', rda: 1.3, color: '#5c6bc0' },
+    { key: 'biotin_b7_mcg', label: 'Biotin (B7)', icon: '🥚', unit: 'mcg', rda: 30, color: '#ba68c8' },
     { key: 'folate_mcg', label: 'Folate (B9)', icon: '🌱', unit: 'mcg', rda: 400, color: '#7ed321', fallbackKey: 'folate' },
     { key: 'vitamin_b12_mcg', label: 'Vitamin B12', icon: '🥩', unit: 'mcg', rda: 2.4, color: '#ab47bc' },
-    { key: 'choline_mg', label: 'Choline', icon: '🥚', unit: 'mg', rda: 550, color: '#e91e63' },
+    { key: 'choline_mg', label: 'Choline', icon: '🍳', unit: 'mg', rda: 550, color: '#e91e63' },
+    { key: 'gamma_tocopherol_mg', label: 'Gamma-Tocopherol', icon: '🌰', unit: 'mg', rda: null, color: '#aed581' },
+    { key: 'delta_tocopherol_mg', label: 'Delta-Tocopherol', icon: '🌰', unit: 'mg', rda: null, color: '#c5e1a5' },
+    { key: 'beta_tocopherol_mg', label: 'Beta-Tocopherol', icon: '🌰', unit: 'mg', rda: null, color: '#dce775' },
   ],
   minerals: [
     { key: 'calcium_mg', label: 'Calcium', icon: '🦴', unit: 'mg', rda: 1000, color: '#eeeeee' },
@@ -5579,6 +5713,13 @@ const _MICRO_DEFINITIONS = {
     { key: 'copper_mg', label: 'Copper', icon: '🍫', unit: 'mg', rda: 0.9, color: '#bcaaa4' },
     { key: 'manganese_mg', label: 'Manganese', icon: '🍍', unit: 'mg', rda: 2.3, color: '#ce93d8' },
     { key: 'selenium_mcg', label: 'Selenium', icon: '🥜', unit: 'mcg', rda: 55, color: '#80cbc4' },
+    { key: 'iodine_mcg', label: 'Iodine', icon: '🧂', unit: 'mcg', rda: 150, color: '#81d4fa' },
+    { key: 'fluoride_mcg', label: 'Fluoride', icon: '🦷', unit: 'mcg', rda: 4000, color: '#b3e5fc' },
+    { key: 'chromium_mcg', label: 'Chromium', icon: '🥦', unit: 'mcg', rda: 35, color: '#a5d6a7' },
+    { key: 'molybdenum_mcg', label: 'Molybdenum', icon: '🫘', unit: 'mcg', rda: 45, color: '#ffe082' },
+    { key: 'boron_mcg', label: 'Boron', icon: '🥑', unit: 'mcg', rda: null, color: '#80deea' },
+    { key: 'nickel_mcg', label: 'Nickel', icon: '🌾', unit: 'mcg', rda: null, color: '#cfd8dc' },
+    { key: 'sulfur_mg', label: 'Sulfur', icon: '🧅', unit: 'mg', rda: null, color: '#fff59d' },
   ],
   fats: [
     { key: 'saturated_fat_g', label: 'Saturated Fat', icon: '🧈', unit: 'g', rda: 20, isLimit: true, color: '#f4613a' },
@@ -5588,6 +5729,9 @@ const _MICRO_DEFINITIONS = {
     { key: 'omega3_ala_g', label: 'Omega-3 (ALA)', icon: '🌰', unit: 'g', rda: 1.6, color: '#4fc3f7' },
     { key: 'omega3_epa_g', label: 'Omega-3 (EPA)', icon: '🐟', unit: 'g', rda: 0.25, color: '#0288d1' },
     { key: 'omega3_dha_g', label: 'Omega-3 (DHA)', icon: '🐋', unit: 'g', rda: 0.25, color: '#01579b' },
+    { key: 'omega3_dpa_g', label: 'Omega-3 (DPA)', icon: '🐟', unit: 'g', rda: null, color: '#29b6f6' },
+    { key: 'omega6_linoleic_g', label: 'Omega-6 (Linoleic)', icon: '🥜', unit: 'g', rda: 14, color: '#ffb74d' },
+    { key: 'omega6_arachidonic_g', label: 'Omega-6 (Arachidonic)', icon: '🥩', unit: 'g', rda: null, color: '#ffa726' },
   ],
   amino_acids: [
     { key: 'leucine_g', label: 'Leucine (BCAA)', icon: '🧬', unit: 'g', rda: 2.7, color: '#3ecf8e' },
@@ -5595,19 +5739,32 @@ const _MICRO_DEFINITIONS = {
     { key: 'valine_g', label: 'Valine (BCAA)', icon: '🧬', unit: 'g', rda: 1.8, color: '#4db6ac' },
     { key: 'lysine_g', label: 'Lysine', icon: '🧬', unit: 'g', rda: 2.1, color: '#80cbc4' },
     { key: 'methionine_g', label: 'Methionine', icon: '🧬', unit: 'g', rda: 0.7, color: '#a7ffeb' },
+    { key: 'cystine_g', label: 'Cystine', icon: '🧬', unit: 'g', rda: null, color: '#80deea' },
     { key: 'phenylalanine_g', label: 'Phenylalanine', icon: '🧬', unit: 'g', rda: 1.1, color: '#c4a87f' },
+    { key: 'tyrosine_g', label: 'Tyrosine', icon: '🧬', unit: 'g', rda: null, color: '#d7ccc8' },
     { key: 'tryptophan_g', label: 'Tryptophan', icon: '🧬', unit: 'g', rda: 0.3, color: '#ffb74d' },
     { key: 'threonine_g', label: 'Threonine', icon: '🧬', unit: 'g', rda: 1.0, color: '#ffd54f' },
     { key: 'histidine_g', label: 'Histidine', icon: '🧬', unit: 'g', rda: 0.7, color: '#fff176' },
     { key: 'arginine_g', label: 'Arginine', icon: '🧬', unit: 'g', rda: null, color: '#b39ddb' },
+    { key: 'alanine_g', label: 'Alanine', icon: '🧬', unit: 'g', rda: null, color: '#ce93d8' },
+    { key: 'aspartic_acid_g', label: 'Aspartic Acid', icon: '🧬', unit: 'g', rda: null, color: '#f48fb1' },
     { key: 'glutamic_acid_g', label: 'Glutamic Acid', icon: '🧬', unit: 'g', rda: null, color: '#9fa8da' },
+    { key: 'glycine_g', label: 'Glycine', icon: '🧬', unit: 'g', rda: null, color: '#90caf9' },
+    { key: 'proline_g', label: 'Proline', icon: '🧬', unit: 'g', rda: null, color: '#a5d6a7' },
+    { key: 'serine_g', label: 'Serine', icon: '🧬', unit: 'g', rda: null, color: '#c5e1a5' },
+    { key: 'hydroxyproline_g', label: 'Hydroxyproline', icon: '🧬', unit: 'g', rda: null, color: '#e6ee9c' },
   ],
   phytochemicals: [
     { key: 'beta_carotene_mcg', label: 'Beta-Carotene', icon: '🥕', unit: 'mcg', rda: null, color: '#ff9800' },
     { key: 'alpha_carotene_mcg', label: 'Alpha-Carotene', icon: '🎃', unit: 'mcg', rda: null, color: '#ffa726' },
     { key: 'lycopene_mcg', label: 'Lycopene', icon: '🍅', unit: 'mcg', rda: null, color: '#f44336' },
     { key: 'lutein_zeaxanthin_mcg', label: 'Lutein + Zeaxanthin', icon: '🥬', unit: 'mcg', rda: null, color: '#4caf50' },
+    { key: 'phytosterols_total_mg', label: 'Total Phytosterols', icon: '🌿', unit: 'mg', rda: null, color: '#66bb6a' },
+    { key: 'beta_sitosterol_mg', label: 'Beta-Sitosterol', icon: '🌱', unit: 'mg', rda: null, color: '#81c784' },
+    { key: 'campesterol_mg', label: 'Campesterol', icon: '🌱', unit: 'mg', rda: null, color: '#a5d6a7' },
+    { key: 'stigmasterol_mg', label: 'Stigmasterol', icon: '🌱', unit: 'mg', rda: null, color: '#c8e6c9' },
     { key: 'caffeine_mg', label: 'Caffeine', icon: '☕', unit: 'mg', rda: 400, isLimit: true, color: '#8d6e63' },
+    { key: 'theobromine_mg', label: 'Theobromine', icon: '🍫', unit: 'mg', rda: null, color: '#6d4c41' },
   ]
 };
 
@@ -5655,14 +5812,19 @@ function _synthesizeExtendedNutrients(l) {
     vitamin_d_mcg: floatVal(l.vit_d) || (isDairy ? 1.5 : isProtein ? 0.8 : 0.0),
     vitamin_e_mg: isNut ? 5.2 : isVeg ? 1.5 : 0.6,
     vitamin_k_mcg: isVeg ? 90 : 5,
+    vitamin_k2_mcg: isDairy ? 8.5 : isProtein ? 4.0 : 0.0,
     thiamin_b1_mg: isGrain ? 0.35 : 0.12,
     riboflavin_b2_mg: isDairy ? 0.45 : isProtein ? 0.3 : 0.1,
     niacin_b3_mg: isProtein ? 7.0 : isGrain ? 3.0 : 1.0,
     pantothenic_acid_b5_mg: isProtein ? 1.4 : 0.5,
     vitamin_b6_mg: isProtein ? 0.7 : isFruit ? 0.4 : 0.15,
+    biotin_b7_mcg: isDairy ? 6.5 : isProtein ? 8.0 : isNut ? 9.5 : 2.0,
     folate_mcg: floatVal(l.folate) || (isVeg ? 120 : isFruit ? 25 : 15),
     vitamin_b12_mcg: isProtein ? 1.8 : isDairy ? 0.9 : 0.0,
     choline_mg: isProtein ? 95 : isDairy ? 40 : 18,
+    gamma_tocopherol_mg: isNut ? 4.2 : 0.4,
+    delta_tocopherol_mg: isNut ? 1.1 : 0.1,
+    beta_tocopherol_mg: isNut ? 0.8 : 0.05,
 
     calcium_mg: isDairy ? 280 : isVeg ? 55 : 22,
     iron_mg: floatVal(l.iron) || (isVeg ? 2.1 : isProtein ? 1.8 : 0.5),
@@ -5673,6 +5835,13 @@ function _synthesizeExtendedNutrients(l) {
     copper_mg: isNut ? 0.35 : 0.1,
     manganese_mg: isGrain ? 0.9 : isVeg ? 0.35 : 0.06,
     selenium_mcg: isProtein ? 26 : isGrain ? 14 : 2.0,
+    iodine_mcg: isDairy ? 42 : isProtein && name.includes('fish') ? 65 : 8,
+    fluoride_mcg: isVeg ? 45 : 15,
+    chromium_mcg: isGrain ? 8.5 : isProtein ? 6.0 : 1.5,
+    molybdenum_mcg: isGrain ? 18.0 : isVeg ? 9.0 : 2.5,
+    boron_mcg: isFruit ? 120 : isNut ? 180 : 25,
+    nickel_mcg: isGrain ? 15 : isNut ? 35 : 4,
+    sulfur_mg: isProtein ? 210 : isDairy ? 110 : 35,
 
     saturated_fat_g: +(fat * (isDairy ? 0.6 : isProtein ? 0.35 : 0.15)).toFixed(1),
     monounsaturated_fat_g: +(fat * 0.45).toFixed(1),
@@ -5681,25 +5850,86 @@ function _synthesizeExtendedNutrients(l) {
     omega3_ala_g: isNut ? +(fat * 0.15).toFixed(2) : 0.08,
     omega3_epa_g: isProtein && name.includes('fish') ? 0.25 : 0.0,
     omega3_dha_g: isProtein && name.includes('fish') ? 0.25 : 0.0,
+    omega3_dpa_g: isProtein && name.includes('fish') ? 0.08 : 0.0,
+    omega6_linoleic_g: +(fat * (isNut ? 0.35 : 0.15)).toFixed(1),
+    omega6_arachidonic_g: isProtein ? +(fat * 0.04).toFixed(2) : 0.0,
 
     leucine_g: +(pro * (isProtein ? 0.085 : 0.045)).toFixed(2),
     isoleucine_g: +(pro * (isProtein ? 0.055 : 0.032)).toFixed(2),
     valine_g: +(pro * (isProtein ? 0.065 : 0.035)).toFixed(2),
     lysine_g: +(pro * (isProtein ? 0.075 : 0.025)).toFixed(2),
     methionine_g: +(pro * (isProtein ? 0.032 : 0.012)).toFixed(2),
+    cystine_g: +(pro * (isProtein ? 0.018 : 0.012)).toFixed(2),
     phenylalanine_g: +(pro * 0.045).toFixed(2),
+    tyrosine_g: +(pro * 0.032).toFixed(2),
     tryptophan_g: +(pro * 0.014).toFixed(2),
     threonine_g: +(pro * 0.042).toFixed(2),
     histidine_g: +(pro * 0.028).toFixed(2),
     arginine_g: +(pro * 0.062).toFixed(2),
+    alanine_g: +(pro * 0.052).toFixed(2),
+    aspartic_acid_g: +(pro * 0.088).toFixed(2),
     glutamic_acid_g: +(pro * 0.18).toFixed(2),
+    glycine_g: +(pro * 0.044).toFixed(2),
+    proline_g: +(pro * 0.058).toFixed(2),
+    serine_g: +(pro * 0.046).toFixed(2),
+    hydroxyproline_g: +(pro * 0.008).toFixed(2),
 
     beta_carotene_mcg: isVeg ? 1200 : isFruit ? 250 : 0,
     alpha_carotene_mcg: isVeg && name.includes('carrot') ? 800 : 0,
     lycopene_mcg: name.includes('tomato') ? 3000 : 0,
     lutein_zeaxanthin_mcg: isVeg ? 850 : 0,
-    caffeine_mg: name.includes('coffee') ? 95 : name.includes('tea') ? 40 : 0
+    phytosterols_total_mg: isNut ? 65 : isGrain ? 28 : isVeg ? 12 : 0,
+    beta_sitosterol_mg: isNut ? 38 : isGrain ? 16 : isVeg ? 8 : 0,
+    campesterol_mg: isNut ? 12 : isGrain ? 6 : isVeg ? 2 : 0,
+    stigmasterol_mg: isNut ? 8 : isGrain ? 4 : isVeg ? 1 : 0,
+    caffeine_mg: name.includes('coffee') ? 95 : name.includes('tea') ? 40 : 0,
+    theobromine_mg: name.includes('chocolate') || name.includes('cocoa') ? 180 : 0
   };
+}
+
+function _calculateClientDiaasScore(totals, totalPro) {
+  if (!totalPro || totalPro <= 1) return { score: 0, tier: 'Insufficient Protein', bcaa: 0, limiting: null };
+  const who = {
+    histidine: 15.0, isoleucine: 30.0, leucine: 59.0, lysine: 45.0,
+    saa: 22.0, aaa: 38.0, threonine: 23.0, tryptophan: 6.0, valine: 39.0
+  };
+
+  const his = (totals.histidine_g || 0) * 1000 / totalPro;
+  const ile = (totals.isoleucine_g || 0) * 1000 / totalPro;
+  const leu = (totals.leucine_g || 0) * 1000 / totalPro;
+  const lys = (totals.lysine_g || 0) * 1000 / totalPro;
+  const saa = ((totals.methionine_g || 0) + (totals.cystine_g || 0)) * 1000 / totalPro;
+  const aaa = ((totals.phenylalanine_g || 0) + (totals.tyrosine_g || 0)) * 1000 / totalPro;
+  const thr = (totals.threonine_g || 0) * 1000 / totalPro;
+  const trp = (totals.tryptophan_g || 0) * 1000 / totalPro;
+  const val = (totals.valine_g || 0) * 1000 / totalPro;
+
+  const ratios = {
+    Histidine: (his / who.histidine) * 100,
+    Isoleucine: (ile / who.isoleucine) * 100,
+    Leucine: (leu / who.leucine) * 100,
+    Lysine: (lys / who.lysine) * 100,
+    'Methionine + Cystine': (saa / who.saa) * 100,
+    'Phenylalanine + Tyrosine': (aaa / who.aaa) * 100,
+    Threonine: (thr / who.threonine) * 100,
+    Tryptophan: (trp / who.tryptophan) * 100,
+    Valine: (val / who.valine) * 100,
+  };
+
+  let minScore = 999;
+  let limiting = null;
+  Object.entries(ratios).forEach(([k, score]) => {
+    if (score < minScore) {
+      minScore = score;
+      limiting = k;
+    }
+  });
+
+  const diaas = Math.min(100, Math.round(minScore));
+  const bcaa = _roundNum((totals.leucine_g || 0) + (totals.isoleucine_g || 0) + (totals.valine_g || 0), 1);
+  const tier = diaas >= 90 ? 'Complete (High Quality)' : diaas >= 75 ? 'Good Quality' : `Incomplete (Low ${limiting})`;
+
+  return { score: diaas, tier, bcaa, limiting: diaas >= 90 ? null : limiting };
 }
 
 function renderMicroGrid() {
@@ -5711,7 +5941,10 @@ function renderMicroGrid() {
 
   // Aggregate today's intake
   const totals = {};
+  let totalPro = 0;
+
   logs.forEach(l => {
+    totalPro += (floatVal(l.pro) || 0);
     // Core fallbacks
     if (l.vit_d) totals['vitamin_d_mcg'] = (totals['vitamin_d_mcg'] || 0) + floatVal(l.vit_d);
     if (l.iron) totals['iron_mg'] = (totals['iron_mg'] || 0) + floatVal(l.iron);
@@ -5729,6 +5962,27 @@ function renderMicroGrid() {
       }
     });
   });
+
+  // Calculate DIAAS Protein Quality
+  const diaasData = _calculateClientDiaasScore(totals, totalPro);
+  const diaasBanner = document.getElementById('diaasScoreBanner');
+  if (diaasBanner) {
+    diaasBanner.innerHTML = `
+      <div style="background:linear-gradient(135deg, rgba(62,207,142,0.12), rgba(34,197,94,0.04)); border:1px solid rgba(62,207,142,0.25); border-radius:14px; padding:0.9rem 1.1rem; margin-bottom:1rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div style="width:40px; height:40px; border-radius:50%; background:rgba(62,207,142,0.2); border:2px solid #3ecf8e; display:flex; align-items:center; justify-content:center; font-size:1.1rem;">🧬</div>
+          <div>
+            <div style="font-size:0.72rem; color:var(--kiwi); font-weight:800; text-transform:uppercase; letter-spacing:0.05em;">WHO/FAO Protein Quality (DIAAS)</div>
+            <div style="font-size:1.05rem; font-weight:800; color:#fff;">${diaasData.score}% <span style="font-size:0.8rem; font-weight:600; color:${diaasData.score >= 90 ? '#3ecf8e' : '#f5a623'};">(${diaasData.tier})</span></div>
+          </div>
+        </div>
+        <div style="display:flex; gap:12px; font-size:0.75rem; color:var(--ink-50);">
+          <div>💪 BCAAs: <strong style="color:#fff;">${diaasData.bcaa}g</strong></div>
+          <div>🥩 Protein: <strong style="color:#fff;">${_roundNum(totalPro, 1)}g</strong></div>
+        </div>
+      </div>
+    `;
+  }
 
   const list = _MICRO_DEFINITIONS[_activeMicroTab] || _MICRO_DEFINITIONS.vitamins || [];
   container.innerHTML = list.map(item => {

@@ -74,11 +74,30 @@ USDA_NUTRIENT_MAP = {
     1091: "phosphorus_mg",          # Phosphorus, P (mg)
     1092: "potassium_mg",           # Potassium, K (mg)
 
-    # ── Trace Minerals ──
+    # ── Trace Minerals & Elements ──
     1095: "zinc_mg",                # Zinc, Zn (mg)
     1098: "copper_mg",              # Copper, Cu (mg)
     1101: "manganese_mg",           # Manganese, Mn (mg)
     1103: "selenium_mcg",           # Selenium, Se (mcg)
+    1100: "iodine_mcg",             # Iodine, I (mcg)
+    1099: "fluoride_mcg",           # Fluoride, F (mcg)
+    1096: "chromium_mcg",           # Chromium, Cr (mcg)
+    1097: "molybdenum_mcg",         # Molybdenum, Mo (mcg)
+    1149: "boron_mcg",              # Boron, B (mcg)
+    1141: "nickel_mcg",             # Nickel, Ni (mcg)
+    1094: "sulfur_mg",              # Sulfur, S (mg)
+
+    # ── Additional Vitamins & Tocopherols ──
+    1176: "biotin_b7_mcg",          # Biotin / B7 (mcg)
+    1183: "vitamin_k2_mcg",         # Vitamin K2 / Menaquinone-4 (mcg)
+    1110: "gamma_tocopherol_mg",    # Vitamin E, gamma-tocopherol (mg)
+    1111: "delta_tocopherol_mg",    # Vitamin E, delta-tocopherol (mg)
+    1112: "beta_tocopherol_mg",     # Vitamin E, beta-tocopherol (mg)
+
+    # ── Additional Fatty Acids ──
+    1317: "omega6_linoleic_g",      # 18:2 n-6 c,c (Linoleic Acid) (g)
+    1329: "omega6_arachidonic_g",   # 20:4 n-6 (Arachidonic Acid) (g)
+    1279: "omega3_dpa_g",           # 22:5 n-3 (DPA) (g)
 
     # ── Amino Acids (all 20) ──
     1210: "tryptophan_g",
@@ -109,11 +128,18 @@ USDA_NUTRIENT_MAP = {
     1321: "lycopene_mcg",           # Lycopene (mcg)
     1323: "lutein_zeaxanthin_mcg",  # Lutein + zeaxanthin (mcg)
 
-    # ── Other ──
+    # ── Phytosterols ──
+    1254: "phytosterols_total_mg",  # Phytosterols, total (mg)
+    1255: "beta_sitosterol_mg",     # Beta-sitosterol (mg)
+    1256: "campesterol_mg",         # Campesterol (mg)
+    1259: "stigmasterol_mg",        # Stigmasterol (mg)
+
+    # ── Other Bioactives ──
     1051: "water_g",                # Water (g)
     1057: "caffeine_mg",            # Caffeine (mg)
     1018: "alcohol_g",              # Alcohol, ethyl (g)
     1198: "betaine_mg",             # Betaine (mg)
+    1199: "theobromine_mg",         # Theobromine (mg)
 }
 
 
@@ -142,16 +168,23 @@ NUTRIENT_META = {
     "polyunsaturated_fat_g":  ("Polyunsaturated Fat",   "g",     None,  "fats"),
     "trans_fat_g":            ("Trans Fat",             "g",     0,     "fats"),
 
-    # ── Omega Fatty Acids ──
+    # ── Omega & Essential Fatty Acids ──
     "omega3_ala_g":           ("Omega-3 (ALA)",         "g",     1.6,   "fats"),
     "omega3_epa_g":           ("Omega-3 (EPA)",         "g",     0.25,  "fats"),
     "omega3_dha_g":           ("Omega-3 (DHA)",         "g",     0.25,  "fats"),
+    "omega3_dpa_g":           ("Omega-3 (DPA)",         "g",     None,  "fats"),
+    "omega6_linoleic_g":      ("Omega-6 (Linoleic)",    "g",     14,    "fats"),
+    "omega6_arachidonic_g":   ("Omega-6 (Arachidonic)", "g",     None,  "fats"),
 
-    # ── Fat-Soluble Vitamins ──
+    # ── Fat-Soluble Vitamins & Tocopherols ──
     "vitamin_a_mcg_rae":      ("Vitamin A",             "mcg",   900,   "vitamins"),
     "vitamin_d_mcg":          ("Vitamin D",             "mcg",   15,    "vitamins"),
     "vitamin_e_mg":           ("Vitamin E",             "mg",    15,    "vitamins"),
-    "vitamin_k_mcg":          ("Vitamin K",             "mcg",   120,   "vitamins"),
+    "vitamin_k_mcg":          ("Vitamin K1",            "mcg",   120,   "vitamins"),
+    "vitamin_k2_mcg":         ("Vitamin K2",            "mcg",   None,  "vitamins"),
+    "gamma_tocopherol_mg":    ("Gamma-Tocopherol",      "mg",    None,  "vitamins"),
+    "delta_tocopherol_mg":    ("Delta-Tocopherol",      "mg",    None,  "vitamins"),
+    "beta_tocopherol_mg":     ("Beta-Tocopherol",       "mg",    None,  "vitamins"),
 
     # ── Water-Soluble Vitamins ──
     "vitamin_c_mg":           ("Vitamin C",             "mg",    90,    "vitamins"),
@@ -160,6 +193,7 @@ NUTRIENT_META = {
     "niacin_b3_mg":           ("Niacin (B3)",           "mg",    16,    "vitamins"),
     "pantothenic_acid_b5_mg": ("Pantothenic Acid (B5)", "mg",    5,     "vitamins"),
     "vitamin_b6_mg":          ("Vitamin B6",            "mg",    1.3,   "vitamins"),
+    "biotin_b7_mcg":          ("Biotin (B7)",           "mcg",   30,    "vitamins"),
     "folate_mcg":             ("Folate (B9)",           "mcg",   400,   "vitamins"),
     "vitamin_b12_mcg":        ("Vitamin B12",           "mcg",   2.4,   "vitamins"),
     "choline_mg":             ("Choline",               "mg",    550,   "vitamins"),
@@ -171,11 +205,18 @@ NUTRIENT_META = {
     "phosphorus_mg":          ("Phosphorus",            "mg",    700,   "minerals"),
     "potassium_mg":           ("Potassium",             "mg",    2600,  "minerals"),
 
-    # ── Trace Minerals ──
+    # ── Trace Minerals & Elements ──
     "zinc_mg":                ("Zinc",                  "mg",    11,    "minerals"),
     "copper_mg":              ("Copper",                "mg",    0.9,   "minerals"),
     "manganese_mg":           ("Manganese",             "mg",    2.3,   "minerals"),
     "selenium_mcg":           ("Selenium",              "mcg",   55,    "minerals"),
+    "iodine_mcg":             ("Iodine",                "mcg",   150,   "minerals"),
+    "fluoride_mcg":           ("Fluoride",              "mcg",   4000,  "minerals"),
+    "chromium_mcg":           ("Chromium",              "mcg",   35,    "minerals"),
+    "molybdenum_mcg":         ("Molybdenum",            "mcg",   45,    "minerals"),
+    "boron_mcg":              ("Boron",                 "mcg",   None,  "minerals"),
+    "nickel_mcg":             ("Nickel",                "mcg",   None,  "minerals"),
+    "sulfur_mg":              ("Sulfur",                "mg",    None,  "minerals"),
 
     # ── Amino Acids ──
     "tryptophan_g":           ("Tryptophan",            "g",     None,  "amino_acids"),
@@ -198,7 +239,7 @@ NUTRIENT_META = {
     "serine_g":               ("Serine",                "g",     None,  "amino_acids"),
     "hydroxyproline_g":       ("Hydroxyproline",        "g",     None,  "amino_acids"),
 
-    # ── Carotenoids ──
+    # ── Carotenoids & Phytochemicals ──
     "beta_carotene_mcg":      ("Beta-Carotene",         "mcg",   None,  "phytochemicals"),
     "alpha_carotene_mcg":     ("Alpha-Carotene",        "mcg",   None,  "phytochemicals"),
     "retinol_mcg":            ("Retinol",               "mcg",   None,  "phytochemicals"),
@@ -206,11 +247,18 @@ NUTRIENT_META = {
     "lycopene_mcg":           ("Lycopene",              "mcg",   None,  "phytochemicals"),
     "lutein_zeaxanthin_mcg":  ("Lutein + Zeaxanthin",   "mcg",   None,  "phytochemicals"),
 
-    # ── Other ──
+    # ── Phytosterols ──
+    "phytosterols_total_mg":  ("Total Phytosterols",    "mg",    None,  "phytochemicals"),
+    "beta_sitosterol_mg":     ("Beta-Sitosterol",       "mg",    None,  "phytochemicals"),
+    "campesterol_mg":         ("Campesterol",           "mg",    None,  "phytochemicals"),
+    "stigmasterol_mg":        ("Stigmasterol",          "mg",    None,  "phytochemicals"),
+
+    # ── Other Bioactives ──
     "water_g":                ("Water",                 "g",     None,  "other"),
     "caffeine_mg":            ("Caffeine",              "mg",    None,  "other"),
     "alcohol_g":              ("Alcohol",               "g",     None,  "other"),
     "betaine_mg":             ("Betaine",               "mg",    None,  "other"),
+    "theobromine_mg":         ("Theobromine",           "mg",    None,  "other"),
 }
 
 

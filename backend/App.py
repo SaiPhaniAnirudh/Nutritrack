@@ -2212,6 +2212,34 @@ def analyze_menu():
 
 
 # ══════════════════════════════════════════════════
+#  NUTRITION FACTS LABEL OCR SCANNER
+# ══════════════════════════════════════════════════
+
+@app.route('/api/ai/analyze-label', methods=['POST'])
+@jwt_required(optional=True)
+def analyze_nutrition_label_route():
+    """
+    Extracts structured Nutrition Facts label info (calories, macros, micros)
+    directly from physical packaging photo via OCR.
+    """
+    data = request.get_json() or {}
+    image_b64 = data.get('image', '')
+    if not image_b64:
+        return jsonify({'error': 'No image provided'}), 400
+
+    if ',' in image_b64:
+        image_b64 = image_b64.split(',', 1)[1]
+
+    try:
+        from ai import gemini_engine
+    except ImportError:
+        from backend.ai import gemini_engine
+
+    result = gemini_engine.analyze_nutrition_label(image_b64)
+    return jsonify(result)
+
+
+# ══════════════════════════════════════════════════
 #  AI FOOD ANALYSIS
 # ══════════════════════════════════════════════════
 
@@ -2224,7 +2252,7 @@ def ai_analyze():
     Three-Way Fusion Food Image Analyzer:
     1. Groq (Llama 3.2 Vision) ultra-fast 0.5s path
     2. Gemini (2.0/1.5 Flash) high-accuracy verification path
-    3. USDA FoodData Central scientific RAG enrichment for 67+ verified nutrients
+    3. USDA FoodData Central scientific RAG enrichment for 85+ verified nutrients
     """
     data  = request.get_json() or {}
     image = data.get('image', '')

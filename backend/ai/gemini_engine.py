@@ -165,6 +165,89 @@ def _call_gemini(endpoint_url, api_key, image_base64):
     }
 
 
+GEMINI_LABEL_PROMPT = """Extract the structured Nutrition Facts from this packaged food label photo with 100% clinical precision.
+Extract:
+1. Product or Brand Name if visible.
+2. Serving Size (e.g. "30g", "1 cup (240ml)", "2 cookies (28g)").
+3. Servings Per Container if stated.
+4. Energy / Calories (kcal).
+5. All Macronutrients and Micronutrients listed.
+
+Return ONLY valid JSON in this exact structure:
+{
+  "product_name": "<name or 'Packaged Food'>",
+  "serving_size": "<serving size>",
+  "servings_per_container": 1.0,
+  "calories": 0.0,
+  "protein_g": 0.0,
+  "total_fat_g": 0.0,
+  "saturated_fat_g": 0.0,
+  "trans_fat_g": 0.0,
+  "carbohydrate_g": 0.0,
+  "fiber_g": 0.0,
+  "total_sugars_g": 0.0,
+  "added_sugars_g": 0.0,
+  "sodium_mg": 0.0,
+  "cholesterol_mg": 0.0,
+  "calcium_mg": 0.0,
+  "iron_mg": 0.0,
+  "potassium_mg": 0.0,
+  "vitamin_d_mcg": 0.0
+}"""
+
+
+def analyze_nutrition_label(image_base64, api_key=None):
+    """
+    Extract structured nutrition facts from a physical product label photo via OCR.
+    """
+    key = api_key or os.getenv('GEMINI_API_KEY') or os.getenv('GOOGLE_API_KEY')
+    if not key:
+        return {"success": False, "error": "GEMINI_API_KEY not configured"}
+
+    start_time = time.time()
+    for url, model_name in [(GEMINI_25_URL, "gemini-2.5-flash"), (GEMINI_15_URL, "gemini-1.5-flash")]:
+        try:
+            full_url = f"{url}?key={key}"
+            payload = {
+                "contents": [{
+                    "parts": [
+                        {"text": GEMINI_LABEL_PROMPT},
+                        {"inline_data": {"mime_type": "image/jpeg", "data": image_base64}}
+                    ]
+                }],
+                "generationConfig": {
+                    "responseMimeType": "application/json",
+                    "temperature": 0.0
+                }
+            }
+            resp = requests.post(full_url, json=payload, timeout=15)
+            if resp.status_code == 200:
+                data = resp.json()
+                candidates = data.get("candidates", [])
+                if candidates:
+                    parts = candidates[0].get("content", {}).get("parts", [])
+                    if parts:
+                        raw_text = parts[0].get("text", "").strip()
+                        if raw_text.startswith("```"):
+                            raw_text = raw_text.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
+                        parsed = json.loads(raw_text)
+                        return {
+                            "success": True,
+                            "nutrition_label": parsed,
+                            "latency_ms": round((time.time() - start_time) * 1000),
+                            "model": model_name
+                        }
+        except Exception as e:
+            print(f"[Gemini Label OCR {model_name}] notice: {e}")
+            continue
+
+    return {
+        "success": False,
+        "error": "Failed to extract nutrition label",
+        "latency_ms": round((time.time() - start_time) * 1000)
+    }
+
+
 def _safe_float(val, default=0.0):
     if val is None:
         return default
@@ -176,3 +259,4 @@ def _safe_float(val, default=0.0):
 
 def is_available():
     return bool(os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"))
+

@@ -12,6 +12,7 @@ Execution Pipeline:
    and enrich items with 67+ lab-measured nutrients and verified source flags.
 """
 
+import hashlib
 import json
 import os
 import time
@@ -21,6 +22,8 @@ import requests
 from . import gemini_engine, groq_engine
 
 CONFIDENCE_THRESHOLD = 70  # Prioritize Groq's sub-second fast-path for all confident identifications
+_IMAGE_HASH_CACHE = {}     # In-memory LRU deduplication cache for sub-5ms repeated scans
+_MAX_CACHE_SIZE = 500
 
 
 def analyze_food_image(image_base64, db_lookup_fn=None):
@@ -37,6 +40,17 @@ def analyze_food_image(image_base64, db_lookup_fn=None):
     start_time = time.time()
     route_log = []
     scan_result = None
+
+    # ─────────────────────────────────────────────────────────────
+    # STEP 0: Zero-Latency Image Hash Cache Check (<5ms)
+    # ─────────────────────────────────────────────────────────────
+    image_hash = hashlib.sha256(image_base64.encode('utf-8')).hexdigest()
+    if image_hash in _IMAGE_HASH_CACHE:
+        cached = _IMAGE_HASH_CACHE[image_hash].copy()
+        cached["latency_ms"] = round((time.time() - start_time) * 1000)
+        cached["route"] = "hash_cache -> usda_rag"
+        cached["cached"] = True
+        return cached
 
     # ─────────────────────────────────────────────────────────────
     # STEP 1: Groq Fast-Path (0.3s - 0.8s)
@@ -195,10 +209,20 @@ def analyze_food_image(image_base64, db_lookup_fn=None):
 
     total_latency = round((time.time() - start_time) * 1000)
     
-    return {
+    final_payload = {
         "items": items,
         "confidence": scan_result.get("confidence", 85),
         "route": " -> ".join(route_log),
         "latency_ms": total_latency,
         "source": "Three-Way Fusion (Groq + Gemini + USDA)"
     }
+
+    # Store in memory cache for instant <5ms recall if scanned again
+    if len(_IMAGE_HASH_CACHE) >= _MAX_CACHE_SIZE:
+        try:
+            _IMAGE_HASH_CACHE.pop(next(iter(_IMAGE_HASH_CACHE)))
+        except Exception:
+            pass
+    _IMAGE_HASH_CACHE[image_hash] = final_payload
+
+    return final_payload

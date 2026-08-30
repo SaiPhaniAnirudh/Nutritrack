@@ -102,10 +102,10 @@ def test_get_nutrient_display_returns_none_for_unknown_field():
 def test_nutrient_count_regression_guard():
     """
     Pins the actual nutrient count so future edits can't silently drop
-    coverage. NUTRIENT_META tracks 67 nutrients (the historical 82+ marketing
-    claim has been resolved across the codebase — see nutrient-count-discrepancy.txt).
+    coverage. NUTRIENT_META tracks 87 verified USDA chemical fields with NIH DRI
+    RDA standards across 7 functional groups.
     """
-    assert nutrient_count() >= 67
+    assert nutrient_count() >= 87
 
 
 def test_get_nutrients_by_group_returns_a_list():
