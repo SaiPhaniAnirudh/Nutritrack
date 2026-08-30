@@ -3,11 +3,10 @@ NutriTrack — Garmin Connect & Oura Ring Integration Adapter
 Parses activity summaries, steps, and active calories burned to feed into the Adaptive TDEE engine.
 """
 
-from datetime import datetime
-from typing import Dict, List, Any
+from typing import Any
 
 
-def parse_garmin_activity_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
+def parse_garmin_activity_payload(payload: dict[str, Any]) -> dict[str, Any]:
     """
     Parse a Garmin Connect activity webhook or JSON export.
     """

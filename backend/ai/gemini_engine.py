@@ -12,9 +12,10 @@ This module handles:
 3. Fallback between Gemini 2.0 Flash and Gemini 1.5 Flash
 """
 
-import os
 import json
+import os
 import time
+
 import requests
 
 GEMINI_25_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"

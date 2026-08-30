@@ -10,15 +10,9 @@ Capabilities:
 """
 
 import os
-import json
-import requests
-from typing import Dict, Optional
-
-import os
-import json
 import re
+
 import requests
-from typing import Dict, Optional
 
 GROQ_CHAT_URL = "https://api.groq.com/openai/v1/chat/completions"
 GROQ_MODELS = ["openai/gpt-oss-120b", "qwen/qwen3.6-27b", "groq/compound", "openai/gpt-oss-20b"]
@@ -55,9 +49,9 @@ def _clean_ai_text(text: str) -> str:
 
 def generate_nutrition_advice(
     message: str,
-    user_context: Dict,
-    chat_history: Optional[list] = None
-) -> Dict:
+    user_context: dict,
+    chat_history: list | None = None
+) -> dict:
     """
     Generate context-aware AI nutrition response using Groq / Gemini.
     """
@@ -151,14 +145,14 @@ INSTRUCTIONS:
 
     if any(k in lower_msg for k in ['workout', 'exercise', 'training', 'gym', 'routine', 'cardio', 'muscle']):
         fallback = (
-            f"🏋️ **Recommended Today's Workout Routine:**\n"
-            f"• **Warm-up:** 5 mins light jogging / jumping jacks + dynamic arm & hip rotations\n"
-            f"• **Exercise 1:** Dumbbell/Barbell Squats — 3 sets × 10–12 reps\n"
-            f"• **Exercise 2:** Push-Ups / Dumbbell Bench Press — 3 sets × 10–15 reps\n"
-            f"• **Exercise 3:** Dumbbell Romanian Deadlifts / Lunges — 3 sets × 12 reps\n"
-            f"• **Exercise 4:** Plank / Core Hollow Hold — 3 sets × 45 secs\n"
-            f"• **Cool-down:** 10 mins stretching & foam rolling.\n\n"
-            f"💡 *Remember to log this in the **Workout & Activity Tracker** on your Dashboard to credit your burned calories!*"
+            "🏋️ **Recommended Today's Workout Routine:**\n"
+            "• **Warm-up:** 5 mins light jogging / jumping jacks + dynamic arm & hip rotations\n"
+            "• **Exercise 1:** Dumbbell/Barbell Squats — 3 sets × 10–12 reps\n"
+            "• **Exercise 2:** Push-Ups / Dumbbell Bench Press — 3 sets × 10–15 reps\n"
+            "• **Exercise 3:** Dumbbell Romanian Deadlifts / Lunges — 3 sets × 12 reps\n"
+            "• **Exercise 4:** Plank / Core Hollow Hold — 3 sets × 45 secs\n"
+            "• **Cool-down:** 10 mins stretching & foam rolling.\n\n"
+            "💡 *Remember to log this in the **Workout & Activity Tracker** on your Dashboard to credit your burned calories!*"
         )
     elif any(k in lower_msg for k in ['eat', 'dinner', 'lunch', 'breakfast', 'snack', 'food', 'meal', 'suggest']):
         fallback = (
@@ -169,17 +163,17 @@ INSTRUCTIONS:
         )
     elif any(k in lower_msg for k in ['glp', 'ozempic', 'wegovy', 'mounjaro', 'zepbound']):
         fallback = (
-            f"💊 **GLP-1 Clinical Protocol Guidance:**\n"
-            f"• **Muscle Protection:** Prioritize at least **1.6g–2.0g protein/kg** daily (minimum 100g) across small, frequent meals.\n"
-            f"• **Hydration & Electrolytes:** Aim for **2,500ml+ water** daily with sodium/potassium to manage side effects.\n"
-            f"• **Fiber Floor:** Ensure 25g+ soluble fiber for optimal gastrointestinal motility."
+            "💊 **GLP-1 Clinical Protocol Guidance:**\n"
+            "• **Muscle Protection:** Prioritize at least **1.6g–2.0g protein/kg** daily (minimum 100g) across small, frequent meals.\n"
+            "• **Hydration & Electrolytes:** Aim for **2,500ml+ water** daily with sodium/potassium to manage side effects.\n"
+            "• **Fiber Floor:** Ensure 25g+ soluble fiber for optimal gastrointestinal motility."
         )
     elif any(k in lower_msg for k in ['scan', 'photo', 'camera', 'barcode', 'voice']):
         fallback = (
-            f"📸 **How to Track Food in NutriTrack:**\n"
-            f"• **AI Photo Scanner:** Go to **Track Food** → tap **Camera** or **Choose Photo** → AI scans all dishes and bounding boxes automatically.\n"
-            f"• **Barcode Scanner:** Tap **Barcode** in Track Food to scan packaged goods.\n"
-            f"• **Voice Logger:** Tap **Voice Log** and speak naturally (e.g. *'I had 2 boiled eggs and oatmeal'*)."
+            "📸 **How to Track Food in NutriTrack:**\n"
+            "• **AI Photo Scanner:** Go to **Track Food** → tap **Camera** or **Choose Photo** → AI scans all dishes and bounding boxes automatically.\n"
+            "• **Barcode Scanner:** Tap **Barcode** in Track Food to scan packaged goods.\n"
+            "• **Voice Logger:** Tap **Voice Log** and speak naturally (e.g. *'I had 2 boiled eggs and oatmeal'*)."
         )
     else:
         fallback = (

@@ -8,7 +8,6 @@ How it works:
 3. The Three-Way Fusion engine queries this module before returning results to scale portions to the user's personal eating habits.
 """
 
-from typing import Dict, Optional
 
 
 def record_scan_correction(
@@ -18,7 +17,7 @@ def record_scan_correction(
     original_cal: float,
     corrected_cal: float,
     db_session=None
-) -> Dict:
+) -> dict:
     """
     Record a user correction to fine-tune the personal vision model.
     """

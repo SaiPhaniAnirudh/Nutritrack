@@ -9,14 +9,13 @@ Clinical Safeguards:
 3. Nutrient Density Safeguard: Flags micronutrient gaps caused by rapid appetite suppression.
 """
 
-from typing import Dict, List
 
 
 def evaluate_glp1_compliance(
-    daily_logs: List[Dict],
+    daily_logs: list[dict],
     water_ml: float,
     weight_kg: float
-) -> Dict:
+) -> dict:
     """
     Evaluate today's dietary adequacy under GLP-1 therapy guidelines.
     

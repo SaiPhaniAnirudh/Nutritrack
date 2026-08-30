@@ -4,12 +4,11 @@ Supports exporting food logs, macros, and 67+ micronutrients into HealthKit JSON
 and importing raw Apple Health export archives.
 """
 
-import json
 from datetime import datetime, timezone
-from typing import List, Dict, Any
+from typing import Any
 
 
-def export_to_healthkit_json(food_logs: List[Dict], workouts: List[Dict] = None) -> Dict[str, Any]:
+def export_to_healthkit_json(food_logs: list[dict], workouts: list[dict] = None) -> dict[str, Any]:
     """
     Format food logs and workouts into standardized Apple HealthKit sample payloads.
     HKQuantityTypeIdentifierDietaryEnergyConsumed, HKQuantityTypeIdentifierDietaryProtein, etc.
@@ -77,7 +76,7 @@ def export_to_healthkit_json(food_logs: List[Dict], workouts: List[Dict] = None)
     }
 
 
-def parse_apple_health_xml(xml_content: str) -> Dict[str, Any]:
+def parse_apple_health_xml(xml_content: str) -> dict[str, Any]:
     """
     Parse an Apple Health export file to extract dietary and workout records.
     """

@@ -14,7 +14,6 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'
 
 from coaching.tdee_engine import calculate_adaptive_tdee, generate_weekly_coaching_plan
 
-
 # ── calculate_adaptive_tdee ──────────────────────────────────────────
 
 def test_insufficient_data_returns_default():

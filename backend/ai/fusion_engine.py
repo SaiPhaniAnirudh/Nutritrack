@@ -12,13 +12,13 @@ Execution Pipeline:
    and enrich items with 67+ lab-measured nutrients and verified source flags.
 """
 
+import json
 import os
 import time
+
 import requests
-import json
-from . import groq_engine
-from . import gemini_engine
-from ..nutrition.nutrients import parse_usda_nutrients, USDA_NUTRIENT_MAP
+
+from . import gemini_engine, groq_engine
 
 CONFIDENCE_THRESHOLD = 70  # Prioritize Groq's sub-second fast-path for all confident identifications
 
@@ -66,7 +66,7 @@ def analyze_food_image(image_base64, db_lookup_fn=None):
             else:
                 route_log.append(f"groq_failed:{groq_res.get('error', 'unknown')}")
         except Exception as ge:
-            route_log.append(f"groq_exception:{str(ge)}")
+            route_log.append(f"groq_exception:{ge!s}")
 
     # ─────────────────────────────────────────────────────────────
     # STEP 2: Gemini Accuracy Verification Path (~1.5s - 2.0s)
@@ -93,7 +93,7 @@ def analyze_food_image(image_base64, db_lookup_fn=None):
             else:
                 route_log.append(f"gemini_failed:{gemini_res.get('error', 'unknown')}")
         except Exception as gme:
-            route_log.append(f"gemini_exception:{str(gme)}")
+            route_log.append(f"gemini_exception:{gme!s}")
 
     # ─────────────────────────────────────────────────────────────
     # STEP 3: Self-Hosted LLM Fallback (Hugging Face / Ollama)
@@ -126,7 +126,7 @@ def analyze_food_image(image_base64, db_lookup_fn=None):
             else:
                 route_log.append(f"hf_http_{resp.status_code}")
         except Exception as hfe:
-            route_log.append(f"hf_exception:{str(hfe)}")
+            route_log.append(f"hf_exception:{hfe!s}")
 
     # ─────────────────────────────────────────────────────────────
     # STEP 4: Handle Failure Gracefully

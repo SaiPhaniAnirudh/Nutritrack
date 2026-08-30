@@ -30,16 +30,15 @@ The frontend (frontend/index.html) is served as static files by Flask.
 Run this backend for persistent cloud storage + multi-device sync.
 """
 
+import json
 import os
 import re
 import sys
-import json
-import base64
 import time
-import requests
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 
-from dotenv import load_dotenv, find_dotenv
+import requests
+from dotenv import find_dotenv, load_dotenv
 
 # Load .env BEFORE reading any environment variables below — this used to
 # happen much later in the file (after SUPABASE_URL/SUPABASE_KEY were
@@ -67,17 +66,21 @@ if _root_dir not in sys.path:
     sys.path.insert(0, _root_dir)
 
 try:
-    from nutrition.nutrients import NUTRIENT_META, USDA_NUTRIENT_MAP, CORE_TO_EXTENDED, parse_usda_nutrients, CORE_NUTRIENT_FIELDS
-    from ai import fusion_engine, chatbot_engine, user_corrections
-    from coaching import tdee_engine, glp1_mode
+    from ai import chatbot_engine, fusion_engine, user_corrections
+    from coaching import glp1_mode, tdee_engine
     from integrations import apple_health, garmin
+    from nutrition.nutrients import (
+        NUTRIENT_META,
+    )
 except ImportError:
-    from backend.nutrition.nutrients import NUTRIENT_META, USDA_NUTRIENT_MAP, CORE_TO_EXTENDED, parse_usda_nutrients, CORE_NUTRIENT_FIELDS
-    from backend.ai import fusion_engine, chatbot_engine, user_corrections
-    from backend.coaching import tdee_engine, glp1_mode
+    from backend.ai import chatbot_engine, fusion_engine, user_corrections
+    from backend.coaching import glp1_mode, tdee_engine
     from backend.integrations import apple_health, garmin
+    from backend.nutrition.nutrients import (
+        NUTRIENT_META,
+    )
 
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, jsonify, request, send_from_directory
 from flask_compress import Compress
 from flask_cors import CORS
 
@@ -109,12 +112,12 @@ try:
     _has_limiter = True
 except ImportError:
     _has_limiter = False
+from functools import wraps
+
+from flask import g
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import text
-
-from functools import wraps
-from flask import g
-from supabase import create_client, Client
+from supabase import Client, create_client
 
 # Initialize Supabase client for JWT verification
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
@@ -187,7 +190,6 @@ if _has_limiter:
     )
     print("  Rate limiter active (1000 req/hr default)")
 else:
-    from contextlib import contextmanager
     class _NoopLimiter:
         def limit(self, *a, **kw):
             def decorator(f): return f
@@ -1804,8 +1806,9 @@ def export_logs_csv():
     uid = get_jwt_identity()
     logs = FoodLog.query.filter_by(user_id=uid).order_by(FoodLog.date.desc(), FoodLog.id.desc()).all()
 
-    import io
     import csv
+    import io
+
     from flask import Response
 
     output = io.StringIO()
@@ -2289,10 +2292,8 @@ def ai_analyze_stream():
                             if 'result' in evt:
                                 result = evt['result']
                                 if 'items' in result and isinstance(result['items'], list) and len(result['items']) > 0:
-                                    all_rag = True
                                     for item in result['items']:
-                                        is_rag = _enrich_with_rag(item)
-                                        if not is_rag: all_rag = False
+                                        _enrich_with_rag(item)
                                     
                                     if len(result['items']) == 1:
                                         result['source'] = result['items'][0].get('source', 'Vision AI')
@@ -2301,14 +2302,14 @@ def ai_analyze_stream():
                                 else:
                                     _enrich_with_rag(result)
                                 # Serialize back to SSE
-                                yield f"data: {json.dumps({'result': result})}\n\n".encode('utf-8')
+                                yield f"data: {json.dumps({'result': result})}\n\n".encode()
                             else:
                                 # Heartbeats or other events
-                                yield f"{decoded}\n\n".encode('utf-8')
+                                yield f"{decoded}\n\n".encode()
                         except json.JSONDecodeError:
-                            yield f"{decoded}\n\n".encode('utf-8')
+                            yield f"{decoded}\n\n".encode()
                 else:
-                    yield f"{decoded}\n\n".encode('utf-8')
+                    yield f"{decoded}\n\n".encode()
         return app.response_class(
             generate(),
             content_type='text/event-stream',

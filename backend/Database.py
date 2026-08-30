@@ -14,17 +14,17 @@ Usage:
     python Database.py init      ← run this first after installing
 """
 
-import sys
-import os
 import json
-from datetime import datetime, timezone, timedelta
+import os
+import sys
+from datetime import datetime, timedelta, timezone
 
 # Load .env before importing App so DATABASE_URL is set
 from dotenv import load_dotenv
+
 load_dotenv()
 
-from App import app, db, User, FoodLog, WaterLog, WeightLog, MealTemplate, Challenge, ChallengeParticipant, WorkoutLog, Recipe
-
+from App import FoodLog, User, app, db
 
 # ══════════════════════════════════════════════════
 #  COMMANDS
@@ -46,7 +46,7 @@ def cmd_seed():
         existing = User.query.filter_by(email='demo@nutritrack.app').first()
         if existing:
             print("⚠️  Demo user already exists. Skipping seed.")
-            print(f"   Email: demo@nutritrack.app  |  Password: Demo1234!")
+            print("   Email: demo@nutritrack.app  |  Password: Demo1234!")
             return
 
         # Create demo user

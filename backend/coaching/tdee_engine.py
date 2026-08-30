@@ -13,16 +13,15 @@ Algorithm:
    - Manual (user controls static targets)
 """
 
-from datetime import datetime, timezone, timedelta
-from typing import List, Dict, Tuple, Optional
+from datetime import datetime
 
 
 def calculate_adaptive_tdee(
-    intake_logs: List[Dict], # [{"date": "YYYY-MM-DD", "cal": float}]
-    weight_logs: List[Dict], # [{"date": "YYYY-MM-DD", "weight_kg": float}]
+    intake_logs: list[dict], # [{"date": "YYYY-MM-DD", "cal": float}]
+    weight_logs: list[dict], # [{"date": "YYYY-MM-DD", "weight_kg": float}]
     default_tdee: float = 2000.0,
     min_days_required: int = 5
-) -> Dict:
+) -> dict:
     """
     Calculate user's true metabolic expenditure over a rolling window.
     
@@ -107,7 +106,7 @@ def generate_weekly_coaching_plan(
     goal: str = "lose", # "lose", "maintain", "gain"
     goal_rate_kg_per_week: float = 0.5,
     is_glp1_active: bool = False
-) -> Dict:
+) -> dict:
     """
     Generate optimal daily calorie & macro targets from TDEE.
     

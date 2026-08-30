@@ -12,9 +12,10 @@ This module handles:
 3. Confidence scoring for smart routing decisions
 """
 
-import os
 import json
+import os
 import time
+
 import requests
 
 # Groq API configuration

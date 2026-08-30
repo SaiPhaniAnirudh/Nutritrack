@@ -11,11 +11,11 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 
 from nutrition.nutrients import (
-    parse_usda_nutrients,
-    get_rda_percentage,
     get_nutrient_display,
     get_nutrients_by_group,
+    get_rda_percentage,
     nutrient_count,
+    parse_usda_nutrients,
 )
 
 
