@@ -38,19 +38,27 @@ python benchmark/run_benchmark.py --output benchmark/results.json
 
 ---
 
-## 📊 3. Audited Baseline Accuracy Targets
+## 📊 3. Expected Baseline Results
 
-Independent reviewers should observe metrics within the following $95\%$ confidence bounds ($n=200$):
+Independent reviewers running this benchmark should observe numbers close to:
 
-| Metric | Target Standard | Measured ($\bar{x}$) | $95\%$ Confidence Interval | Standard Deviation ($\sigma$) |
-| :--- | :---: | :---: | :---: | :---: |
-| **Calorie MAPE** | $<\pm 3.0\%$ | **$\pm 1.50\%$** | $[1.50\%, 1.50\%]$ | $0.00\%$ |
-| **Protein MAPE** | $<\pm 3.0\%$ | **$\pm 0.78\%$** | $[0.77\%, 0.80\%]$ | $0.11\%$ |
-| **Carbohydrates MAPE** | $<\pm 3.0\%$ | **$\pm 1.96\%$** | $[1.88\%, 2.03\%]$ | $0.53\%$ |
-| **Fat MAPE** | $<\pm 3.0\%$ | **$\pm 1.86\%$** | $[1.82\%, 1.90\%]$ | $0.27\%$ |
-| **Calorie Signed Bias** | $<\pm 2.0\%$ | **$-1.50\%$** | — | No systemic skew |
-| **USDA Chemical Match** | $>95\%$ | **$100.0\%$** | — | Deterministic RAG |
-| **Median Inference Speed** | $<1000\text{ms}$ | **$480\text{ms}$** | — | Groq LPU Vision fast-path |
+| Metric | Our result | Notes |
+| :--- | :---: | :--- |
+| **Calorie MAPE** | ±1.50% | Deterministic USDA lookup — no stochastic variance |
+| **Protein MAPE** | ±0.80% | Deterministic USDA lookup |
+| **Carbohydrates MAPE** | ±2.10% | Deterministic USDA lookup |
+| **Fat MAPE** | ±1.90% | Deterministic USDA lookup |
+| **USDA Chemical Match** | 100.0% | Expected: the benchmark checks its own ground truth |
+| **Median Inference Speed** | 480ms | Will vary by hardware and network |
+
+> **On determinism:** The macro MAPE values are near-deterministic because
+> they come from a USDA food-ID lookup, not a model prediction. The
+> interesting metric is Top-1 food identification accuracy (94.8% in our
+> run), which has real variance. A previous version of this file reported
+> confidence intervals with σ = 0 — those were technically what the script
+> computed but misleading to present as statistical results, so we removed
+> them.
+
 
 ---
 
@@ -77,7 +85,7 @@ External auditors can query live platform endpoints without authentication:
 | **Held-Out Test Suite** | `tests/test_active_learning_heldout.py (v1.0)` | 50 unseen evaluation meals |
 | **Primary Vision Engine** | `Groq LPU (Llama-3.2-90B-Vision-Preview)` | Fixed temperature $T=0.1$ |
 | **Fallback Multimodal** | `Google Gemini 2.5 Flash` | Fixed temperature $T=0.2$ |
-| **Database Chemistry** | `USDA FoodData Central SR Legacy & IFCT 2024` | 82+ verified nutrient taxonomy |
+| **Database Chemistry** | `USDA FoodData Central SR Legacy & IFCT 2024` | 67+ verified nutrient taxonomy |
 | **Runtime Environment** | Python 3.10+ on Ubuntu / Windows / macOS | Lockfile: `requirements.txt` |
 
 ---

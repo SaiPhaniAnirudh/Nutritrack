@@ -1,31 +1,28 @@
 {
-  "paper_title": "NutriTrack: Statistically Robust Multimodal AI Food Intelligence with Chemical RAG and Active Learning",
-  "paper_url": "https://github.com/SaiPhaniAnirudh/NutriTrack/blob/main/benchmark/REPLICATION_KIT.md",
-  "code_url": "https://github.com/SaiPhaniAnirudh/NutriTrack",
-  "dataset_name": "NutriTrack-200-International-Reference-Suite",
-  "dataset_url": "https://raw.githubusercontent.com/SaiPhaniAnirudh/NutriTrack/main/dist/nutritrack_hf_dataset.json",
-  "dataset_checksum_sha256": "e2ae4d0648eec1352a68dd85a9b798dec6f9cde92a95d5c92c80d083f11ffefd",
+  "_status": "DRAFT — not yet submitted to Papers With Code",
+  "_note": "This file documents what a PwC submission would contain. It is NOT proof of an active listing. To make this real, submit at https://paperswithcode.com/contribute",
+  "paper_title": "NutriTrack: Multimodal AI Food Recognition with USDA RAG Nutrition Lookup",
+  "paper_url": "https://github.com/SaiPhaniAnirudh/Nutritrack/blob/main/benchmark/REPLICATION_KIT.md",
+  "code_url": "https://github.com/SaiPhaniAnirudh/Nutritrack",
+  "dataset_name": "NutriTrack-200-Meal-Reference-Suite",
   "tasks": [
     {
       "task_name": "Food Recognition & Calorie Estimation",
       "metrics": {
         "Top-1 Accuracy (%)": 94.8,
-        "Top-3 Accuracy (%)": 98.2,
         "Calorie MAPE (%)": 1.50,
-        "Protein MAPE (%)": 0.78,
-        "Held-Out Active Learning Error (%)": 1.54,
-        "Active Learning Error Reduction (%)": 90.1,
-        "Latency (ms)": 480
-      }
+        "Protein MAPE (%)": 0.80,
+        "Median Latency (ms)": 480
+      },
+      "_metrics_note": "Self-reported from internal benchmark. Not independently verified."
     }
   ],
   "evaluated_models": [
     {
-      "model_name": "NutriTrack Fusion Engine v3.2 (Groq LPU + Gemini 2.5 Flash + USDA RAG)",
+      "model_name": "NutriTrack (Groq LPU + Gemini 2.5 Flash + USDA RAG)",
       "top1_acc": "94.8%",
       "calorie_mape": "1.50%",
-      "protein_mape": "0.78%",
-      "heldout_generalization_mape": "1.54%"
+      "protein_mape": "0.80%"
     }
   ]
 }

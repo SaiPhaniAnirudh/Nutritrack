@@ -1,6 +1,6 @@
 """
 Unit tests for backend/nutrition/nutrients.py — the USDA nutrient
-ID mapping and parsing logic behind the 82+ micronutrient tracking claim.
+ID mapping and parsing logic behind the 67+ micronutrient tracking claim.
 
 Run:
     pytest backend/tests/test_nutrients.py -v

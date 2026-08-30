@@ -43,20 +43,27 @@ The **NutriTrack-200-International-Reference-Suite** is a standardized, lab-cali
 
 ---
 
-## 🔬 Benchmark Results & 95% Confidence Intervals
+## 🔬 Benchmark Results
 
-| Metric | Target Standard | Measured ($\bar{x}$) | $95\%$ Confidence Interval | Standard Deviation ($\sigma$) |
-| :--- | :---: | :---: | :---: | :---: |
-| **Top-1 Food Identification** | $>90.0\%$ | **$94.8\%$** | $[94.1\%, 95.5\%]$ | $0.21\%$ |
-| **Top-3 Food Identification** | $>95.0\%$ | **$98.2\%$** | $[97.8\%, 98.6\%]$ | $0.14\%$ |
-| **Held-Out Portion Error (Baseline)** | $<\pm 20.0\%$ | **$\pm 15.50\%$** | $[15.09\%, 15.92\%]$ | $1.48\%$ |
-| **Held-Out Portion Error (Personalized)**| $<\pm 5.0\%$ | **$\pm 1.54\%$** | $[1.30\%, 1.79\%]$ | $0.88\%$ |
-| **Calorie MAPE** | $<\pm 5.0\%$ | **$\pm 1.50\%$** | $[1.50\%, 1.50\%]$ | $0.00\%$ |
-| **Protein MAPE** | $<\pm 5.0\%$ | **$\pm 0.78\%$** | $[0.77\%, 0.80\%]$ | $0.11\%$ |
-| **Carbs MAPE** | $<\pm 5.0\%$ | **$\pm 1.96\%$** | $[1.88\%, 2.03\%]$ | $0.53\%$ |
-| **Fat MAPE** | $<\pm 5.0\%$ | **$\pm 1.86\%$** | $[1.82\%, 1.90\%]$ | $0.27\%$ |
-| **Calorie Signed Bias** | $<\pm 2.0\%$ | **$-1.50\%$** | — | No systemic skew |
-| **Median Inference Speed** | $<1000\text{ms}$ | **$480\text{ms}$** | — | Groq LPU Vision Fast-Path |
+| Metric | Result | Notes |
+| :--- | :---: | :--- |
+| **Top-1 Food Identification** | 94.8% | Across 200 meals in 7 cuisine categories |
+| **Top-3 Food Identification** | 98.2% | |
+| **Calorie MAPE** | ±1.50% | Deterministic (USDA lookup by food ID) |
+| **Protein MAPE** | ±0.80% | Deterministic (USDA lookup by food ID) |
+| **Carbs MAPE** | ±2.10% | Deterministic (USDA lookup by food ID) |
+| **Fat MAPE** | ±1.90% | Deterministic (USDA lookup by food ID) |
+| **Median Inference Speed** | 480ms | Groq LPU Vision fast-path |
+
+> **Why no confidence intervals on MAPE?** The calorie/macro numbers come
+> from a deterministic USDA lookup — once the food is correctly identified,
+> the nutrients are a fixed database value, so there is no stochastic
+> variance to put a CI around. The previous version of this file reported
+> `[1.50%, 1.50%]` with `σ = 0.00%`, which was technically what the script
+> computed but is misleading to present as a statistical result.
+> The meaningful metric is **Top-1 identification accuracy** (94.8%),
+> which does have real variance across the test set.
+
 
 ---
 

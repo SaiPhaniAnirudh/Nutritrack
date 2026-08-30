@@ -180,7 +180,7 @@ fill updates. The stat cards switched to a side-by-side layout
 
 ---
 
-## Phase 7 — Three-Way Fusion Scanner, 82+ Clinical Nutrients & Adaptive TDEE Coaching
+## Phase 7 — Three-Way Fusion Scanner, 67+ Clinical Nutrients & Adaptive TDEE Coaching
 
 To close the gap with top commercial apps (MacroFactor, PlateLens, Welling), NutriTrack underwent a full architectural expansion across AI inference, clinical nutrition depth, and metabolic intelligence:
 
@@ -192,36 +192,33 @@ To close the gap with top commercial apps (MacroFactor, PlateLens, Welling), Nut
   3. **USDA Scientific RAG Enrichment:** Recognized food names are queried in Supabase PostgreSQL (`base_foods`) to replace AI raw guesses with lab-measured nutrient data.
 - **Result:** Automated 200-meal benchmark suite achieved **$\pm 1.50\%$ Calorie MAPE** and **$\pm 0.78\%$ Protein MAPE** with 480ms response time.
 
-### 2. 82+ Clinical Micronutrient Taxonomy
-- Extended the database schema from 11 core metrics to **82+ USDA FoodData Central nutrients** across 7 functional classes:
+### 2. 67+ Clinical Micronutrient Taxonomy
+- Extended the database schema from 11 core metrics to **67+ USDA FoodData Central nutrients** across 7 functional classes:
   - 13 Vitamins, 9 Minerals, 19 Amino Acids & BCAAs, Complete Fatty Acid Profiles, Omega-3s, and Phytochemicals.
-- Built the interactive **82+ Clinical Micronutrient & Adequacy Panel** in the dashboard with category tabs and real-time % RDA target progress bars.
+- Built the interactive **67+ Clinical Micronutrient & Adequacy Panel** in the dashboard with category tabs and real-time % RDA target progress bars.
 
----
 
-## 8. Verified Performance Metrics & 2026 Competitive Evaluation (9.4/10)
+## 8. Internal Benchmark Results (Self-Reported)
 
-| Dimension | Measured Performance | Verification Standard |
-| :--- | :--- | :--- |
-| **Top-1 Food Identification** | **$94.8\%$** ($98.2\%$ Top-3) | 200-meal international reference suite across 7 cuisine categories |
-| **Calorie Accuracy (MAPE)** | **$\pm 1.50\%$** $[95\%\text{ CI: } 1.50\% \text{--} 1.50\%]$ | Seeded against USDA SR Legacy & IFCT 2024 ground truth |
-| **Protein Accuracy (MAPE)** | **$\pm 0.78\%$** $[95\%\text{ CI: } 0.77\% \text{--} 0.80\%]$ | Laboratory nitrogen conversion factor verification |
-| **Carbs & Fat Accuracy** | **$\pm 1.96\%$** (Carbs) / **$\pm 1.86\%$** (Fat) | USDA SR Legacy chemical attribution |
-| **Mean Signed Bias** | **$-1.50\%$** (Zero systemic skew) | Non-directional distribution across 200 meals |
-| **Dataset Checksum** | `e2ae4d0648eec135...f11ffefd` | Canonical SHA-256 replication kit (`REPLICATION_KIT.md`) |
-| **Active Learning Convergence** | **$11.4\% \rightarrow 1.8\%$** error reduction | 14-day exponential moving average (EMA) on held-out meals |
-| **End-to-End Latency** | **$480\text{ms}$** median ($1,450\text{ms}$ multimodal) | Sub-second Groq LPU fast-path + Gemini 2.5 Flash |
-| **Uptime & Observability** | **$99.94\%$** availability ($99.8\%$ scan success) | Endpoint percentile latency (P95: $1,950\text{ms}$) |
+An internal 200-meal benchmark comparing NutriTrack's output against USDA FoodData Central and IFCT 2024 ground-truth values:
 
-### 🏆 August 2026 Global Competitive Standing
+| Metric | Result |
+|---|---|
+| Top-1 food identification | 94.8% |
+| Calorie MAPE | ±1.50% |
+| Protein MAPE | ±0.80% |
+| Carb MAPE | ±2.10% |
+| Fat MAPE | ±1.90% |
+| Median latency | 480ms |
 
-```
-Rank 1 ── PlateLens       [9.6 / 10]  (Enterprise clinical trial history)
-Rank 2 ── NutriTrack      [9.4 / 10]  (Open platform, 200-meal stats, Indian food, 82+ nutrients, mobile UX)
-Rank 3 ── Welling         [9.4 / 10]  (Fast multimodal logging & conversational AI)
-Rank 4 ── MacroFactor     [9.3 / 10]  (Adaptive TDEE expenditure algorithms)
-Rank 5 ── Cronometer      [9.0 / 10]  (Traditional micronutrient depth)
-```
+> **Note:** The calorie/macro MAPE figures are near-deterministic because
+> the RAG pipeline looks up USDA values by food ID — a given food always
+> returns the same nutrients. The meaningful test is Top-1 identification
+> accuracy (whether the AI identifies the right food), not the MAPE on
+> nutrients (which is just a USDA lookup once the food is identified).
+> See [PEER_REVIEW_SUBMISSION.md](PEER_REVIEW_SUBMISSION.md) for
+> reproduction instructions.
+
 
 ### 3. Adaptive TDEE Expenditure & GLP-1 Mode
 - Implemented a **rolling 14-day energy balance algorithm** analyzing real calorie intake vs. body weight changes ($\Delta\text{Weight (kg)} \times 7700\text{ kcal} / \text{Days}$) to calibrate true metabolic rate.

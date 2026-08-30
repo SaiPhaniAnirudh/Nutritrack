@@ -37,11 +37,11 @@ We have successfully implemented and deployed NutriTrack's **Modern 3D Split-Scr
 - Includes **1-Click "✓ Apply Targets to Profile"** and **GLP-1 Medication Protection Mode** toggle.
 
 ### 8. Apple HealthKit & Garmin Connect Integrations ([apple_health.py](file:///c:/Users/pc/OneDrive/Desktop/nutritrack/backend/integrations/apple_health.py) & [garmin.py](file:///c:/Users/pc/OneDrive/Desktop/nutritrack/backend/integrations/garmin.py))
-- **Apple HealthKit Export/Import:** Generates standardized Apple Health JSON payloads containing calories, macros, and 82+ micronutrients.
+- **Apple HealthKit Export/Import:** Generates standardized Apple Health JSON payloads containing calories, macros, and 67+ micronutrients.
 - **Garmin & Oura Sync:** Parses activity sessions and active calories burned, directly incorporating them into energy balance and workout logs.
 
 ### 9. Offline Client-Side Database Extended Nutrients ([Foods.js](file:///c:/Users/pc/OneDrive/Desktop/nutritrack/frontend/Foods.js))
-- Enriched client-side `FOODS` dataset with complete 82+ micronutrient profiles (Vitamins A–K, Minerals, BCAAs, Omega-3s) for zero-latency offline searches.
+- Enriched client-side `FOODS` dataset with complete 67+ micronutrient profiles (Vitamins A–K, Minerals, BCAAs, Omega-3s) for zero-latency offline searches.
 
 ### 10. 📱 Spacious Modern Dashboard ([frontend/Style.css](frontend/Style.css#L500-L550))
 - Increased card grid spacing (`gap: 1.8rem`) and card inner padding (`padding: 2.8rem 3.2rem`).
@@ -63,7 +63,7 @@ python tests/test_coaching_and_chatbot.py
 ```
 *(5/5 passed with 0 errors)*
 
-3. **Three-Way Fusion & 82+ Nutrients:**
+3. **Three-Way Fusion & 67+ Nutrients:**
 ```bash
 python tests/test_fusion_and_nutrients.py
 ```

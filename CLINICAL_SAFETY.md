@@ -37,7 +37,7 @@ NutriTrack's automated AI coaching is **explicitly contraindicated** as a primar
 ## 📋 3. Clinician Configuration & Data Portability
 
 * **Clinician Override Target:** Healthcare providers can specify custom calorie, protein, and micronutrient targets that override automated algorithms.
-* **Transparent Attribution:** All clinical micronutrient logs (82+ fields) reference USDA SR Legacy chemical values with lab-provenance metadata.
+* **Transparent Attribution:** All clinical micronutrient logs (67+ fields) reference USDA SR Legacy chemical values with lab-provenance metadata.
 * **Structured Export:** Health records can be exported in standardized **Apple HealthKit XML/JSON** and **CSV format** for clinical consultation.
 
 ---
