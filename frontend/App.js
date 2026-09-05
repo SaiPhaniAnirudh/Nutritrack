@@ -19,6 +19,43 @@
 // Was called 22+ times (search normalization, addFoodToLog, cloud-log
 // merge) but never defined — every call threw "floatVal is not defined",
 // which silently aborted food logging before Supabase/UI ever ran.
+// ─────────────────────────────────────────────────
+//  HIGH-PERFORMANCE 3D AUTH VISUAL & LIFECYCLE CONTROLLER
+// ─────────────────────────────────────────────────
+let _authAnimId = null;
+let _isAuthVisualRunning = false;
+let _authCachedRect = null;
+
+function isAuthVisualVisible() {
+  const authSec = document.getElementById('authSection');
+  const canvas = document.getElementById('auth3dCanvas');
+  if (!authSec || !canvas) return false;
+  if (authSec.classList.contains('hidden')) return false;
+  if (authSec.style.display === 'none') return false;
+  if (canvas.offsetParent === null) return false;
+  return true;
+}
+
+function stop3DAuthVisual() {
+  _isAuthVisualRunning = false;
+  if (_authAnimId) {
+    cancelAnimationFrame(_authAnimId);
+    _authAnimId = null;
+  }
+}
+
+function start3DAuthVisual() {
+  if (_isAuthVisualRunning) return;
+  if (!isAuthVisualVisible()) return;
+  if (typeof window._run3DAuthRender === 'function') {
+    _isAuthVisualRunning = true;
+    window._run3DAuthRender();
+  }
+}
+
+window.stop3DAuthVisual = stop3DAuthVisual;
+window.start3DAuthVisual = start3DAuthVisual;
+
 function init3DAuthVisual() {
   const canvas = document.getElementById('auth3dCanvas');
   if (!canvas) return;
@@ -28,10 +65,16 @@ function init3DAuthVisual() {
   const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
   let width, height, cx, cy, scaleFactor = 1;
 
+  function updateCachedRect() {
+    if (canvas && isAuthVisualVisible()) {
+      _authCachedRect = canvas.getBoundingClientRect();
+    }
+  }
+
   function resize() {
-    const rect = canvas.getBoundingClientRect();
-    const w = rect.width || 380;
-    const h = rect.height || 380;
+    updateCachedRect();
+    const w = (_authCachedRect && _authCachedRect.width) || 380;
+    const h = (_authCachedRect && _authCachedRect.height) || 380;
     width = canvas.width = w * dpr;
     height = canvas.height = h * dpr;
     cx = width / 2;
@@ -39,35 +82,36 @@ function init3DAuthVisual() {
     scaleFactor = (Math.min(width, height) / (400 * dpr)) * dpr;
   }
   resize();
-  window.addEventListener('resize', resize);
+  window.addEventListener('resize', resize, { passive: true });
 
-  // Mouse & Touch Parallax Tracking
+  // Mouse & Touch Parallax Tracking (Zero layout thrashing: uses cached bounding rect)
   let mouseX = 0, mouseY = 0, targetMouseX = 0, targetMouseY = 0;
   window.addEventListener('mousemove', (e) => {
-    const r = canvas.getBoundingClientRect();
-    if (r.width > 0 && r.height > 0) {
-      targetMouseX = ((e.clientX - r.left) / r.width - 0.5) * 2;
-      targetMouseY = ((e.clientY - r.top) / r.height - 0.5) * 2;
+    if (!_isAuthVisualRunning || !_authCachedRect) return;
+    if (_authCachedRect.width > 0 && _authCachedRect.height > 0) {
+      targetMouseX = ((e.clientX - _authCachedRect.left) / _authCachedRect.width - 0.5) * 2;
+      targetMouseY = ((e.clientY - _authCachedRect.top) / _authCachedRect.height - 0.5) * 2;
     }
-  });
+  }, { passive: true });
 
   // Touch Support for Mobile / Tablets
   canvas.addEventListener('touchmove', (e) => {
+    if (!_isAuthVisualRunning || !_authCachedRect) return;
     if (e.touches && e.touches.length > 0) {
-      const r = canvas.getBoundingClientRect();
       const t = e.touches[0];
-      targetMouseX = ((t.clientX - r.left) / r.width - 0.5) * 2.5;
-      targetMouseY = ((t.clientY - r.top) / r.height - 0.5) * 2.5;
+      targetMouseX = ((t.clientX - _authCachedRect.left) / _authCachedRect.width - 0.5) * 2.5;
+      targetMouseY = ((t.clientY - _authCachedRect.top) / _authCachedRect.height - 0.5) * 2.5;
     }
   }, { passive: true });
 
   // Interactive Click / Touch Energy Ripples
   const ripples = [];
   function addRipple(clientX, clientY) {
-    const r = canvas.getBoundingClientRect();
+    if (!_authCachedRect) updateCachedRect();
+    if (!_authCachedRect) return;
     ripples.push({
-      x: (clientX - r.left) * dpr,
-      y: (clientY - r.top) * dpr,
+      x: (clientX - _authCachedRect.left) * dpr,
+      y: (clientY - _authCachedRect.top) * dpr,
       radius: 4 * scaleFactor,
       maxRadius: 130 * scaleFactor,
       alpha: 0.85
@@ -356,14 +400,31 @@ function init3DAuthVisual() {
       ctx.stroke();
     }
 
-    requestAnimationFrame(render);
+    // Only schedule next frame if auth canvas is actually visible on screen
+    if (_isAuthVisualRunning && isAuthVisualVisible()) {
+      _authAnimId = requestAnimationFrame(render);
+    } else {
+      stop3DAuthVisual();
+    }
   }
 
-  render();
+  window._run3DAuthRender = function() {
+    resize();
+    if (_authAnimId) cancelAnimationFrame(_authAnimId);
+    _isAuthVisualRunning = true;
+    _authAnimId = requestAnimationFrame(render);
+  };
+
+  // Only start animation loop if auth section is currently visible
+  if (isAuthVisualVisible()) {
+    start3DAuthVisual();
+  }
 }
 
 if (typeof window !== 'undefined') {
   window.init3DAuthVisual = init3DAuthVisual;
+  window.stop3DAuthVisual = stop3DAuthVisual;
+  window.start3DAuthVisual = start3DAuthVisual;
   if (document.readyState === 'complete') {
     init3DAuthVisual();
   } else {
@@ -1041,6 +1102,7 @@ function showLoginForm() {
   if (tabRegister) tabRegister.classList.remove('active');
   if (tabLogin) tabLogin.classList.add('active');
   if (indicator) indicator.classList.remove('to-register');
+  if (isAuthVisualVisible()) start3DAuthVisual();
 }
 
 async function handleForgotPassword() {
@@ -1483,6 +1545,7 @@ async function loginSuccess(userProfile) {
   currentUser = normalizeUserProfile(userProfile);
 
   // 1. Immediately switch UI to active app so user is NEVER left staring at a stuck login screen
+  stop3DAuthVisual();
   const authSec = document.getElementById('authSection');
   if (authSec) {
     authSec.style.setProperty('display', 'none', 'important');
@@ -1618,6 +1681,7 @@ function handleLogoutUI() {
 
   // Explicitly reset to clean Login Form with fields visible
   showLoginForm();
+  start3DAuthVisual();
   hideLoader();
 
   if (window.history && window.history.replaceState) {
@@ -3075,6 +3139,7 @@ function addFoodById(safeId, targetEl) {
 let _foodPage = 0;
 let _currentDbFoods = [];
 let _totalDbCount = 15085;
+let _foodSearchFetchTimer = null;
 
 async function searchFoods(query = '', page = 0) {
   const q = (query || '').toLowerCase().trim();
@@ -3090,7 +3155,7 @@ async function searchFoods(query = '', page = 0) {
 
   _lastSearchQuery = `${currentCat}:${q}`;
 
-  // 1. Calculate local matches cleanly
+  // 1. Calculate local matches cleanly (0ms instant response)
   let localMatches = Array.isArray(FOODS) ? FOODS : [];
   if (currentCat !== 'all') {
     localMatches = localMatches.filter(f => f.cat === currentCat || (f.cat && f.cat.includes(currentCat)));
@@ -3112,6 +3177,18 @@ async function searchFoods(query = '', page = 0) {
     }
   }
 
+  // Debounce remote backend search to prevent network congestion while typing
+  if (page === 0) {
+    clearTimeout(_foodSearchFetchTimer);
+    _foodSearchFetchTimer = setTimeout(() => {
+      _executeRemoteFoodFetch(q, page, countEl, container, localMatches);
+    }, 220);
+  } else {
+    await _executeRemoteFoodFetch(q, page, countEl, container, localMatches);
+  }
+}
+
+async function _executeRemoteFoodFetch(q, page, countEl, container, localMatches) {
   try {
     let dbFetched = [];
 
@@ -3176,7 +3253,7 @@ async function searchFoods(query = '', page = 0) {
 
     if (page === 0) {
       const dbNames = new Set(dbFetched.map(f => f.name.toLowerCase()));
-      const uniqueLocal = localMatches.filter(f => !dbNames.has(f.name.toLowerCase()));
+      const uniqueLocal = (localMatches || []).filter(f => !dbNames.has(f.name.toLowerCase()));
       _currentDbFoods = [...uniqueLocal, ...dbFetched];
     } else {
       _currentDbFoods = [..._currentDbFoods, ...dbFetched];

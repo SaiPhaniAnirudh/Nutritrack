@@ -1344,6 +1344,16 @@ body {
 }
 
 /* ── 11. PROFILE PAGE & GLOWING AVATAR HALO ── */
+.profile-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, 1fr) !important;
+  gap: 1.5rem !important;
+  align-items: start !important;
+  width: 100% !important;
+  max-width: 1350px !important;
+  margin: 0 auto !important;
+}
+
 .profile-avatar-section {
   text-align: center !important;
   padding: 2rem 1.2rem !important;
@@ -2192,6 +2202,10 @@ body {
   }
   .profile-stats {
     grid-template-columns: repeat(2, 1fr);
+  }
+  .profile-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1.2rem !important;
   }
 }
 
