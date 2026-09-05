@@ -75,4 +75,23 @@ if (!html.includes('let shouldShowBanner = !dismissedTime;')) {
 }
 console.log('  ✅ PWA banner dismissal persistence verified');
 
+// 7. Check History Grid Responsive Collapse (<1024px) & Elevated Floating Assistant Bar
+if (!css.includes('.history-grid') || !css.includes('max-width: 1024px')) {
+  console.error('❌ Failed: .history-grid responsive collapse below 1024px missing in DashboardRestyle.css');
+  process.exit(1);
+}
+console.log('  ✅ .history-grid responsive single-column collapse below 1024px verified');
+
+if (!css.includes('.history-table-container') || !html.includes('class="history-table-container"')) {
+  console.error('❌ Failed: .history-table-container wrapper missing');
+  process.exit(1);
+}
+console.log('  ✅ .history-table-container with horizontal scroll protection verified');
+
+if (!css.includes('bottom: calc(72px + env(safe-area-inset-bottom, 0px) + 12px)')) {
+  console.error('❌ Failed: Floating assistant bar elevation above mobile nav missing in DashboardRestyle.css');
+  process.exit(1);
+}
+console.log('  ✅ Floating assistant bar elevation above bottom navigation bar verified');
+
 console.log('\n🎉 ALL PERFORMANCE & ALIGNMENT CHECKS PASSED 100%!\n');

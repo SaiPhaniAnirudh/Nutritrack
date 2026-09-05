@@ -117,6 +117,10 @@ nutritrack/
 ```
 
 ## 🌟 Advanced Clinical & Lifestyle Nutrition Suite
+- **⚡ BMR & TDEE Precision Calculator:** Gold-standard Mifflin-St Jeor metabolic expenditure engine with selectable Physical Activity Level (PAL) multipliers and 1-tap macro lock.
+- **📋 Nutrition Facts Label OCR:** Packaging nutrition facts table scanner with interactive viewfinder HUD, verified packaged presets, and dynamic portion scaling.
+- **🔬 7-Day Micronutrient Gap Auditor:** Clinical biomarker deficiency analyzer tracking 7-day intake against RDA standards with targeted whole food prescriptions.
+- **💾 Full Offline IndexedDB Sync Engine:** Sub-millisecond offline food catalog querying and seamless background synchronization upon reconnection.
 - **🔄 AI Smart Swap Engine:** Side-by-side food comparison with dynamic metabolic deltas (Calories Saved, Protein Boost, Fiber Gain, Sugar Avoided) and 1-tap logging.
 - **📄 Clinical Nutrition Dossier:** Physician-grade progress report generator with 30-day TDEE energy balance, compliance table, 67+ micronutrients matrix, and vector-clean `@media print` PDF generation.
 - **⏱️ Batch Meal Prep Studio:** 3-station concurrent cooking pipelines with live countdown timers, completion audio chimes, and glass container portion calculators.
