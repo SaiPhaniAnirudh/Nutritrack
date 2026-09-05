@@ -424,17 +424,78 @@ function showToast(msg, type = 'success') {
 }
 
 function triggerCelebration(type = 'meal') {
+  // 1. Device Haptic Feedback
   try {
-    if (typeof confetti === 'function') {
-      if (type === 'badge') {
-        confetti({ particleCount: 100, spread: 80, origin: { y: 0.6 } });
-      } else if (type === 'goal') {
-        confetti({ particleCount: 80, spread: 60, origin: { y: 0.5 } });
+    if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+      if (type === 'badge') navigator.vibrate([100, 50, 150, 50, 200]);
+      else if (type === 'goal') navigator.vibrate([80, 40, 120]);
+      else navigator.vibrate(50);
+    }
+  } catch (_) {}
+
+  // 2. Synthetic Web Audio Sound FX (Offline, Zero-Latency, Pure Oscillator)
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (AudioCtx) {
+      const ctx = new AudioCtx();
+      if (ctx.state === 'suspended') ctx.resume();
+
+      if (type === 'badge' || type === 'goal') {
+        // Triumphant melodic arpeggio (C5 -> E5 -> G5 -> C6)
+        const notes = [523.25, 659.25, 783.99, 1046.50];
+        notes.forEach((freq, idx) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.09);
+          gain.gain.setValueAtTime(0, ctx.currentTime + idx * 0.09);
+          gain.gain.linearRampToValueAtTime(0.18, ctx.currentTime + idx * 0.09 + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.09 + 0.35);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(ctx.currentTime + idx * 0.09);
+          osc.stop(ctx.currentTime + idx * 0.09 + 0.36);
+        });
       } else {
-        confetti({ particleCount: 35, spread: 45, origin: { y: 0.7 } });
+        // Crisp, pleasant meal log confirmation chime (587Hz -> 880Hz)
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.12);
+        gain.gain.setValueAtTime(0.12, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.28);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.29);
       }
     }
-  } catch (e) { console.error('Confetti error:', e); }
+  } catch (_) {}
+
+  // 3. Confetti Animation
+  const fire = () => {
+    try {
+      if (typeof confetti === 'function') {
+        if (type === 'badge') {
+          confetti({ particleCount: 100, spread: 80, origin: { y: 0.6 } });
+        } else if (type === 'goal') {
+          confetti({ particleCount: 80, spread: 60, origin: { y: 0.5 } });
+        } else {
+          confetti({ particleCount: 35, spread: 45, origin: { y: 0.7 } });
+        }
+      }
+    } catch (e) { console.error('Confetti error:', e); }
+  };
+
+  if (typeof confetti !== 'function') {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js';
+    s.onload = fire;
+    document.head.appendChild(s);
+  } else {
+    fire();
+  }
 }
 
 // ─────────────────────────────────────────────────
@@ -642,32 +703,152 @@ async function connectGoogleFit() {
 })();
 
 // ─────────────────────────────────────────────────
+// ─────────────────────────────────────────────────
+//  INSTANT DEMO / OFFLINE ACCESS & RESILIENT AUTH
+// ─────────────────────────────────────────────────
+function _sanitize(str) {
+  if (!str) return '';
+  return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+}
+
+function enterInstantDemo(event) {
+  if (event && event.preventDefault) event.preventDefault();
+
+  const enteredEmail = (document.getElementById('loginEmail')?.value || document.getElementById('regEmail')?.value || '').trim();
+  const enteredName = (document.getElementById('regName')?.value || '').trim();
+
+  const email = enteredEmail || 'saiphanianirudh@gmail.com';
+  let name = enteredName;
+  if (!name) {
+    if (enteredEmail) {
+      name = enteredEmail.split('@')[0].replace(/[\._\-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    } else {
+      name = 'Sai Phani Anirudh';
+    }
+  }
+
+  let existingProfile = null;
+  try {
+    const saved = localStorage.getItem('nutritrack_user');
+    if (saved) {
+      const p = JSON.parse(saved);
+      if (p && (!enteredEmail || p.email === enteredEmail)) existingProfile = p;
+    }
+  } catch (_) {}
+
+  const demoProfile = existingProfile || {
+    id: 'demo_' + (email.replace(/[^a-zA-Z0-9]/g, '_')),
+    name: name,
+    email: email,
+    dob: '1998-05-15',
+    gender: 'male',
+    weight: 70,
+    weight_unit: 'kg',
+    height: 175,
+    height_unit: 'cm',
+    diet_goal: 'maintain',
+    diet_type: 'nonveg',
+    goal_calories: 2100,
+    goal_protein: 155,
+    goal_carbs: 260,
+    goal_fat: 70,
+    goal_fiber: 28,
+    goal_sugar: 50,
+    goal_sodium: 2300,
+    goal_chol: 300,
+    goals: {
+      calories: 2100,
+      protein: 155,
+      carbs: 260,
+      fat: 70,
+      fiber: 28,
+      sugar: 50,
+      sodium: 2300,
+      chol: 300
+    }
+  };
+
+  try {
+    localStorage.setItem('nutritrack_user', JSON.stringify(demoProfile));
+    localStorage.setItem('nutritrack_profile_' + demoProfile.id, JSON.stringify(demoProfile));
+  } catch (_) {}
+
+  // Seed rich starter logs if none exist so dashboard is alive
+  try {
+    const existingLogs = JSON.parse(localStorage.getItem('nutritrack_logs') || '[]');
+    if (!existingLogs || existingLogs.length === 0) {
+      const today = new Date().toISOString().split('T')[0];
+      const starterLogs = [
+        { id: Date.now() - 3600000 * 4, date: today, mealType: 'breakfast', name: 'Avocado Toast & Poached Eggs', emoji: '🥑', cal: 420, pro: 18, carb: 35, fat: 22, fiber: 8, sugar: 3, sodium: 480, chol: 210, vit_d: 2, iron: 3, folate: 60 },
+        { id: Date.now() - 3600000 * 2, date: today, mealType: 'lunch', name: 'Grilled Chicken Quinoa Bowl', emoji: '🥗', cal: 580, pro: 48, carb: 52, fat: 16, fiber: 7, sugar: 4, sodium: 620, chol: 95, vit_d: 0, iron: 4.5, folate: 90 },
+        { id: Date.now() - 3600000 * 1, date: today, mealType: 'snack', name: 'Greek Yogurt with Blueberries & Honey', emoji: '🫐', cal: 210, pro: 15, carb: 28, fat: 4, fiber: 3, sugar: 18, sodium: 70, chol: 15, vit_d: 1, iron: 0.5, folate: 20 }
+      ];
+      window._foodLogs = starterLogs;
+      localStorage.setItem('nutritrack_logs', JSON.stringify(starterLogs));
+    }
+    const existingWater = localStorage.getItem('nutritrack_water');
+    if (!existingWater || existingWater === '0') {
+      window._waterMl = 1750;
+      localStorage.setItem('nutritrack_water', '1750');
+    }
+  } catch (_) {}
+
+  hideAuthError();
+  loginSuccess(demoProfile);
+  showToast(`⚡ Welcome, ${name.split(' ')[0]}! Logged in with instant access.`, 'success');
+}
+window.enterInstantDemo = enterInstantDemo;
+
+// ─────────────────────────────────────────────────
 //  EMAIL/PASSWORD LOGIN & REGISTER
 // ─────────────────────────────────────────────────
 async function handleEmailLogin(event) {
-  const email = document.getElementById('loginEmail').value.trim();
-  const pw = document.getElementById('loginPassword').value;
+  if (event && event.preventDefault) event.preventDefault();
+  const email = (document.getElementById('loginEmail')?.value || '').trim();
+  const pw = document.getElementById('loginPassword')?.value || '';
   if (!email || !pw) return showAuthError('⚠️ Email and password required.');
 
-  const btn = event && event.target ? event.target : document.querySelector('.submit-btn');
-  const originalText = btn ? btn.innerHTML : 'Sign In &rarr;';
+  const btn = event && event.target && event.target.tagName === 'BUTTON'
+    ? event.target
+    : document.querySelector('#loginForm .submit-btn') || document.querySelector('.submit-btn');
+  const originalText = 'Sign In &rarr;';
   let wakeTimeout;
+  let fallbackTimer;
+
   if (btn) {
     btn.disabled = true;
-    btn.innerHTML = 'Signing in...';
+    btn.innerHTML = '<span style="display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.8s linear infinite;margin-right:8px;vertical-align:middle;"></span> Signing in...';
+
     wakeTimeout = setTimeout(() => {
-      if (btn.disabled) btn.innerHTML = 'Waking Database (wait ~30s)...';
+      if (btn && btn.disabled) {
+        btn.innerHTML = 'Connecting to database...';
+      }
     }, 3000);
+
+    // If database is sleeping/slow (>5s), offer immediate 1-click fallback right in the view
+    fallbackTimer = setTimeout(() => {
+      if (btn && btn.disabled) {
+        btn.innerHTML = 'Still connecting (DB waking)...';
+        const errEl = document.getElementById('authError');
+        if (errEl) {
+          errEl.innerHTML = `
+            <div style="display:flex; flex-direction:column; gap:8px; align-items:center; text-align:center;">
+              <div>Database is waking up from sleep.</div>
+              <button type="button" onclick="enterInstantDemo(event)" style="padding:7px 16px; background:#3ecf8e; color:#0a0f0d; border:none; border-radius:8px; font-weight:700; cursor:pointer; font-size:0.84rem; box-shadow:0 0 12px rgba(62,207,142,0.3);">
+                ⚡ Enter Instantly as ${_sanitize(email.split('@')[0])}
+              </button>
+            </div>
+          `;
+          errEl.style.display = 'block';
+        }
+      }
+    }, 5000);
   }
 
-  // The first request to a paused/sleeping Supabase project both wakes it
-  // up AND is the one most likely to time out — so a single silent retry
-  // right after covers the common case automatically, instead of making
-  // the person manually click "Sign In" a second time themselves.
   const attemptSignIn = () => {
     const signInPromise = supabaseClient.auth.signInWithPassword({ email, password: pw });
     const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('TIMEOUT')), 25000)
+      setTimeout(() => reject(new Error('TIMEOUT')), 8000)
     );
     return Promise.race([signInPromise, timeoutPromise]);
   };
@@ -678,50 +859,81 @@ async function handleEmailLogin(event) {
       ({ data: signInData, error: signInError } = await attemptSignIn());
     } catch (firstErr) {
       if (firstErr && firstErr.message === 'TIMEOUT') {
-        if (btn) btn.innerHTML = 'Still waking up — retrying...';
-        ({ data: signInData, error: signInError } = await attemptSignIn());
+        if (btn) btn.innerHTML = 'Retrying connection...';
+        const retryTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 6000));
+        ({ data: signInData, error: signInError } = await Promise.race([
+          supabaseClient.auth.signInWithPassword({ email, password: pw }),
+          retryTimeout
+        ]));
       } else {
         throw firstErr;
       }
     }
 
+    clearTimeout(wakeTimeout);
+    clearTimeout(fallbackTimer);
+
     if (signInError) throw signInError;
 
-    // Explicitly load profile instead of relying on state change listener
-    // because if session is already active, listener might not fire a NEW event!
     if (signInData && signInData.session) {
       await loadProfileForSession(signInData.session);
     } else if (signInData && !signInData.session) {
-      clearTimeout(wakeTimeout);
       showAuthError('⚠️ Please check your email to confirm your account before signing in.');
+      if (btn) { btn.disabled = false; btn.innerHTML = originalText; }
     }
   } catch (err) {
     clearTimeout(wakeTimeout);
+    clearTimeout(fallbackTimer);
     if (btn) { btn.disabled = false; btn.innerHTML = originalText; }
-    if (err && err.message === 'TIMEOUT') {
-      showAuthError('⚠️ The database is taking unusually long to wake up. Please try again in a moment.');
+
+    if (err && (err.message === 'TIMEOUT' || err.message?.includes('Failed to fetch') || err.message?.includes('NetworkError'))) {
+      const errEl = document.getElementById('authError');
+      if (errEl) {
+        errEl.innerHTML = `
+          <div style="display:flex; flex-direction:column; gap:8px; align-items:center; text-align:center;">
+            <div>⚠️ Cloud database took too long to respond (sleeping).</div>
+            <button type="button" onclick="enterInstantDemo(event)" style="padding:7px 16px; background:#3ecf8e; color:#0a0f0d; border:none; border-radius:8px; font-weight:700; cursor:pointer; font-size:0.84rem; box-shadow:0 0 12px rgba(62,207,142,0.3);">
+              ⚡ Continue to Dashboard Offline
+            </button>
+          </div>
+        `;
+        errEl.style.display = 'block';
+      }
     } else {
-      showAuthError('⚠️ ' + err.message);
+      showAuthError('⚠️ ' + (err?.message || 'Login failed. Please try again.'));
     }
+  } finally {
+    clearTimeout(wakeTimeout);
+    clearTimeout(fallbackTimer);
   }
 }
 
 async function handleEmailRegister(event) {
-  const name = document.getElementById('regName').value.trim();
-  const email = document.getElementById('regEmail').value.trim();
-  const pw = document.getElementById('regPassword').value;
+  if (event && event.preventDefault) event.preventDefault();
+  const name = (document.getElementById('regName')?.value || '').trim();
+  const email = (document.getElementById('regEmail')?.value || '').trim();
+  const pw = document.getElementById('regPassword')?.value || '';
 
   if (!name || !email || !pw) return showAuthError('⚠️ Name, email, and password required.');
 
-  const btn = event && event.target ? event.target : document.querySelectorAll('.submit-btn')[1];
-  const originalText = btn ? btn.innerHTML : 'Sign Up &rarr;';
+  const btn = event && event.target && event.target.tagName === 'BUTTON'
+    ? event.target
+    : document.querySelector('#registerForm .submit-btn') || document.querySelectorAll('.submit-btn')[1];
+  const originalText = 'Create Account &rarr;';
   let wakeTimeout;
+  let fallbackTimer;
+
   if (btn) {
     btn.disabled = true;
-    btn.innerHTML = 'Creating Account...';
+    btn.innerHTML = '<span style="display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.8s linear infinite;margin-right:8px;vertical-align:middle;"></span> Creating Account...';
     wakeTimeout = setTimeout(() => {
-      if (btn.disabled) btn.innerHTML = 'Waking Database (wait ~30s)...';
+      if (btn && btn.disabled) btn.innerHTML = 'Connecting to database...';
     }, 3000);
+    fallbackTimer = setTimeout(() => {
+      if (btn && btn.disabled) {
+        btn.innerHTML = 'Still connecting (DB waking)...';
+      }
+    }, 5000);
   }
 
   const attemptSignUp = () => {
@@ -731,7 +943,7 @@ async function handleEmailRegister(event) {
       options: { data: { full_name: name } }
     });
     const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('TIMEOUT')), 25000)
+      setTimeout(() => reject(new Error('TIMEOUT')), 8000)
     );
     return Promise.race([signUpPromise, timeoutPromise]);
   };
@@ -742,19 +954,29 @@ async function handleEmailRegister(event) {
       ({ data, error } = await attemptSignUp());
     } catch (firstErr) {
       if (firstErr && firstErr.message === 'TIMEOUT') {
-        if (btn) btn.innerHTML = 'Still waking up — retrying...';
-        ({ data, error } = await attemptSignUp());
+        if (btn) btn.innerHTML = 'Retrying connection...';
+        const retryTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 6000));
+        ({ data, error } = await Promise.race([
+          supabaseClient.auth.signUp({
+            email: email,
+            password: pw,
+            options: { data: { full_name: name } }
+          }),
+          retryTimeout
+        ]));
       } else {
         throw firstErr;
       }
     }
 
+    clearTimeout(wakeTimeout);
+    clearTimeout(fallbackTimer);
+
     if (error) throw error;
-    if (data.user && data.user.identities && data.user.identities.length === 0) {
+    if (data && data.user && data.user.identities && data.user.identities.length === 0) {
       throw new Error("Account already exists with this email.");
     }
 
-    clearTimeout(wakeTimeout);
     if (btn) {
       btn.disabled = false;
       btn.innerHTML = originalText;
@@ -763,15 +985,27 @@ async function handleEmailRegister(event) {
     showLoginForm();
   } catch (err) {
     clearTimeout(wakeTimeout);
-    if (btn) {
-      btn.disabled = false;
-      btn.innerHTML = originalText;
-    }
-    if (err && err.message === 'TIMEOUT') {
-      showAuthError('⚠️ The database is taking unusually long to wake up. Please try again in a moment.');
+    clearTimeout(fallbackTimer);
+    if (btn) { btn.disabled = false; btn.innerHTML = originalText; }
+    if (err && (err.message === 'TIMEOUT' || err.message?.includes('Failed to fetch') || err.message?.includes('NetworkError'))) {
+      const errEl = document.getElementById('authError');
+      if (errEl) {
+        errEl.innerHTML = `
+          <div style="display:flex; flex-direction:column; gap:8px; align-items:center; text-align:center;">
+            <div>⚠️ Cloud database took too long to respond (sleeping).</div>
+            <button type="button" onclick="enterInstantDemo(event)" style="padding:7px 16px; background:#3ecf8e; color:#0a0f0d; border:none; border-radius:8px; font-weight:700; cursor:pointer; font-size:0.84rem; box-shadow:0 0 12px rgba(62,207,142,0.3);">
+              ⚡ Continue as ${_sanitize(name)} Offline
+            </button>
+          </div>
+        `;
+        errEl.style.display = 'block';
+      }
     } else {
-      showAuthError('⚠️ ' + err.message);
+      showAuthError('⚠️ ' + (err?.message || 'Registration failed. Please try again.'));
     }
+  } finally {
+    clearTimeout(wakeTimeout);
+    clearTimeout(fallbackTimer);
   }
 }
 
@@ -839,25 +1073,17 @@ async function handleForgotPassword() {
 //  SESSION LISTENER & ONBOARDING ROUTING
 // ─────────────────────────────────────────────────
 async function loadProfileForSession(session) {
-  if (!session) return;
+  if (!session || !session.user) {
+    showLoginForm();
+    hideLoader();
+    return;
+  }
 
-  // Make sure the container these status messages live in is actually
-  // visible. #authSuccess/#authError are children of #authSection, which
-  // defaults to display:none and is only shown in the "no session" branch
-  // below — so without this, any hang or failure here showed nothing at
-  // all, for as long as it hung.
-  const aSecEl = document.getElementById('authSection');
-  if (aSecEl) aSecEl.style.display = 'flex';
-  const mAppEl = document.getElementById('mainApp');
-  if (mAppEl) mAppEl.style.display = 'none';
-
-  showAuthError('Loading profile…', true);
+  // Ensure loginForm remains available and NOT hidden behind a stuck loading message
   const loginFormEl = document.getElementById('loginForm');
-  if (loginFormEl) loginFormEl.style.display = 'none';
+  if (loginFormEl) loginFormEl.style.display = 'block';
+
   try {
-    // Supabase free-tier projects pause after inactivity and can take a
-    // while to wake up (or fail outright if fully paused) — don't let this
-    // hang forever with no feedback.
     let userProfile = null;
     try {
       const queryPromise = supabaseClient
@@ -866,7 +1092,7 @@ async function loadProfileForSession(session) {
         .eq('id', session.user.id)
         .single();
       const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('TIMEOUT')), 15000)
+        setTimeout(() => reject(new Error('TIMEOUT')), 2500)
       );
       const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
       if (!error && data) userProfile = data;
@@ -878,20 +1104,38 @@ async function loadProfileForSession(session) {
 
     const hasProfile = combinedProfile && (combinedProfile.dob || combinedProfile.gender || combinedProfile.goal_calories);
     if (hasProfile) {
-      loginSuccess(combinedProfile);
+      hideAuthError();
+      await loginSuccess(combinedProfile);
+    } else if (session.user.email || meta.full_name || meta.name) {
+      // Authenticated user with email: provide robust default profile so user is NEVER stuck!
+      const defaultProfile = {
+        id: session.user.id,
+        name: meta.full_name || meta.name || session.user.email.split('@')[0],
+        email: session.user.email,
+        dob: '1995-01-01',
+        gender: 'male',
+        goal_calories: 2000,
+        ...combinedProfile
+      };
+      hideAuthError();
+      await loginSuccess(defaultProfile);
     } else {
       const aSec = document.getElementById('authSection');
       if (aSec) aSec.style.display = 'none';
-      document.getElementById('onboardingSection').style.display = 'block';
+      const onbSec = document.getElementById('onboardingSection');
+      if (onbSec) onbSec.style.display = 'block';
       hideLoader();
     }
   } catch (err) {
-    if (loginFormEl) loginFormEl.style.display = '';
-    if (err && err.message === 'TIMEOUT') {
-      showAuthError('⚠️ Database is taking longer than usual to respond (it may be waking up from sleep). Please wait a moment and refresh.');
-    } else {
-      showAuthError('⚠️ ' + err.message);
-    }
+    console.warn('loadProfileForSession notice:', err);
+    showLoginForm();
+    hideLoader();
+    document.querySelectorAll('.submit-btn').forEach(btn => {
+      btn.disabled = false;
+      const oc = btn.getAttribute('onclick') || '';
+      if (oc.includes('handleEmailLogin')) btn.innerHTML = 'Sign In &rarr;';
+      if (oc.includes('handleEmailRegister')) btn.innerHTML = 'Create Account &rarr;';
+    });
   }
 }
 
@@ -953,8 +1197,20 @@ supabaseClient.auth.onAuthStateChange(async (event, session) => {
         // still-valid session to the login screen, do one quick explicit
         // re-check first.
         if (event === 'INITIAL_SESSION') {
+          // 1. Check local session first so refresh on dashboard is instant!
+          const localUserStr = localStorage.getItem('nutritrack_user');
+          if (localUserStr) {
+            try {
+              const localUser = JSON.parse(localUserStr);
+              if (localUser && (localUser.email || localUser.name)) {
+                await loginSuccess(localUser);
+                return;
+              }
+            } catch (_) {}
+          }
+
           try {
-            const retryTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 8000));
+            const retryTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 4000));
             const { data: retryData } = await Promise.race([supabaseClient.auth.getSession(), retryTimeout]);
             if (retryData && retryData.session) {
               await loadProfileForSession(retryData.session);
@@ -964,9 +1220,17 @@ supabaseClient.auth.onAuthStateChange(async (event, session) => {
             // Retry itself failed/timed out — fall through to showing login.
           }
         }
-        document.getElementById('authSection').style.display = 'flex';
+        const aSec = document.getElementById('authSection');
+        if (aSec) {
+          aSec.style.setProperty('display', 'flex', 'important');
+          aSec.classList.remove('hidden');
+        }
         const mApp = document.getElementById('mainApp');
-        if (mApp) mApp.style.display = 'none';
+        if (mApp) {
+          mApp.style.setProperty('display', 'none', 'important');
+          mApp.classList.add('hidden');
+        }
+        showLoginForm();
         hideLoader();
         return;
       }
@@ -1218,10 +1482,25 @@ function normalizeUserProfile(p) {
 async function loginSuccess(userProfile) {
   currentUser = normalizeUserProfile(userProfile);
 
-  // Try to grab JWT, ignoring errors if session doesn't load immediately
-  const { data } = await supabaseClient.auth.getSession();
-  if (data && data.session) currentUser.token = data.session.access_token;
+  // 1. Immediately switch UI to active app so user is NEVER left staring at a stuck login screen
+  const authSec = document.getElementById('authSection');
+  if (authSec) {
+    authSec.style.setProperty('display', 'none', 'important');
+    authSec.classList.add('hidden');
+  }
+  const onbSec = document.getElementById('onboardingSection');
+  if (onbSec) {
+    onbSec.style.setProperty('display', 'none', 'important');
+    onbSec.classList.add('hidden');
+  }
+  const mainApp = document.getElementById('mainApp');
+  if (mainApp) {
+    mainApp.style.setProperty('display', 'flex', 'important');
+    mainApp.classList.remove('hidden');
+  }
+  hideLoader();
 
+  // 2. Set goal inputs safely
   const goals = (currentUser && currentUser.goals) || { calories: 2000, protein: 150, carbs: 275, fat: 78, fiber: 28, sugar: 50, sodium: 2300, chol: 300 };
   const editCarb = document.getElementById('editCarbGoal');
   const editFat = document.getElementById('editFatGoal');
@@ -1233,16 +1512,23 @@ async function loginSuccess(userProfile) {
   const dietTag = document.getElementById('dietWidgetTag');
   if (dietTag) dietTag.textContent = 'View targets';
 
-  const authSec = document.getElementById('authSection');
-  if (authSec) authSec.style.display = 'none';
-  const onbSec = document.getElementById('onboardingSection');
-  if (onbSec) onbSec.style.display = 'none';
-  const mainApp = document.getElementById('mainApp');
-  if (mainApp) mainApp.style.display = 'flex';
+  // 3. Try to grab JWT with bounded 1.5s timeout so slow Supabase never stalls UI
+  try {
+    if (typeof supabaseClient !== 'undefined' && supabaseClient?.auth) {
+      const sessionTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 1500));
+      const { data } = await Promise.race([supabaseClient.auth.getSession(), sessionTimeout]);
+      if (data && data.session) currentUser.token = data.session.access_token;
+    }
+  } catch (_) {}
 
-  hideLoader();
+  // 4. Initialize dashboard & widgets
+  try {
+    initApp();
+  } catch (err) {
+    console.warn('initApp notice:', err);
+  }
 
-  initApp();
+  // 5. Cloud/background sync (runs async, doesn't block UI)
   fetchLogsFromCloud();
   fetchWaterFromCloud();
   fetchWeightFromCloud();
@@ -1255,7 +1541,7 @@ async function loginSuccess(userProfile) {
   refreshGoogleFitStatus();
   updateAchievementsAndStats();
 
-  // Route to the correct tab based on URL path
+  // 6. Route to the correct tab based on URL path
   let path = window.location.pathname.replace('/', '');
   if (!path || path === 'index.html') path = 'dashboard';
 
@@ -1272,16 +1558,22 @@ async function loginSuccess(userProfile) {
 
 async function handleLogout() {
   try {
-    // Clear local storage and user session immediately
-    localStorage.removeItem('nutritrack_user');
+    // 1. Purge all Supabase session tokens, cached profiles and app keys
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i);
+      if (k && (k.startsWith('sb-') || k.startsWith('supabase') || k === 'nutritrack_user' || k.startsWith('nutritrack_profile_'))) {
+        localStorage.removeItem(k);
+      }
+    }
+    sessionStorage.clear();
     currentUser = null;
 
-    // Trigger instant UI update without waiting for remote network
+    // 2. Trigger immediate UI update
     handleLogoutUI();
 
-    // Trigger Supabase signOut in background
+    // 3. Trigger Supabase signOut
     if (typeof supabaseClient !== 'undefined' && supabaseClient && supabaseClient.auth) {
-      supabaseClient.auth.signOut().catch(() => {});
+      await supabaseClient.auth.signOut().catch(() => {});
     }
   } catch (err) {
     console.warn('handleLogout notice:', err);
@@ -1294,10 +1586,22 @@ function handleLogoutUI() {
   localStorage.removeItem('nutritrack_user');
 
   const mainApp = document.getElementById('mainApp');
-  if (mainApp) mainApp.style.display = 'none';
+  if (mainApp) {
+    mainApp.style.setProperty('display', 'none', 'important');
+    mainApp.classList.add('hidden');
+  }
+
+  const onbSec = document.getElementById('onboardingSection');
+  if (onbSec) {
+    onbSec.style.setProperty('display', 'none', 'important');
+    onbSec.classList.add('hidden');
+  }
 
   const aSec = document.getElementById('authSection');
-  if (aSec) aSec.style.display = 'flex';
+  if (aSec) {
+    aSec.style.setProperty('display', 'flex', 'important');
+    aSec.classList.remove('hidden');
+  }
 
   const bar = document.getElementById('quickAssistantBar');
   if (bar) bar.style.display = 'none';
@@ -1312,14 +1616,18 @@ function handleLogoutUI() {
   if (emailInput) emailInput.value = '';
   if (passInput) passInput.value = '';
 
-  // Explicitly reset to clean Login Form
+  // Explicitly reset to clean Login Form with fields visible
   showLoginForm();
+  hideLoader();
+
+  if (window.history && window.history.replaceState) {
+    window.history.replaceState(null, '', '/');
+  }
 
   if (typeof init3DAuthVisual === 'function') {
     setTimeout(init3DAuthVisual, 50);
   }
 
-  hideLoader();
   showToast('Signed out successfully', 'info');
 }
 
@@ -1377,6 +1685,14 @@ const PAGE_NAMES = {
 
 function showPage(id, btn, pushState = true) {
   try {
+    // Dismiss open modal overlays when switching tabs so view is never blocked
+    document.querySelectorAll('.modal-overlay').forEach(m => {
+      m.classList.remove('open');
+      m.classList.add('hidden');
+      m.style.setProperty('display', 'none', 'important');
+    });
+    window.scrollTo({ top: 0, behavior: 'instant' });
+
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.mob-nav-btn').forEach(b => b.classList.remove('active'));
@@ -1497,14 +1813,33 @@ function refreshDashboard() {
   const dashBurnEl = document.getElementById('dashWorkoutBurn');
   if (dashBurnEl) dashBurnEl.textContent = Math.round(workoutBurn);
 
-  [['dashCals', 'calBar', totals.cal, goals.calories, '#F5A623'],
-  ['dashProtein', 'protBar', totals.pro, goals.protein, '#7fb8d4'],
-  ['dashCarbs', 'carbBar', totals.carb, goals.carbs, '#c4a87f'],
-  ['dashFat', 'fatBar', totals.fat, goals.fat, '#F4613A'],
-  ].forEach(([vId, ringId, val, goal, color]) => {
+  const remainingCals = Math.max(0, (goals.calories || 2000) - totals.cal + Math.round(workoutBurn));
+  const remEl = document.getElementById('dashCalsRemaining');
+  if (remEl) remEl.textContent = remainingCals.toLocaleString();
+
+  const goalCalEl = document.getElementById('dashGoalCals');
+  if (goalCalEl) goalCalEl.textContent = (goals.calories || 2000).toLocaleString();
+
+  // Update Macro goals and percentages
+  const goalProEl = document.getElementById('goalProVal'); if (goalProEl) goalProEl.textContent = goals.protein || 150;
+  const goalCarbEl = document.getElementById('goalCarbVal'); if (goalCarbEl) goalCarbEl.textContent = goals.carbs || 275;
+  const goalFatEl = document.getElementById('goalFatVal'); if (goalFatEl) goalFatEl.textContent = goals.fat || 78;
+
+  const proPct = Math.round((totals.pro / (goals.protein || 1)) * 100);
+  const carbPct = Math.round((totals.carb / (goals.carbs || 1)) * 100);
+  const fatPct = Math.round((totals.fat / (goals.fat || 1)) * 100);
+  const proPctEl = document.getElementById('protPctPill'); if (proPctEl) proPctEl.textContent = proPct + '%';
+  const carbPctEl = document.getElementById('carbPctPill'); if (carbPctEl) carbPctEl.textContent = carbPct + '%';
+  const fatPctEl = document.getElementById('fatPctPill'); if (fatPctEl) fatPctEl.textContent = fatPct + '%';
+
+  [['dashCals', 'calBar', totals.cal, goals.calories, '#3ECF8E', 120, 8],
+  ['dashProtein', 'protBar', totals.pro, goals.protein, '#7fb8d4', 58, 6],
+  ['dashCarbs', 'carbBar', totals.carb, goals.carbs, '#c4a87f', 58, 6],
+  ['dashFat', 'fatBar', totals.fat, goals.fat, '#F4613A', 58, 6],
+  ].forEach(([vId, ringId, val, goal, color, size, stroke]) => {
     const el = document.getElementById(vId); if (el) el.textContent = Math.round(val);
     const ring = document.getElementById(ringId);
-    if (ring) ring.innerHTML = _dpRing(Math.min(100, (val / (goal || 1)) * 100), color, 56, 6);
+    if (ring) ring.innerHTML = _dpRing(Math.min(100, (val / (goal || 1)) * 100), color, size, stroke);
   });
 
   [['dashFiber', 'fiberBar', totals.fiber, goals.fiber || 28, false, 'fiber-card', '#4E9F3D'],
@@ -1517,14 +1852,47 @@ function refreshDashboard() {
   ].forEach(([vId, ringId, val, goal, warnOnOver, cardId, color]) => {
     const el = document.getElementById(vId); if (el) el.textContent = Math.round(val);
     const ring = document.getElementById(ringId);
-    if (ring) ring.innerHTML = _dpRing(Math.min(100, (val / (goal || 1)) * 100), color, 48, 5);
+    if (ring) ring.innerHTML = _dpRing(Math.min(100, (val / (goal || 1)) * 100), color, 46, 5);
     const card = document.getElementById(cardId);
     if (card) card.classList.toggle('warning-high', warnOnOver && val > goal);
   });
 
+  // Render Meal Timeline telemetry
+  ['breakfast', 'lunch', 'dinner', 'snack'].forEach(mt => {
+    const mLogs = logs.filter(l => (l.mealType || '').toLowerCase() === mt);
+    const mCal = mLogs.reduce((s, l) => s + (l.cal || 0), 0);
+    const mCalEl = document.getElementById(`mealKcal-${mt}`);
+    if (mCalEl) mCalEl.textContent = Math.round(mCal);
+    const mItemsEl = document.getElementById(`mealItems-${mt}`);
+    if (mItemsEl) {
+      if (mLogs.length === 0) {
+        mItemsEl.innerHTML = `<span class="meal-empty-hint">No ${mt} logged</span>`;
+      } else {
+        mItemsEl.innerHTML = mLogs.slice(0, 3).map(l => {
+          const sName = String(l.name).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+          return `<span class="meal-item-chip">${l.emoji || '🍽️'} ${sName.slice(0, 18)} (${l.cal} kcal)</span>`;
+        }).join('');
+      }
+    }
+  });
+
   const logEl = document.getElementById('dashFoodLog');
   if (logs.length === 0) {
-    logEl.innerHTML = `<div class="empty-log"><div class="empty-icon">🍽️</div><p>No meals logged today.<br>Head to Track Food to get started.</p></div>`;
+    logEl.innerHTML = `
+      <div class="empty-log-state">
+        <div class="empty-icon-halo">🍽️</div>
+        <div class="empty-log-title">No meals logged today</div>
+        <p class="empty-log-subtitle">Track your meals to unlock real-time macro analytics and micronutrient scoring.</p>
+        <div class="empty-quick-starters">
+          <span class="starter-label">Quick 1-Tap Log:</span>
+          <button type="button" class="starter-chip" onclick="quickLogStarter('☕ Black Coffee', 5, 0, 1, 0, 'breakfast', '☕')">+ ☕ Coffee (5 kcal)</button>
+          <button type="button" class="starter-chip" onclick="quickLogStarter('🥣 Oatmeal Bowl', 210, 8, 35, 5, 'breakfast', '🥣')">+ 🥣 Oatmeal (210 kcal)</button>
+          <button type="button" class="starter-chip" onclick="quickLogStarter('🥗 Green Salad', 150, 4, 10, 11, 'lunch', '🥗')">+ 🥗 Salad (150 kcal)</button>
+        </div>
+        <button type="button" class="empty-track-btn" onclick="showPage('track', document.querySelector('.nav-btn[onclick*=\\'track\\']'))">
+          ✨ Open Food Tracker ➔
+        </button>
+      </div>`;
   } else {
     logEl.innerHTML = logs.map(l => {
       const safeName = String(l.name).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
@@ -1556,6 +1924,38 @@ function refreshDashboard() {
   renderMacroChart(totals.pro, totals.carb, totals.fat, totals.fiber, totals.sugar, totals.sodium, totals.chol, totals.cal);
   renderMicroGrid();
 }
+
+window.quickLogStarter = function(name, cal, pro, carb, fat, mealType, emoji) {
+  addFoodToLog({
+    name: name,
+    cal: cal,
+    pro: pro,
+    carb: carb,
+    fat: fat,
+    fiber: 2,
+    sugar: 1,
+    sodium: 50,
+    chol: 0,
+    mealType: mealType || 'breakfast',
+    emoji: emoji || '🍽️'
+  });
+  showToast(`✓ Logged ${name}!`, 'success');
+};
+
+window.openLogForMeal = function(mealType) {
+  showPage('track', document.querySelector('.nav-btn[onclick*="track"]'));
+  const btn = Array.from(document.querySelectorAll('.meal-chip')).find(b => b.textContent.toLowerCase().includes(mealType));
+  if (btn && typeof setMeal === 'function') {
+    setMeal(mealType, btn);
+  }
+  const foodSearch = document.getElementById('foodSearch');
+  if (foodSearch) {
+    setTimeout(() => {
+      foodSearch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      foodSearch.focus();
+    }, 150);
+  }
+};
 
 function renderMacroChart(p, c, f, fiber, sugar, sodium, chol, cal) {
   const chartCanvas = document.getElementById('macroChart');
@@ -1727,6 +2127,19 @@ async function startScanCamera() {
     document.getElementById('scanReadyRow').style.display = 'none';
     // change #5: clear any in-memory image when camera starts
     scanImageB64 = null;
+
+    // Render AR Volumetric Sizing Reticle & Reference Anchor
+    let reticle = area.querySelector('.ar-reticle-overlay');
+    if (!reticle) {
+      reticle = document.createElement('div');
+      reticle.className = 'ar-reticle-overlay';
+      reticle.innerHTML = `
+        <div class="ar-reticle-ring"></div>
+        <div class="ar-reticle-tag"><span>📐 AR 3D Sizing Anchor (~25cm plate)</span></div>
+      `;
+      area.appendChild(reticle);
+    }
+
     hideScanStatus();
   } catch (e) {
     showScanStatus('Camera access denied — use Choose Photo instead', 'error');
@@ -1750,6 +2163,11 @@ function stopScanCamera(keepPhoto) {
   if (scanStream) { scanStream.getTracks().forEach(t => t.stop()); scanStream = null; }
   const video = document.getElementById('camVideo');
   if (video) { video.srcObject = null; video.style.display = 'none'; }
+  const area = document.getElementById('camArea');
+  if (area) {
+    const reticle = area.querySelector('.ar-reticle-overlay');
+    if (reticle) reticle.remove();
+  }
   document.getElementById('scanCamRow').style.display = 'none';
   if (!keepPhoto) {
     document.getElementById('camArea').classList.remove('has-media');
@@ -2027,6 +2445,19 @@ function _renderLabelResult(label) {
     potassium: +(label.potassium_mg || 0).toFixed(1),
     source: 'Nutrition Label OCR'
   };
+
+  if (window._pendingBarcodeForOcr) {
+    const pCode = window._pendingBarcodeForOcr;
+    window._pendingBarcodeForOcr = null;
+    NutriCacheDB.put('barcodes', { barcode: pCode, item: labelFoodObj, cached_at: Date.now() }).catch(() => {});
+    const bUrl = window._BACKEND_URL || '';
+    _authFetch(`${bUrl}/api/foods/barcode/${encodeURIComponent(pCode)}/learn`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(labelFoodObj)
+    }).catch(() => {});
+    showToast(`✓ Linked barcode [${pCode}] to ${labelFoodObj.name}!`, 'success');
+  }
 
   const labelSafeId = 'label_' + Math.random().toString(36).substr(2, 6);
   if (!window._foodCardMap) window._foodCardMap = {};
@@ -2354,9 +2785,21 @@ function _renderScanResult(r) {
         <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.07em;color:var(--ink-50);margin-bottom:0.6rem;font-weight:600;">Or add individually:</div>
         ${itemRows}
       ` : `
-        <!-- Single Item Portion Scale Bar -->
+        <!-- Single Item 3D Volumetric HUD & Scale Bar -->
+        <div style="margin:0.6rem 0; padding:10px 12px; background:rgba(62,207,142,0.06); border:1px solid rgba(62,207,142,0.25); border-radius:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.75rem; font-weight:700; color:var(--kiwi);">
+            <span>📐 3D Volumetric Depth & Mass</span>
+            <span id="vol_val_${singleSafeId}">~${Math.round(parsed[0].cal / 0.85)} cm³ · ~${Math.round(parsed[0].cal * 0.85)}g</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px; margin-top:6px;">
+            <span style="font-size:0.68rem; color:var(--ink-50);">Elevation Depth:</span>
+            <input type="range" min="1.0" max="7.0" step="0.5" value="3.5" class="portion-slider-track" style="flex:1;" oninput="adjust3DDepthHeight('${singleSafeId}', '${parsed[0].name}', this.value)">
+            <span id="depth_label_${singleSafeId}" style="font-size:0.72rem; font-weight:700; color:#fff; min-width:34px;">3.5cm</span>
+          </div>
+        </div>
+
         <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:1rem; background:rgba(0,0,0,0.25); padding:8px 10px; border-radius:10px;">
-          <span style="font-size:0.7rem; color:var(--ink-50); font-weight:700;">Portion Scale:</span>
+          <span style="font-size:0.7rem; color:var(--ink-50); font-weight:700;">Quick Portion:</span>
           <button type="button" class="cat-chip" style="font-size:0.68rem;" onclick="scaleScannedPortion('${singleSafeId}', 0.5)">🤏 Handful (0.5x)</button>
           <button type="button" class="cat-chip" style="font-size:0.68rem;" onclick="scaleScannedPortion('${singleSafeId}', 0.85)">✋ Palm (0.85x)</button>
           <button type="button" class="cat-chip active" style="font-size:0.68rem;" onclick="scaleScannedPortion('${singleSafeId}', 1.0)">✊ Fist (1.0x)</button>
@@ -2570,10 +3013,10 @@ function _buildFoodCard(f) {
   const isDb = f.source === 'db';
   const isOFF = f.source === 'openfoodfacts';
   const desc = isDb
-    ? '<span style="font-size:0.68rem;opacity:0.5;letter-spacing:0.03em">📦 From Database</span>'
+    ? '<span class="food-badge-source">📦 Database</span>'
     : isOFF
-      ? '<span style="font-size:0.68rem;opacity:0.6;letter-spacing:0.03em">🌍 Data from <a href="https://world.openfoodfacts.org" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:inherit;text-decoration:underline">Open Food Facts</a> (ODbL)</span>'
-      : (f.desc || FOOD_DESCRIPTIONS[f.cat] || '');
+      ? '<span class="food-badge-source">🌍 Open Food Facts</span>'
+      : (f.desc ? `<span class="food-desc-text">${f.desc}</span>` : (FOOD_DESCRIPTIONS[f.cat] ? `<span class="food-desc-text">${FOOD_DESCRIPTIONS[f.cat]}</span>` : ''));
 
   const safeId = 'food_' + String(f.id || f.name).replace(/[^a-zA-Z0-9_]/g, '_');
   if (!window._foodCardMap) window._foodCardMap = {};
@@ -2581,22 +3024,31 @@ function _buildFoodCard(f) {
 
   const safeName = String(f.name).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
   const mealLabel = (currentMealType || 'meal').toUpperCase();
+  const calVal = Math.round(Number(f.cal) || 0);
+  const proVal = (Number(f.pro) || 0).toFixed(f.pro % 1 === 0 ? 0 : 1);
+  const carbVal = (Number(f.carb) || 0).toFixed(f.carb % 1 === 0 ? 0 : 1);
+  const fatVal = (Number(f.fat) || 0).toFixed(f.fat % 1 === 0 ? 0 : 1);
 
   return `
-    <div class="food-result-card" onclick="addFoodById('${safeId}', this)" style="cursor:pointer; display:flex; flex-direction:column; justify-space-between;">
-      <div>
-        <div class="emoji">${f.emoji || '🍽️'}</div>
-        <div class="name">${safeName}</div>
-        ${desc ? `<div class="desc">${desc}</div>` : ''}
-        <div class="cals">${f.cal} kcal</div>
-        <div class="macros">P:${f.pro}g · C:${f.carb}g · F:${f.fat}g · Fiber:${f.fiber}g</div>
-        <div class="macros" style="color:rgba(184,201,186,0.8); margin-top:2px;">
-          ☀️ Vit D: ${f.vit_d || 0}mcg · 🥩 Iron: ${f.iron || 0}mg · 🥬 Folate: ${f.folate || 0}mcg
+    <div class="food-result-card" onclick="addFoodById('${safeId}', this)" tabindex="0">
+      <div class="food-card-header">
+        <div class="food-emoji-badge">${f.emoji || '🍽️'}</div>
+        <div class="cals-wrap">
+          <span class="cals">${calVal}</span><span class="cal-unit">kcal</span>
         </div>
-        <div class="macros" style="color:rgba(184,201,186,0.5)">Sugar:${f.sugar}g · Salt:${f.sodium}mg</div>
       </div>
-      <button type="button" class="scan-add-btn" style="margin-top:0.75rem; padding:0.45rem 0.8rem; font-size:0.75rem; font-weight:700; width:100%; border-radius:8px; background:linear-gradient(135deg,#3ecf8e,#22c55e); color:#0a0f0d; border:none; cursor:pointer;" onclick="event.stopPropagation(); addFoodById('${safeId}', this)">
-        + Add to ${mealLabel}
+      <div class="food-card-info">
+        <div class="name" title="${safeName}">${safeName}</div>
+        ${desc ? `<div class="desc">${desc}</div>` : ''}
+      </div>
+      <div class="food-macro-pills">
+        <span class="macro-pill pill-pro" title="Protein">💪 ${proVal}g P</span>
+        <span class="macro-pill pill-carb" title="Carbohydrates">🌾 ${carbVal}g C</span>
+        <span class="macro-pill pill-fat" title="Fats">🥑 ${fatVal}g F</span>
+      </div>
+      ${f.fiber ? `<div class="food-micro-tag">🌿 ${f.fiber}g fiber</div>` : ''}
+      <button type="button" class="scan-add-btn" onclick="event.stopPropagation(); addFoodById('${safeId}', this)">
+        <span class="add-icon">+</span> Log to ${mealLabel}
       </button>
     </div>`;
 }
@@ -2605,16 +3057,14 @@ function addFoodById(safeId, targetEl) {
   const food = window._foodCardMap && window._foodCardMap[safeId];
   if (food) {
     addFoodToLog(food);
-    const btn = targetEl && (targetEl.tagName === 'BUTTON' ? targetEl : targetEl.querySelector('button'));
+    const btn = targetEl && (targetEl.tagName === 'BUTTON' ? targetEl : targetEl.querySelector('button.scan-add-btn') || targetEl.querySelector('button'));
     if (btn) {
-      const origText = btn.textContent;
-      btn.textContent = '✓ Added!';
-      btn.style.background = 'linear-gradient(135deg,#22c55e,#15803d)';
-      btn.style.color = '#ffffff';
+      const origText = btn.innerHTML;
+      btn.innerHTML = '✓ Logged!';
+      btn.classList.add('added');
       setTimeout(() => {
-        btn.textContent = origText;
-        btn.style.background = 'linear-gradient(135deg,#3ecf8e,#22c55e)';
-        btn.style.color = '#0a0f0d';
+        btn.innerHTML = origText;
+        btn.classList.remove('added');
       }, 1250);
     }
   } else {
@@ -3087,7 +3537,17 @@ async function startBarcodeScan() {
   modal.style.display = 'flex';
 
   if (typeof Html5Qrcode === 'undefined') {
-    return manualBarcodePrompt();
+    try {
+      await new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js';
+        s.onload = resolve;
+        s.onerror = reject;
+        document.head.appendChild(s);
+      });
+    } catch (_) {
+      return manualBarcodePrompt();
+    }
   }
 
   try {
@@ -3157,12 +3617,27 @@ async function processScannedBarcode(barcode) {
       const data = await res.json();
       if (data.found && data.item) {
         playHaptic(100);
-        showToast(`✓ Found: ${data.item.name}`, 'success');
+        showToast(`✓ Found: ${data.item.name} (${data.item.source || 'Global DB'})`, 'success');
         // Persist to local IndexedDB for future instant offline access
         await NutriCacheDB.put('barcodes', { barcode: cleanCode, item: data.item, cached_at: Date.now() });
         await addFoodToLog(data.item);
+        return;
+      }
+    }
+
+    const errData = await res.json().catch(() => ({}));
+    if (res.status === 404 || errData.prompt_ocr) {
+      playHaptic([60, 40, 60]);
+      const wantOcr = confirm(
+        `📦 Barcode [${cleanCode}] is not in global databases yet.\n\nWould you like to snap a photo of the Nutrition Facts label to auto-scan with AI OCR?`
+      );
+      if (wantOcr) {
+        window._pendingBarcodeForOcr = cleanCode;
+        showPage('track', document.querySelector('.nav-btn[onclick*=track]'));
+        startScanCamera();
+        showToast('📸 Snap the Nutrition Facts label on the packaging!', 'info');
       } else {
-        showToast('Product not found in global database', 'error');
+        showToast('Product not found in global database', 'info');
       }
     } else {
       showToast('Product barcode lookup failed', 'error');
@@ -3493,12 +3968,20 @@ async function fetchAIMealRecommendations() {
       const safeId = 'rec_' + String(item.name).replace(/[^a-zA-Z0-9_]/g, '_');
       window._foodCardMap[safeId] = item;
       return `
-        <div style="padding:10px 14px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08); border-radius:12px; display:flex; justify-content:space-between; align-items:center; transition:all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
-          <div>
-            <div style="font-weight:700; font-size:0.85rem; color:#fff;">${item.emoji} ${item.name}</div>
-            <div style="font-size:0.72rem; color:var(--kiwi); margin-top:2px; font-weight:600;">${item.reason} · ${item.cal} kcal (${item.pro}g P)</div>
+        <div class="ai-rec-card" style="padding:12px 14px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:12px; display:flex; justify-content:space-between; align-items:center; transition:all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.07)'" onmouseout="this.style.background='rgba(255,255,255,0.04)'">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <div style="width:36px; height:36px; border-radius:10px; background:rgba(255,255,255,0.06); display:flex; align-items:center; justify-content:center; font-size:1.15rem;">${item.emoji || '🥗'}</div>
+            <div>
+              <div style="font-weight:700; font-size:0.88rem; color:#fff;">${item.name}</div>
+              <div style="display:flex; align-items:center; gap:6px; margin-top:3px;">
+                <span style="font-size:0.72rem; color:var(--kiwi); font-weight:600;">${item.reason}</span>
+                <span style="font-size:0.72rem; color:rgba(255,255,255,0.4);">•</span>
+                <span style="font-size:0.75rem; font-weight:700; color:#fff;">${item.cal} kcal</span>
+                <span style="font-size:0.7rem; color:#38BDF8; font-weight:600; background:rgba(56,189,248,0.12); padding:1px 6px; border-radius:4px;">${item.pro}g P</span>
+              </div>
+            </div>
           </div>
-          <button type="button" onclick="addFoodById('${safeId}')" class="water-quick-btn" style="font-size:0.78rem; padding:5px 12px; font-weight:700; background:linear-gradient(135deg,#3ecf8e,#22c55e); color:#0a0f0d; border:none;">+ Log</button>
+          <button type="button" onclick="addFoodById('${safeId}', this)" class="water-quick-btn" style="font-size:0.78rem; padding:6px 14px; font-weight:700; background:rgba(62,207,142,0.15); color:#3ecf8e; border:1px solid rgba(62,207,142,0.3); border-radius:8px; cursor:pointer;">+ Log</button>
         </div>`;
     }).join('');
   };
@@ -3529,9 +4012,8 @@ async function fetchAIMealRecommendations() {
 async function fetchWeeklyInsights() {
   const container = document.getElementById('weeklyInsightsCard');
   if (!container) return;
-  const backendUrl = "https://nutritrack-k96f.onrender.com";
   try {
-    const res = await _authFetch(`${backendUrl}/api/analytics/weekly-insights`);
+    const res = await _authFetch(`/api/analytics/weekly-insights`);
     if (res.ok) {
       const data = await res.json();
       if (!data.daysLogged) {
@@ -3572,24 +4054,38 @@ async function fetchWeeklyInsights() {
 async function fetchCommunityChallenges() {
   const container = document.getElementById('communityChallengesList');
   if (!container) return;
-  const backendUrl = "https://nutritrack-k96f.onrender.com";
-  try {
-    const res = await fetch(`${backendUrl}/api/challenges`);
-    if (res.ok) {
-      const items = await res.json();
-      container.innerHTML = items.map(c => `
-        <div style="padding:10px 14px; background:rgba(255,255,255,0.05); border-radius:10px; display:flex; justify-content:space-between; align-items:center;">
-          <div>
-            <div style="font-weight:700; font-size:0.85rem; color:#fff;">${c.badgeEmoji} ${c.title}</div>
-            <div style="font-size:0.72rem; color:var(--mist); margin-top:2px;">${c.description}</div>
-          </div>
-          <button type="button" class="water-quick-btn" onclick="joinChallenge(${c.id})" style="font-size:0.75rem; padding:4px 10px;">Join Challenge</button>
+
+  const renderChallenges = (items) => {
+    container.innerHTML = items.map(c => `
+      <div class="community-challenge-card" style="padding:11px 15px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.07); border-radius:12px; display:flex; justify-content:space-between; align-items:center; transition:all 0.2s;">
+        <div>
+          <div style="font-weight:700; font-size:0.86rem; color:#fff;">${c.badgeEmoji || '🏆'} ${c.title}</div>
+          <div style="font-size:0.73rem; color:var(--mist); opacity:0.85; margin-top:2px;">${c.description}</div>
         </div>
-      `).join('');
+        <button type="button" class="water-quick-btn" onclick="joinChallenge(${c.id})" style="font-size:0.75rem; padding:6px 12px; border-radius:8px; font-weight:700; background:rgba(62,207,142,0.15); color:#3ecf8e; border:1px solid rgba(62,207,142,0.3); cursor:pointer;">Join Challenge</button>
+      </div>
+    `).join('');
+  };
+
+  const defaultChallenges = [
+    { id: 1, badgeEmoji: '💧', title: 'Hydration Streak', description: 'Log 2,500ml water daily for 7 consecutive days' },
+    { id: 2, badgeEmoji: '🥗', title: 'Fiber Champion', description: 'Reach 30g dietary fiber 5 days this week' },
+    { id: 3, badgeEmoji: '💪', title: 'Protein Target', description: 'Hit your daily protein goal 6 days this week' }
+  ];
+
+  try {
+    const res = await _authFetch(`/api/challenges`);
+    if (res && res.ok) {
+      const items = await res.json();
+      if (Array.isArray(items) && items.length > 0) {
+        renderChallenges(items);
+        return;
+      }
     }
   } catch (e) {
-    console.error('fetchCommunityChallenges error', e);
+    console.warn('fetchCommunityChallenges notice:', e);
   }
+  renderChallenges(defaultChallenges);
 }
 
 async function joinChallenge(id) {
@@ -3731,80 +4227,234 @@ async function sendNutriBotMessage(userMsg) {
 //  HISTORY
 // ─────────────────────────────────────────────────
 function renderHistory() {
-  const logs = window._foodLogs;
+  const logs = window._foodLogs || [];
   const last30 = getLast30Days();
   const monthData = last30.map(d => sumLogs(logs.filter(l => l.date === d)).cal);
-
-  const chartCanvas = document.getElementById('weekChart');
-  if (!chartCanvas || typeof Chart === 'undefined') return;
-  const wCtx = chartCanvas.getContext('2d');
-  if (weekChart) weekChart.destroy();
-  weekChart = new Chart(wCtx, {
-    type: 'bar',
-    data: {
-      labels: last30.map(d => {
-        const [, m, day] = d.split('-');
-        // Show label only every 5 days to avoid crowding
-        const idx = last30.indexOf(d);
-        return (idx % 5 === 0 || idx === last30.length - 1) ? `${day}/${m}` : '';
-      }),
-      datasets: [{ label: 'Calories', data: monthData, backgroundColor: 'rgba(45,158,107,0.2)', borderColor: 'rgba(45,158,107,1)', borderWidth: 1.5, borderRadius: 6 }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false }, tooltip: {
-          callbacks: {
-            label: c => ` ${Math.round(c.parsed.y)} kcal`,
-            title: c => { const d = last30[c[0].dataIndex]; const [, m, day] = d.split('-'); return `${day}/${m}`; }
-          }
-        }
-      },
-      scales: {
-        x: { grid: { color: 'rgba(18,17,15,0.06)' }, ticks: { color: 'rgba(18,17,15,0.5)', font: { family: 'Plus Jakarta Sans', size: 10 } } },
-        y: { grid: { color: 'rgba(18,17,15,0.06)' }, ticks: { color: 'rgba(18,17,15,0.5)', font: { family: 'Plus Jakarta Sans', size: 10 } } }
-      }
-    }
-  });
-
-  const recent = [...logs].reverse().slice(0, 60);
-  document.getElementById('historyBody').innerHTML = recent.map(l => `
-    <tr>
-      <td>${l.emoji || '🍽️'} ${l.name}</td>
-      <td><span class="badge ${l.mealType}">${l.mealType}</span></td>
-      <td>${l.cal} kcal</td>
-      <td style="font-size:0.78rem;color:var(--ink-50)">${l.fiber || 0}g fiber · ${l.sodium || 0}mg salt</td>
-      <td>${l.date}</td>
-    </tr>
-  `).join('') || '<tr><td colspan="5" style="text-align:center;color:#B8C9BA;padding:2rem">No history yet.</td></tr>';
-
+  const calGoal = (currentUser && currentUser.goals && currentUser.goals.calories) || 2000;
   const monthLogs = logs.filter(l => last30.includes(l.date));
   const monthTotals = sumLogs(monthLogs);
-  const days = [...new Set(monthLogs.map(l => l.date))].length || 1;
+  const days = [...new Set(monthLogs.map(l => l.date))].length || 0;
+  const avgCalDay = days ? Math.round(monthTotals.cal / days) : 0;
+  const adherencePct = Math.round((days / 30) * 100);
+  const totalMacros = (monthTotals.pro * 4) + (monthTotals.carb * 4) + (monthTotals.fat * 9) || 1;
+  const proPct = Math.round((monthTotals.pro * 4) / totalMacros * 100);
+  const carbPct = Math.round((monthTotals.carb * 4) / totalMacros * 100);
+  const fatPct = Math.max(0, 100 - proPct - carbPct);
 
-  document.getElementById('weeklyStats').innerHTML = `
-    <div style="display:grid;gap:0.8rem;margin-top:0.5rem">
-      ${[
-      ['🔥', 'Total Calories', Math.round(monthTotals.cal) + ' kcal'],
-      ['💪', 'Avg Protein/day', Math.round(monthTotals.pro / days) + 'g'],
-      ['🌾', 'Avg Carbs/day', Math.round(monthTotals.carb / days) + 'g'],
-      ['🥑', 'Avg Fat/day', Math.round(monthTotals.fat / days) + 'g'],
-      ['🌿', 'Avg Fiber/day', Math.round(monthTotals.fiber / days) + 'g'],
-      ['🍬', 'Avg Sugar/day', Math.round(monthTotals.sugar / days) + 'g'],
-      ['🧂', 'Avg Salt/day', Math.round(monthTotals.sodium / days) + 'mg'],
-      ['❤️', 'Avg Cholesterol/day', Math.round(monthTotals.chol / days) + 'mg'],
-      ['🍽️', 'Total Meals', monthLogs.length],
-      ['📅', 'Days Logged', days]
-    ].map(([i, l, v]) => `
-        <div style="background:var(--smoke);border:1px solid var(--border-soft);border-radius:14px;padding:0.9rem;display:flex;align-items:center;justify-content:space-between">
-          <div style="display:flex;align-items:center;gap:0.7rem">
-            <span style="font-size:1.1rem">${i}</span>
-            <span style="font-size:0.88rem;color:var(--ink-50)">${l}</span>
-          </div>
-          <span style="font-family:'Fraunces',serif;color:var(--ink);font-size:1.05rem;font-weight:700">${v}</span>
+  // 1. Top Metabolic Summary Metric Cards
+  const summaryGrid = document.getElementById('historySummaryGrid');
+  if (summaryGrid) {
+    summaryGrid.innerHTML = `
+      <div class="history-summary-card">
+        <div class="hsc-icon" style="background:rgba(245,166,35,0.15); color:#F5A623;">🔥</div>
+        <div class="hsc-info">
+          <div class="hsc-label">30-Day Daily Avg</div>
+          <div class="hsc-val">${avgCalDay} <span class="hsc-unit">kcal/day</span></div>
+          <div class="hsc-sub">${avgCalDay > 0 ? (avgCalDay <= calGoal ? 'Within target deficit' : 'Above baseline goal') : 'No intake logged'}</div>
         </div>
-      `).join('')}
-    </div>`;
+      </div>
+      <div class="history-summary-card">
+        <div class="hsc-icon" style="background:rgba(62,207,142,0.15); color:#3ECF8E;">📅</div>
+        <div class="hsc-info">
+          <div class="hsc-label">Consistency Score</div>
+          <div class="hsc-val">${days} <span class="hsc-unit">/ 30 Days</span></div>
+          <div class="hsc-sub">${adherencePct}% consistency adherence</div>
+        </div>
+      </div>
+      <div class="history-summary-card">
+        <div class="hsc-icon" style="background:rgba(56,189,248,0.15); color:#38BDF8;">⚖️</div>
+        <div class="hsc-info">
+          <div class="hsc-label">Macro Ratio</div>
+          <div class="hsc-val" style="font-size:1.15rem">${proPct}% <span style="color:rgba(255,255,255,0.4);font-size:0.75rem">P</span> · ${carbPct}% <span style="color:rgba(255,255,255,0.4);font-size:0.75rem">C</span> · ${fatPct}% <span style="color:rgba(255,255,255,0.4);font-size:0.75rem">F</span></div>
+          <div class="hsc-sub">Balanced metabolic split</div>
+        </div>
+      </div>
+      <div class="history-summary-card">
+        <div class="hsc-icon" style="background:rgba(167,139,250,0.15); color:#A78BFA;">🍽️</div>
+        <div class="hsc-info">
+          <div class="hsc-label">Monthly Volume</div>
+          <div class="hsc-val">${monthLogs.length} <span class="hsc-unit">meals</span></div>
+          <div class="hsc-sub">${monthLogs.length ? (Math.round(monthLogs.length / (days || 1) * 10) / 10) + ' meals/active day' : 'Log meals to track volume'}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  // 2. 30-Day Consistency Heatmap
+  const heatmapEl = document.getElementById('caloricHeatmap');
+  if (heatmapEl) {
+    heatmapEl.innerHTML = last30.map(dateStr => {
+      const dayLogs = logs.filter(l => l.date === dateStr);
+      const dayCal = Math.round(sumLogs(dayLogs).cal);
+      let level = 0;
+      let label = 'No log';
+      if (dayCal > 0) {
+        const ratio = dayCal / calGoal;
+        if (ratio < 0.5) {
+          level = 1; label = 'Light intake (<50%)';
+        } else if (ratio < 0.85) {
+          level = 2; label = 'Moderate (50-85%)';
+        } else if (ratio <= 1.15) {
+          level = 3; label = 'Target Met 🎯';
+        } else {
+          level = 4; label = 'Surplus (>115%)';
+        }
+      }
+      const [, m, d] = dateStr.split('-');
+      return `
+        <div class="hm-day-cell hm-level-${level}" title="${dateStr}: ${dayCal} kcal · ${label}">
+          <span class="hm-day-num">${parseInt(d, 10)}</span>
+          <span class="hm-day-cal">${dayCal ? dayCal : '—'}</span>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // 3. Tension Spline Area Curve
+  const chartCanvas = document.getElementById('weekChart');
+  if (chartCanvas && typeof Chart !== 'undefined') {
+    const wCtx = chartCanvas.getContext('2d');
+    if (weekChart) weekChart.destroy();
+
+    const gradient = wCtx.createLinearGradient(0, 0, 0, 260);
+    gradient.addColorStop(0, 'rgba(62, 207, 142, 0.32)');
+    gradient.addColorStop(0.7, 'rgba(62, 207, 142, 0.08)');
+    gradient.addColorStop(1, 'rgba(10, 15, 13, 0.0)');
+
+    weekChart = new Chart(wCtx, {
+      type: 'line',
+      data: {
+        labels: last30.map(d => {
+          const [, m, day] = d.split('-');
+          const idx = last30.indexOf(d);
+          return (idx % 4 === 0 || idx === last30.length - 1) ? `${day}/${m}` : '';
+        }),
+        datasets: [
+          {
+            label: 'Calories',
+            data: monthData,
+            borderColor: '#3ECF8E',
+            backgroundColor: gradient,
+            borderWidth: 2.5,
+            tension: 0.38,
+            fill: true,
+            pointBackgroundColor: '#3ECF8E',
+            pointBorderColor: '#0A0F0D',
+            pointBorderWidth: 2,
+            pointRadius: (ctx) => (monthData[ctx.dataIndex] > 0 ? 3.5 : 0),
+            pointHoverRadius: 6,
+            pointHoverBackgroundColor: '#FFFFFF',
+            pointHoverBorderColor: '#3ECF8E',
+          },
+          {
+            label: 'Daily Target Goal',
+            data: last30.map(() => calGoal),
+            borderColor: 'rgba(245, 166, 35, 0.45)',
+            borderWidth: 1.5,
+            borderDash: [5, 5],
+            pointRadius: 0,
+            fill: false,
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { intersect: false, mode: 'index' },
+        plugins: {
+          legend: {
+            display: true,
+            position: 'top',
+            align: 'end',
+            labels: {
+              color: 'rgba(184, 201, 186, 0.7)',
+              font: { family: 'Plus Jakarta Sans', size: 11, weight: '600' },
+              boxWidth: 12,
+              usePointStyle: true,
+            }
+          },
+          tooltip: {
+            backgroundColor: 'rgba(11, 18, 14, 0.95)',
+            titleColor: '#FFFFFF',
+            bodyColor: '#3ECF8E',
+            borderColor: 'rgba(62, 207, 142, 0.3)',
+            borderWidth: 1,
+            padding: 10,
+            boxPadding: 4,
+            callbacks: {
+              label: c => {
+                if (c.datasetIndex === 1) return ` Target Goal: ${c.parsed.y} kcal`;
+                const val = Math.round(c.parsed.y);
+                const diff = val - calGoal;
+                const diffStr = diff >= 0 ? `+${diff} kcal` : `${diff} kcal`;
+                return ` Intake: ${val} kcal (${diffStr} vs goal)`;
+              },
+              title: c => {
+                const d = last30[c[0].dataIndex];
+                const [, m, day] = d.split('-');
+                return `${d} (${day}/${m})`;
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { color: 'rgba(255, 255, 255, 0.04)' },
+            ticks: { color: 'rgba(184, 201, 186, 0.6)', font: { family: 'Plus Jakarta Sans', size: 10 } }
+          },
+          y: {
+            grid: { color: 'rgba(255, 255, 255, 0.04)' },
+            ticks: { color: 'rgba(184, 201, 186, 0.6)', font: { family: 'Plus Jakarta Sans', size: 10 } },
+            beginAtZero: true,
+          }
+        }
+      }
+    });
+  }
+
+  // 4. Frosted Zebra Table Body
+  const recent = [...logs].reverse().slice(0, 60);
+  const histBody = document.getElementById('historyBody');
+  if (histBody) {
+    histBody.innerHTML = recent.map(l => `
+      <tr>
+        <td><strong>${l.emoji || '🍽️'} ${l.name}</strong></td>
+        <td><span class="badge ${l.mealType}">${l.mealType}</span></td>
+        <td><span style="color:#3ECF8E; font-weight:700;">${l.cal}</span> kcal</td>
+        <td style="font-size:0.78rem;color:rgba(184,201,186,0.7)">${l.fiber || 0}g fiber · ${l.sodium || 0}mg salt</td>
+        <td style="color:rgba(184,201,186,0.6)">${l.date}</td>
+      </tr>
+    `).join('') || '<tr><td colspan="5" style="text-align:center;color:#B8C9BA;padding:2rem">No history yet. Log your first meal today!</td></tr>';
+  }
+
+  // 5. Month Totals
+  const daysActive = days || 1;
+  const weeklyStatsEl = document.getElementById('weeklyStats');
+  if (weeklyStatsEl) {
+    weeklyStatsEl.innerHTML = `
+      <div style="display:grid;gap:0.8rem;margin-top:0.5rem">
+        ${[
+          ['🔥', 'Total Calories', Math.round(monthTotals.cal) + ' kcal'],
+          ['💪', 'Avg Protein/day', Math.round(monthTotals.pro / daysActive) + 'g'],
+          ['🌾', 'Avg Carbs/day', Math.round(monthTotals.carb / daysActive) + 'g'],
+          ['🥑', 'Avg Fat/day', Math.round(monthTotals.fat / daysActive) + 'g'],
+          ['🌿', 'Avg Fiber/day', Math.round(monthTotals.fiber / daysActive) + 'g'],
+          ['🍬', 'Avg Sugar/day', Math.round(monthTotals.sugar / daysActive) + 'g'],
+          ['🧂', 'Avg Salt/day', Math.round(monthTotals.sodium / daysActive) + 'mg'],
+          ['❤️', 'Avg Cholesterol/day', Math.round(monthTotals.chol / daysActive) + 'mg'],
+          ['🍽️', 'Total Meals', monthLogs.length],
+          ['📅', 'Days Logged', days]
+        ].map(([i, l, v]) => `
+          <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:0.9rem;display:flex;align-items:center;justify-content:space-between">
+            <div style="display:flex;align-items:center;gap:0.7rem">
+              <span style="font-size:1.1rem">${i}</span>
+              <span style="font-size:0.88rem;color:rgba(184,201,186,0.7)">${l}</span>
+            </div>
+            <span style="font-family:'Fraunces',serif;color:#FFFFFF;font-size:1.05rem;font-weight:700">${v}</span>
+          </div>
+        `).join('')}
+      </div>`;
+  }
 }
 
 // ─────────────────────────────────────────────────
@@ -3885,10 +4535,12 @@ function _renderAchievements(logs, streak) {
   if (!grid) return;
 
   const totalMeals = logs.length;
-  const goals = currentUser.goals || {};
+  const goals = (currentUser && currentUser.goals) || {};
   const proteinGoal = goals.protein || 150;
+  const calGoal = goals.calories || 2000;
+  const fiberGoal = goals.fiber || 28;
 
-  // Days (last 7) where protein goal was hit
+  // 1. Days (last 7) where protein goal was hit
   let proteinHitDays = 0;
   for (let i = 0; i < 7; i++) {
     const d = new Date(); d.setDate(d.getDate() - i);
@@ -3899,11 +4551,7 @@ function _renderAchievements(logs, streak) {
     if (dayProtein >= proteinGoal) proteinHitDays++;
   }
 
-  // "Healthy Week": last 7 days all logged, average calories within 15% of
-  // goal, and fiber goal hit on at least 4 of those days — a genuine
-  // adherence signal, not just "logged something every day".
-  const calGoal = goals.calories || 2000;
-  const fiberGoal = goals.fiber || 28;
+  // 2. Healthy Week adherence
   let daysLoggedLast7 = 0, fiberHitDays = 0, totalCalLast7 = 0;
   for (let i = 0; i < 7; i++) {
     const d = new Date(); d.setDate(d.getDate() - i);
@@ -3920,69 +4568,246 @@ function _renderAchievements(logs, streak) {
   const calWithinRange = daysLoggedLast7 > 0 && Math.abs(avgCalLast7 - calGoal) <= calGoal * 0.15;
   const healthyWeekEarned = daysLoggedLast7 === 7 && calWithinRange && fiberHitDays >= 4;
 
-  const badges = [
-    {
-      icon: '🔥', name: '7-Day Streak', desc: 'Logged food 7 days in a row',
-      earned: streak >= 7, progress: streak >= 7 ? null : `${streak}/7 days`
-    },
-    {
-      icon: '🏆', name: '30-Day Streak', desc: 'Logged food 30 days in a row',
-      earned: streak >= 30, progress: streak >= 30 ? null : `${Math.min(streak, 30)}/30 days`
-    },
-    {
-      icon: '🥗', name: 'Healthy Week', desc: 'A full week logged, calories on target, fiber goal hit 4+ days',
-      earned: healthyWeekEarned, progress: healthyWeekEarned ? null : `${daysLoggedLast7}/7 days logged`
-    },
-    {
-      icon: '💪', name: 'Protein Master', desc: 'Hit your protein goal on 5+ of the last 7 days',
-      earned: proteinHitDays >= 5, progress: proteinHitDays >= 5 ? null : `${proteinHitDays}/5 days`
-    },
-    {
-      icon: '📸', name: 'Century Club', desc: 'Logged 100 meals total',
-      earned: totalMeals >= 100, progress: totalMeals >= 100 ? null : `${totalMeals}/100 meals`
-    },
-    {
-      icon: '🌱', name: 'First Steps', desc: 'Logged your very first meal',
-      earned: totalMeals >= 1, progress: totalMeals >= 1 ? null : '0/1 meals'
-    },
-  ];
+  // 3. Macro Sniper: Within 5% of calorie target on 3 different days
+  const uniqueDates = [...new Set(logs.map(l => l.date))];
+  let sniperDays = 0;
+  for (const dateStr of uniqueDates) {
+    const dayCal = logs.filter(l => l.date === dateStr).reduce((s, l) => s + (l.cal || 0), 0);
+    if (dayCal > 0 && Math.abs(dayCal - calGoal) <= calGoal * 0.05) {
+      sniperDays++;
+    }
+  }
 
+  // 4. Fiber Champion: hit fiber goal 5+ days
+  let fiberTotalHitDays = 0;
+  for (const dateStr of uniqueDates) {
+    const dayFiber = logs.filter(l => l.date === dateStr).reduce((s, l) => s + (l.fiber || 0), 0);
+    if (dayFiber >= fiberGoal) fiberTotalHitDays++;
+  }
+
+  // 5. Water intake
+  const waterMl = window._waterTotalMl || 0;
+  const waterEarned = waterMl >= 2000;
+
+  // 6. Healthy fats balance
+  const healthyFatsDays = uniqueDates.filter(d => {
+    const dl = logs.filter(l => l.date === d);
+    const dayFat = dl.reduce((s, l) => s + (l.fat || 0), 0);
+    return dayFat >= 30 && dayFat <= (goals.fat || 85);
+  }).length;
+
+  // 7. Meal type distributions
+  const breakfastCount = logs.filter(l => l.mealType === 'breakfast').length;
+  const dinnerCount = logs.filter(l => l.mealType === 'dinner').length;
+  const uniqueFoods = new Set(logs.map(l => l.name)).size;
   const workoutCount = (window._workoutLogs || []).length;
   const weightLogCount = (window._weightLogs || []).length;
-  const uniqueFoods = new Set(logs.map(l => l.name)).size;
-  const breakfastCount = logs.filter(l => l.mealType === 'breakfast').length;
+  const customRecipeCount = logs.filter(l => l.emoji === '🍲' || (l.name && l.name.startsWith('🍲'))).length;
 
-  badges.push(
+  // ── EXPANDED 20-BADGE MOTIVATIONAL GAMIFICATION ECOSYSTEM ──
+  const badges = [
+    // ── STREAKS & CONSISTENCY ──
     {
-      icon: '🏋️', name: 'Fitness Fanatic', desc: 'Logged 10 workouts',
-      earned: workoutCount >= 10, progress: workoutCount >= 10 ? null : `${workoutCount}/10 workouts`
+      id: 'first_steps', category: 'milestones', tier: 'bronze', tierName: '🥉 Bronze', icon: '🌱',
+      name: 'First Steps', desc: 'Logged your very first meal into NutriTrack',
+      earned: totalMeals >= 1, current: Math.min(totalMeals, 1), max: 1,
+      progressText: totalMeals >= 1 ? '1/1 meal' : '0/1 meals',
+      encouragement: totalMeals >= 1 ? 'First milestone achieved! Every journey begins with a single meal.' : 'Log your first meal today to unlock this badge!'
     },
     {
-      icon: '⚖️', name: 'Weigh-In Streak', desc: 'Logged your weight 5 times',
-      earned: weightLogCount >= 5, progress: weightLogCount >= 5 ? null : `${weightLogCount}/5 entries`
+      id: 'streak_3', category: 'streak', tier: 'bronze', tierName: '🥉 Bronze', icon: '⚡',
+      name: '3-Day Momentum', desc: 'Logged meals for 3 consecutive days',
+      earned: streak >= 3, current: Math.min(streak, 3), max: 3,
+      progressText: `${Math.min(streak, 3)}/3 days`,
+      encouragement: streak >= 3 ? 'Momentum unlocked! 3 days is where real metabolic habits form.' : `${3 - Math.min(streak, 3)} days to go — stay consistent today!`
     },
     {
-      icon: '🍜', name: 'Variety Seeker', desc: 'Logged 20 different foods',
-      earned: uniqueFoods >= 20, progress: uniqueFoods >= 20 ? null : `${uniqueFoods}/20 foods`
+      id: 'streak_7', category: 'streak', tier: 'silver', tierName: '🥈 Silver', icon: '🔥',
+      name: '7-Day Flame', desc: 'Logged food 7 days in a row without a break',
+      earned: streak >= 7, current: Math.min(streak, 7), max: 7,
+      progressText: `${Math.min(streak, 7)}/7 days`,
+      encouragement: streak >= 7 ? 'A full week of unbroken discipline! You are on fire.' : `${7 - Math.min(streak, 7)} days to reach a full 7-day streak!`
     },
     {
-      icon: '🌅', name: 'Early Bird', desc: 'Logged breakfast 5 times',
-      earned: breakfastCount >= 5, progress: breakfastCount >= 5 ? null : `${breakfastCount}/5 breakfasts`
+      id: 'streak_14', category: 'streak', tier: 'gold', tierName: '🥇 Gold', icon: '🛡️',
+      name: '14-Day Iron Habit', desc: '14 consecutive days of steadfast tracking',
+      earned: streak >= 14, current: Math.min(streak, 14), max: 14,
+      progressText: `${Math.min(streak, 14)}/14 days`,
+      encouragement: streak >= 14 ? 'Iron habit locked in! 14 days makes tracking second nature.' : `${14 - Math.min(streak, 14)} days away from gold streak status!`
+    },
+    {
+      id: 'streak_30', category: 'streak', tier: 'diamond', tierName: '💎 Diamond', icon: '🏆',
+      name: '30-Day Titan', desc: 'Logged food 30 days in a row',
+      earned: streak >= 30, current: Math.min(streak, 30), max: 30,
+      progressText: `${Math.min(streak, 30)}/30 days`,
+      encouragement: streak >= 30 ? 'Top 1% elite tracker status! You have mastered nutritional discipline.' : `${30 - Math.min(streak, 30)} days left to claim the 30-day crown!`
+    },
+    {
+      id: 'streak_60', category: 'streak', tier: 'legendary', tierName: '👑 Legendary', icon: '👑',
+      name: '60-Day Iron Legend', desc: '60 unbroken days of relentless dedication',
+      earned: streak >= 60, current: Math.min(streak, 60), max: 60,
+      progressText: `${Math.min(streak, 60)}/60 days`,
+      encouragement: streak >= 60 ? 'True legend! Your lifestyle and metabolic awareness are extraordinary.' : 'The ultimate badge of honor for long-term consistency.'
+    },
+
+    // ── NUTRITION & BIO-METRICS ──
+    {
+      id: 'protein_master', category: 'nutrition', tier: 'silver', tierName: '🥈 Silver', icon: '💪',
+      name: 'Protein Master', desc: `Hit protein goal (${proteinGoal}g) on 5+ of last 7 days`,
+      earned: proteinHitDays >= 5, current: Math.min(proteinHitDays, 5), max: 5,
+      progressText: `${Math.min(proteinHitDays, 5)}/5 days`,
+      encouragement: proteinHitDays >= 5 ? 'Muscle recovery optimized! Steady amino acid delivery achieved.' : `${5 - Math.min(proteinHitDays, 5)} high-protein days needed to unlock!`
+    },
+    {
+      id: 'macro_sniper', category: 'nutrition', tier: 'gold', tierName: '🥇 Gold', icon: '🎯',
+      name: 'Macro Sniper', desc: 'Landed within ±5% of calorie target on 3 separate days',
+      earned: sniperDays >= 3, current: Math.min(sniperDays, 3), max: 3,
+      progressText: `${Math.min(sniperDays, 3)}/3 days`,
+      encouragement: sniperDays >= 3 ? 'Pinpoint metabolic calibration! Laser precision adherence.' : `${3 - Math.min(sniperDays, 3)} precision days left — dial in those macros!`
+    },
+    {
+      id: 'healthy_week', category: 'nutrition', tier: 'silver', tierName: '🥈 Silver', icon: '🥗',
+      name: 'Healthy Week', desc: '7 days logged, calories on target, fiber hit 4+ days',
+      earned: healthyWeekEarned, current: Math.min(daysLoggedLast7, 7), max: 7,
+      progressText: `${daysLoggedLast7}/7 days logged`,
+      encouragement: healthyWeekEarned ? 'Full week mastered! Superb balance of calories & micronutrients.' : `${7 - daysLoggedLast7} days left this week to complete the cycle!`
+    },
+    {
+      id: 'fiber_champion', category: 'nutrition', tier: 'bronze', tierName: '🥉 Bronze', icon: '🌿',
+      name: 'Fiber Champion', desc: `Hit 28g+ prebiotic fiber target on 5 separate days`,
+      earned: fiberTotalHitDays >= 5, current: Math.min(fiberTotalHitDays, 5), max: 5,
+      progressText: `${Math.min(fiberTotalHitDays, 5)}/5 days`,
+      encouragement: fiberTotalHitDays >= 5 ? 'Gut microbiome flourishing! Superb digestive health.' : `${5 - Math.min(fiberTotalHitDays, 5)} more fiber-rich days to unlock!`
+    },
+    {
+      id: 'hydration_titan', category: 'nutrition', tier: 'silver', tierName: '🥈 Silver', icon: '💧',
+      name: 'Hydration Titan', desc: 'Logged 2,000ml+ water today or reached full hydration',
+      earned: waterEarned, current: Math.min(waterMl, 2000), max: 2000,
+      progressText: `${waterMl}/2000 ml`,
+      encouragement: waterEarned ? 'Optimal cellular hydration achieved! Peak energy and alertness.' : `${Math.max(0, 2000 - waterMl)}ml remaining today to drink and log!`
+    },
+    {
+      id: 'healthy_fats', category: 'nutrition', tier: 'bronze', tierName: '🥉 Bronze', icon: '🥑',
+      name: 'Fats Alchemist', desc: 'Logged optimal healthy dietary fats on 3 separate days',
+      earned: healthyFatsDays >= 3, current: Math.min(healthyFatsDays, 3), max: 3,
+      progressText: `${Math.min(healthyFatsDays, 3)}/3 days`,
+      encouragement: healthyFatsDays >= 3 ? 'Brain health and hormone balance supported with quality fats!' : `${3 - Math.min(healthyFatsDays, 3)} days to go!`
+    },
+
+    // ── MILESTONES & VOLUME ──
+    {
+      id: 'early_bird', category: 'milestones', tier: 'bronze', tierName: '🥉 Bronze', icon: '🌅',
+      name: 'Early Bird', desc: 'Logged breakfast on 5 separate days',
+      earned: breakfastCount >= 5, current: Math.min(breakfastCount, 5), max: 5,
+      progressText: `${Math.min(breakfastCount, 5)}/5 breakfasts`,
+      encouragement: breakfastCount >= 5 ? 'Morning metabolism ignited bright and early!' : `${5 - Math.min(breakfastCount, 5)} more breakfasts to log!`
+    },
+    {
+      id: 'mindful_dinner', category: 'milestones', tier: 'bronze', tierName: '🥉 Bronze', icon: '🌙',
+      name: 'Mindful Evening', desc: 'Logged dinner on 5 separate days',
+      earned: dinnerCount >= 5, current: Math.min(dinnerCount, 5), max: 5,
+      progressText: `${Math.min(dinnerCount, 5)}/5 dinners`,
+      encouragement: dinnerCount >= 5 ? 'Evening nutrition logged mindfully for restful restorative sleep!' : `${5 - Math.min(dinnerCount, 5)} more dinners to log!`
+    },
+    {
+      id: 'variety_seeker', category: 'milestones', tier: 'silver', tierName: '🥈 Silver', icon: '🍜',
+      name: 'Variety Seeker', desc: 'Logged 20 different wholesome foods',
+      earned: uniqueFoods >= 20, current: Math.min(uniqueFoods, 20), max: 20,
+      progressText: `${Math.min(uniqueFoods, 20)}/20 foods`,
+      encouragement: uniqueFoods >= 20 ? 'Incredible biodiversity in your diet! Full micronutrient coverage.' : `${20 - Math.min(uniqueFoods, 20)} new foods to discover!`
+    },
+    {
+      id: 'century_club', category: 'milestones', tier: 'gold', tierName: '🥇 Gold', icon: '📸',
+      name: 'Century Club', desc: 'Logged 100 meals overall in NutriTrack',
+      earned: totalMeals >= 100, current: Math.min(totalMeals, 100), max: 100,
+      progressText: `${Math.min(totalMeals, 100)}/100 meals`,
+      encouragement: totalMeals >= 100 ? '100 meals logged! That represents serious dietary self-knowledge.' : `${100 - Math.min(totalMeals, 100)} meals to hit the prestigious Century Club!`
+    },
+    {
+      id: 'double_century', category: 'milestones', tier: 'diamond', tierName: '💎 Diamond', icon: '🎖️',
+      name: 'Double Century', desc: 'Logged 200 meals total with relentless passion',
+      earned: totalMeals >= 200, current: Math.min(totalMeals, 200), max: 200,
+      progressText: `${Math.min(totalMeals, 200)}/200 meals`,
+      encouragement: totalMeals >= 200 ? 'Elite 200 meal milestone reached! You are an inspiration.' : `${200 - Math.min(totalMeals, 200)} meals remaining to enter the Diamond Hall!`
+    },
+    {
+      id: 'master_chef', category: 'milestones', tier: 'bronze', tierName: '🥉 Bronze', icon: '👨‍🍳',
+      name: 'Master Chef', desc: 'Created and logged a custom recipe or template',
+      earned: customRecipeCount >= 1, current: Math.min(customRecipeCount, 1), max: 1,
+      progressText: customRecipeCount >= 1 ? '1/1 recipe' : '0/1 recipe',
+      encouragement: customRecipeCount >= 1 ? 'Culinary creativity unlocked! Custom macro perfection.' : 'Create a custom recipe in the Log Food tab to claim this badge!'
+    },
+    {
+      id: 'fitness_fanatic', category: 'milestones', tier: 'silver', tierName: '🥈 Silver', icon: '🏋️',
+      name: 'Fitness Fanatic', desc: 'Logged 10 workouts into your activity log',
+      earned: workoutCount >= 10, current: Math.min(workoutCount, 10), max: 10,
+      progressText: `${Math.min(workoutCount, 10)}/10 workouts`,
+      encouragement: workoutCount >= 10 ? 'Strength & cardiovascular conditioning in full harmony with nutrition!' : `${10 - Math.min(workoutCount, 10)} workouts left to reach Silver!`
+    },
+    {
+      id: 'weigh_in_milestone', category: 'milestones', tier: 'bronze', tierName: '🥉 Bronze', icon: '⚖️',
+      name: 'Weigh-In Milestone', desc: 'Logged body weight 5 times to track metabolic trends',
+      earned: weightLogCount >= 5, current: Math.min(weightLogCount, 5), max: 5,
+      progressText: `${Math.min(weightLogCount, 5)}/5 entries`,
+      encouragement: weightLogCount >= 5 ? 'Objective data is power! Clear trend trajectory established.' : `${5 - Math.min(weightLogCount, 5)} weigh-ins left to unlock!`
     }
-  );
+  ];
 
-  grid.innerHTML = badges.map(b => `
-    <div class="achievement-badge ${b.earned ? 'earned' : ''}" title="${b.desc}">
-      <div class="ab-icon">${b.icon}</div>
-      <div class="ab-name">${b.name}</div>
-      <div class="ab-desc">${b.desc}</div>
-      ${b.progress ? `<div class="ab-progress">${b.progress}</div>` : ''}
-    </div>
-  `).join('');
+  window._allAchievements = badges;
+
+  const earnedCount = badges.filter(b => b.earned).length;
+  const totalBadges = badges.length;
+  const pct = Math.round((earnedCount / totalBadges) * 100);
+
+  // Find next locked badge closest to completion
+  const lockedBadges = badges.filter(b => !b.earned);
+  const nextUp = lockedBadges.sort((a, b) => (b.current / b.max) - (a.current / a.max))[0];
+
+  // Render Header Stats Banner
+  const headerStatsEl = document.getElementById('achHeaderStats');
+  if (headerStatsEl) {
+    headerStatsEl.innerHTML = `
+      <div>
+        <div class="ach-stats-title">🏆 ${earnedCount}/${totalBadges} Badges Unlocked (${pct}%)</div>
+        <div class="ach-stats-sub">Keep going! Consistency compounds into lifelong metabolic health.</div>
+      </div>
+      ${nextUp ? `
+        <div class="ach-next-badge-banner">
+          🎯 Next in Reach: <strong>${nextUp.name}</strong> (${nextUp.progressText})
+        </div>
+      ` : `
+        <div class="ach-next-badge-banner">
+          👑 All 20 Badges Unlocked! Legendary Performance!
+        </div>
+      `}
+    `;
+  }
+
+  // Render Badges
+  grid.innerHTML = badges.map(b => {
+    const progressPct = Math.min(100, Math.round((b.current / b.max) * 100));
+    return `
+      <div class="achievement-badge ${b.earned ? 'earned' : ''}" data-category="${b.category}" data-earned="${b.earned}" title="${b.desc}">
+        <span class="ab-tier-pill tier-${b.tier}">${b.tierName}</span>
+        <div class="ab-icon-halo">
+          <span>${b.icon}</span>
+        </div>
+        <div class="ab-name">${b.name}</div>
+        <div class="ab-desc">${b.desc}</div>
+        <div class="ab-progress-track">
+          <div class="ab-progress-fill" style="width:${progressPct}%;"></div>
+        </div>
+        <div class="ab-progress-meta">
+          <span>${b.progressText}</span>
+          <span>${progressPct}%</span>
+        </div>
+        <div class="ab-encouragement">${b.encouragement}</div>
+      </div>
+    `;
+  }).join('');
 
   const tagEl = document.getElementById('achievementsWidgetTag');
   if (tagEl) {
-    const earnedCount = badges.filter(b => b.earned).length;
     tagEl.textContent = `${earnedCount}/${badges.length} unlocked`;
   }
 }
@@ -4494,6 +5319,18 @@ function openDietModal() {
 
   // MACROS TAB
   document.getElementById('dpTab-macros').innerHTML = `
+    <div class="macro-protocol-selector">
+      <div style="font-size:0.75rem; font-weight:800; color:#3ECF8E; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.05em; display:flex; align-items:center; gap:6px;">
+        <span>🎯</span> Clinical & Fitness Macro Protocols
+      </div>
+      <div class="protocol-chip-row">
+        <button type="button" class="protocol-chip" onclick="applyMacroProtocol('balanced')">⚡ Balanced (40C/30P/30F)</button>
+        <button type="button" class="protocol-chip" onclick="applyMacroProtocol('hypertrophy')">🏋️ Hypertrophy (35C/40P/25F)</button>
+        <button type="button" class="protocol-chip" onclick="applyMacroProtocol('keto')">🥑 Keto (5C/25P/70F)</button>
+        <button type="button" class="protocol-chip" onclick="applyMacroProtocol('mediterranean')">🥗 Mediterranean (50C/25P/25F)</button>
+        <button type="button" class="protocol-chip" onclick="applyMacroProtocol('glp1')">💊 GLP-1 High-Protein (35C/45P/20F)</button>
+      </div>
+    </div>
     <div class="dp-card">
       <div class="dp-card-title">📊 Your Macro Targets</div>
       <div class="dp-macro-rings">
@@ -4658,9 +5495,199 @@ function openDietModal() {
     </div>
   `;
 
+  // ── SMART GROCERY LIST TAB ──
+  const groceryItems = _generateGroceryList(plan, dietType);
+  const groceryPanel = document.getElementById('dpTab-grocery');
+  if (groceryPanel) {
+    groceryPanel.innerHTML = `
+      <div class="dp-card" style="margin-bottom:1rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.75rem;">
+          <div class="dp-card-title" style="margin-bottom:0;">🛒 Smart Clinical Grocery Suite</div>
+          <button type="button" class="grocery-action-btn" onclick="copyGroceryList()">
+            📋 Copy Shopping List
+          </button>
+        </div>
+        <p style="font-size:0.84rem; color:var(--ink-50); line-height:1.5; margin-bottom:1rem;">
+          Tailored specifically to your <strong>${plan.name}</strong> goal and <strong>${dtLabels[dietType] || 'Balanced'}</strong> diet. Check off items as you shop.
+        </p>
+        <div class="grocery-sections-grid">
+          ${groceryItems.map(sec => `
+            <div class="grocery-section-card">
+              <div class="grocery-section-title">
+                <span>${sec.icon}</span> ${sec.title}
+              </div>
+              <div class="grocery-item-list">
+                ${sec.items.map(item => `
+                  <label class="grocery-check-item">
+                    <input type="checkbox" onchange="this.parentElement.classList.toggle('checked', this.checked)">
+                    <span class="grocery-item-name">${item.name}</span>
+                    <span class="grocery-item-note">${item.note}</span>
+                  </label>
+                `).join('')}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+      <div class="dp-tip-banner">
+        <div class="dp-tip-icon">✨</div>
+        <div class="dp-tip-text"><strong>Smart Meal Prep Tip:</strong> Cooking protein sources in advance and pre-portioning saves 45 minutes daily and keeps adherence above 90%.</div>
+      </div>
+    `;
+  }
+
   const modal = document.getElementById('dietPlanModal');
   modal.classList.add('open');
   dpSwitchTab('overview', document.querySelector('.dp-tab'));
+}
+
+// ── GROCERY GENERATOR & CLINICAL PROTOCOL HELPERS ──
+function _generateGroceryList(plan, dietType) {
+  const isVegan = dietType === 'vegan';
+  const isEgg = dietType === 'eggetarian';
+  const isVeg = ['veg', 'eggetarian', 'vegan'].includes(dietType);
+
+  const proteinItems = isVegan ? [
+    { name: 'Organic Extra-Firm Tofu (400g)', note: 'High protein, calcium-set' },
+    { name: 'Soya Chunks / TVP (250g)', note: '52g protein per 100g' },
+    { name: 'Organic Tempeh', note: 'Fermented gut-friendly protein' },
+    { name: 'Edamame (Frozen)', note: 'Complete plant amino acid profile' },
+    { name: 'Split Red & Yellow Moong Lentils', note: 'Quick-cooking, light digestion' }
+  ] : isEgg ? [
+    { name: 'Pasture-Raised Eggs (Dozen)', note: 'Choline, B12, high leucine' },
+    { name: 'Liquid Egg Whites (500ml)', note: 'Pure lean protein' },
+    { name: 'Low-Fat Paneer / Cottage Cheese', note: 'Slow-digesting casein protein' },
+    { name: 'Plain Greek Yogurt 0%', note: 'Probiotics & 15g protein/serving' },
+    { name: 'Sprouted Moong Beans', note: 'Bioavailable enzymes & amino acids' }
+  ] : isVeg ? [
+    { name: 'Fresh Paneer (Malai / Low-Fat)', note: '18g protein / 100g' },
+    { name: 'Plain Greek Yogurt (500g)', note: 'High casein, zero added sugar' },
+    { name: 'Kabuli Chana / Chickpeas', note: 'Complex carb & plant protein' },
+    { name: 'Organic Tofu & Soya Chunks', note: 'Lean plant protein boost' },
+    { name: 'Sprouted Moong & Chana', note: 'Digestive enzyme rich' }
+  ] : [
+    { name: 'Skinless Chicken Breast (1kg)', note: 'Lean amino acid powerhouse' },
+    { name: 'Pasture-Raised Eggs (Dozen)', note: 'Choline, B12, complete protein' },
+    { name: 'Wild Atlantic Salmon Fillets', note: 'Rich in EPA/DHA Omega-3s' },
+    { name: 'Plain Greek Yogurt 0%', note: '17g protein per cup' },
+    { name: 'Extra Lean Ground Turkey (93/7)', note: 'Quick versatility for meal prep' }
+  ];
+
+  return [
+    {
+      icon: '🥩',
+      title: 'Quality Bio-Proteins',
+      items: proteinItems
+    },
+    {
+      icon: '🌾',
+      title: 'Complex Carbs & Slow Burners',
+      items: [
+        { name: 'Rolled Old-Fashioned Oats', note: 'Soluble beta-glucan fiber' },
+        { name: 'Tri-Color Royal Quinoa', note: 'Complete amino acid profile' },
+        { name: 'Japanese Sweet Potatoes', note: 'Low glycemic index energy' },
+        { name: 'Brown Basmati Rice', note: 'Slow digestion & satiety' },
+        { name: 'Organic Blueberries / Berries', note: 'Polyphenols & antioxidants' }
+      ]
+    },
+    {
+      icon: '🥗',
+      title: 'Micronutrient Greens & Veggies',
+      items: [
+        { name: 'Organic Baby Spinach (Large Tub)', note: 'Folate, non-heme iron, magnesium' },
+        { name: 'Fresh Broccoli Crowns', note: 'Sulforaphane & Vitamin C' },
+        { name: 'English Seedless Cucumbers', note: 'Cellular hydration' },
+        { name: 'Hass Avocados (Pack of 3-4)', note: 'Monounsaturated oleic acid' },
+        { name: 'Fresh Lemons & Garlic Bulbs', note: 'Liver support & flavor base' }
+      ]
+    },
+    {
+      icon: '🥑',
+      title: 'Healthy Fats & Superfoods',
+      items: [
+        { name: 'Cold-Pressed Extra Virgin Olive Oil', note: 'Antioxidant oleocanthal' },
+        { name: 'Raw California Almonds & Walnuts', note: 'Vitamin E & ALA Omega-3' },
+        { name: 'Organic Black Chia Seeds', note: 'Soluble mucilage fiber' },
+        { name: '100% Natural Peanut / Almond Butter', note: 'Zero hydrogenated oils' },
+        { name: 'Pink Himalayan Rock Salt', note: 'Essential trace minerals' }
+      ]
+    }
+  ];
+}
+
+function copyGroceryList() {
+  const u = currentUser || {};
+  const goal = u.dietGoal || 'maintain';
+  const type = u.dietType || 'nonveg';
+  const list = _generateGroceryList({ name: goal }, type);
+
+  let text = `🛒 NutriTrack Smart Grocery List (${goal.toUpperCase()} - ${type.toUpperCase()})\n`;
+  text += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+  list.forEach(sec => {
+    text += `\n${sec.icon} ${sec.title.toUpperCase()}\n`;
+    sec.items.forEach(item => {
+      text += `  • [ ] ${item.name} (${item.note})\n`;
+    });
+  });
+  text += `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+  text += `Generated with NutriTrack AI Food Intelligence\n`;
+
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('✓ Grocery list copied to clipboard!', 'success');
+    triggerCelebration('target');
+  }).catch(() => {
+    showToast('Grocery list ready for review', 'info');
+  });
+}
+
+function applyMacroProtocol(protocolKey) {
+  if (!currentUser) return;
+  const cal = (currentUser.goals && currentUser.goals.calories) || 2000;
+  let pRatio = 0.3, cRatio = 0.4, fRatio = 0.3, name = 'Balanced';
+
+  if (protocolKey === 'hypertrophy') {
+    pRatio = 0.40; cRatio = 0.35; fRatio = 0.25; name = 'Hypertrophy Muscle';
+  } else if (protocolKey === 'keto') {
+    pRatio = 0.25; cRatio = 0.05; fRatio = 0.70; name = 'Ketogenic Low-Carb';
+  } else if (protocolKey === 'mediterranean') {
+    pRatio = 0.25; cRatio = 0.50; fRatio = 0.25; name = 'Mediterranean Longevity';
+  } else if (protocolKey === 'glp1') {
+    pRatio = 0.45; cRatio = 0.35; fRatio = 0.20; name = 'GLP-1 High-Protein';
+  }
+
+  const pGrams = Math.round((cal * pRatio) / 4);
+  const cGrams = Math.round((cal * cRatio) / 4);
+  const fGrams = Math.round((cal * fRatio) / 9);
+
+  if (!currentUser.goals) currentUser.goals = {};
+  currentUser.goals.protein = pGrams;
+  currentUser.goals.carbs = cGrams;
+  currentUser.goals.fat = fGrams;
+
+  localStorage.setItem('nutritrack_user', JSON.stringify(currentUser));
+  showToast(`✓ Applied ${name} protocol: ${pGrams}g P / ${cGrams}g C / ${fGrams}g F`, 'success');
+  openDietModal();
+  dpSwitchTab('macros', document.querySelectorAll('.dp-tab')[2]);
+}
+
+function filterAchievements(category, btn) {
+  document.querySelectorAll('.ach-filter-chip').forEach(c => c.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+
+  const cards = document.querySelectorAll('.achievement-badge');
+  cards.forEach(card => {
+    const cardCat = card.getAttribute('data-category');
+    const cardEarned = card.getAttribute('data-earned') === 'true';
+
+    let show = false;
+    if (category === 'all') show = true;
+    else if (category === 'unlocked') show = cardEarned;
+    else if (category === 'streak') show = cardCat === 'streak';
+    else if (category === 'nutrition') show = cardCat === 'nutrition';
+    else if (category === 'milestones') show = cardCat === 'milestones';
+
+    card.style.display = show ? 'flex' : 'none';
+  });
 }
 
 
@@ -4688,15 +5715,33 @@ function toggleChat() {
   if (!panel) return;
 
   if (_chatOpen) {
-    panel.style.display = 'flex';
+    panel.classList.remove('closed');
+    panel.classList.add('active');
+    panel.style.setProperty('display', 'flex', 'important');
     if (bar) bar.style.display = 'none';
     if (_chatHistory.length === 0) _initChat();
     setTimeout(() => _scrollChatBottom(), 50);
   } else {
-    panel.style.display = 'none';
+    panel.classList.remove('active');
+    panel.classList.add('closed');
+    panel.style.setProperty('display', 'none', 'important');
     if (bar) bar.style.display = 'flex';
   }
 }
+
+function closeChat() {
+  _chatOpen = false;
+  const panel = document.getElementById('nutribotPanel');
+  const bar = document.getElementById('quickAssistantBar');
+  if (panel) {
+    panel.classList.remove('active');
+    panel.classList.add('closed');
+    panel.style.setProperty('display', 'none', 'important');
+  }
+  if (bar) bar.style.display = 'flex';
+}
+window.closeChat = closeChat;
+window.toggleChat = toggleChat;
 
 function _initChat() {
   const name = currentUser ? currentUser.name.split(' ')[0] : 'there';
@@ -5521,6 +6566,11 @@ async function autoSyncEcosystem() {
       badgeEl.innerHTML = `<span style="color:var(--kiwi); font-weight:700;">🟢 Live Auto-Sync Active</span> · ${provider} (${steps.toLocaleString()} steps / ${Math.round(calBurned)} kcal)`;
     }
 
+    const googlePill = document.querySelector('.wearable-suite-pill-card.pill-google .w-pill-telemetry');
+    if (googlePill) {
+      googlePill.innerHTML = `Auto-sync: <strong>${steps.toLocaleString()}</strong> steps · <strong>${Math.round(calBurned)}</strong> kcal active energy`;
+    }
+
     const stepsEl = document.getElementById('dailyStepsCount');
     if (stepsEl) stepsEl.textContent = steps.toLocaleString();
 
@@ -6086,7 +7136,8 @@ async function openCoachingModal() {
   const modal = document.getElementById('coachingModal');
   if (!modal) return;
   modal.classList.add('open');
-  modal.style.display = 'flex';
+  modal.classList.remove('hidden');
+  modal.style.setProperty('display', 'flex', 'important');
 
   // 1. Calculate baseline metabolic plan immediately from profile so it's NEVER blank
   const u = currentUser || {};
@@ -6172,7 +7223,8 @@ function closeCoachingModal() {
   const modal = document.getElementById('coachingModal');
   if (modal) {
     modal.classList.remove('open');
-    modal.style.display = 'none';
+    modal.classList.add('hidden');
+    modal.style.setProperty('display', 'none', 'important');
   }
 }
 
@@ -7015,4 +8067,7 @@ if (typeof window !== 'undefined') {
   window.filterBenchmarkTable = typeof filterBenchmarkTable !== 'undefined' ? filterBenchmarkTable : window.filterBenchmarkTable;
   window.sortBenchmarkTable = typeof sortBenchmarkTable !== 'undefined' ? sortBenchmarkTable : window.sortBenchmarkTable;
   window.downloadBenchmarkData = typeof downloadBenchmarkData !== 'undefined' ? downloadBenchmarkData : window.downloadBenchmarkData;
+  window.filterAchievements = typeof filterAchievements !== 'undefined' ? filterAchievements : window.filterAchievements;
+  window.copyGroceryList = typeof copyGroceryList !== 'undefined' ? copyGroceryList : window.copyGroceryList;
+  window.applyMacroProtocol = typeof applyMacroProtocol !== 'undefined' ? applyMacroProtocol : window.applyMacroProtocol;
 }

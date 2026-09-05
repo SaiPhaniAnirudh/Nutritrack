@@ -26,8 +26,10 @@
 - 🎙️ **Voice logging** — natural-language meal entry ("2 scrambled eggs, avocado toast and black coffee") parsed into structured food logs.
 - ⚡ **Adaptive Metabolic Coach** — calibrates true TDEE from logged history and recommends weekly calorie/macro targets, with a GLP-1 medication protection mode enforcing minimum protein/hydration.
 - 🩺 **Clinician Mode** — lets a registered dietitian/physician lock individualized calorie floors and CKD-style protein caps.
+- 🛒 **Smart Clinical Grocery Suite** — automated department-by-department grocery checklists with 1-click clipboard export, synchronized with clinical macro protocols (Hypertrophy, Keto, Mediterranean, GLP-1).
+- 📈 **30-Day Consistency Heatmap & Spline Curves** — GitHub-style daily adherence heatmap and organic metabolic trajectory curve with target reference tracking.
 - ⌚ **Wearable sync** — Google Fit, Apple HealthKit export/import, Garmin Connect, and Oura activity sync feed into daily energy balance.
-- 🏅 **Gamification** — streaks, achievement badges, shareable progress cards, community challenges.
+- 🏅 **20-Badge Gamification Hub** — 5 motivational tiers (Bronze to Legendary), real-time progress percentages, category filters, and "Next in Reach" milestone teasers.
 - 🌐 **Multi-language UI** — English, Hindi, Telugu, Tamil, Spanish.
 - 📱 **Installable PWA + Android APK** — offline-capable home-screen app.
 - 🔬 **Open accuracy benchmark** — a reproducible 200-meal validation suite across 7 cuisine categories (see [Accuracy Benchmark](#-accuracy-benchmark) below).

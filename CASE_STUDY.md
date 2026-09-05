@@ -224,3 +224,20 @@ An internal 200-meal benchmark comparing NutriTrack's output against USDA FoodDa
 - Implemented a **rolling 14-day energy balance algorithm** analyzing real calorie intake vs. body weight changes ($\Delta\text{Weight (kg)} \times 7700\text{ kcal} / \text{Days}$) to calibrate true metabolic rate.
 - Added **GLP-1 Medication Protection Mode** with a $\ge 100\text{g}$ protein safety baseline and clinical hydration reminders.
 - Upgraded **NutriBot** with Groq Llama 3.3 70B for sub-second, context-aware nutrition coaching with full visibility into the user's daily nutrient gaps.
+
+---
+
+## Phase 8 — Long-Term Consistency Heatmap, Smart Grocery Engine & 20-Badge Motivational Hub
+
+### 1. Caloric Consistency Heatmap & Metabolic Trajectory Curve
+- **The Problem:** Users often struggle to visualize whether individual deficit or surplus days translate into consistent weekly weight loss.
+- **The Solution:** Added a GitHub-style **30-Day Consistency Heatmap** mapping daily intake to target goal adherence ratios (Level 0 through Level 4), paired with a **smooth tension spline area curve (`tension: 0.38`)** and dashed reference goal line.
+- **Outcome:** Immediate visual feedback that encourages consistency over perfection.
+
+### 2. Clinical Macro Protocols & Categorized Smart Grocery Suite
+- **The Solution:** Embedded 1-click clinical macro protocols (*Hypertrophy 40/35/25*, *Keto 70/25/5*, *Mediterranean 50/30/20*, *GLP-1 45/35/20*) that dynamically re-tune target grams.
+- **Smart Grocery Generator:** Generates an interactive department-by-department shopping list (Bio-Proteins, Complex Carbs, Greens & Veggies, Healthy Fats) tailored to the user's diet type (Non-Veg, Veg, Eggetarian, Vegan) with 1-click clipboard export.
+
+### 3. Expanded 20-Badge Gamification & Encouragement Hub
+- **The Solution:** Expanded gamification from 10 to **20 motivational achievements** across 5 distinct tiers (Bronze 🥉, Silver 🥈, Gold 🥇, Diamond 💎, Legendary 👑).
+- **Encouragement Engine:** Integrated animated progress bars with live percentages (`80% · 4/5 days`), category filtering chips, and real-time coaching tips ("Next in Reach" banner) to keep users engaged and motivated.

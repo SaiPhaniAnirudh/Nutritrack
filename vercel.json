@@ -1,4 +1,24 @@
 {
+  "headers": [
+    {
+      "source": "/(.*)\\.(css|js|png|jpg|jpeg|gif|svg|webp|ico|woff|woff2)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/(sw\\.js|manifest\\.json|robots\\.txt|sitemap\\.xml)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    }
+  ],
   "rewrites": [
     { "source": "/sitemap.xml", "destination": "/frontend/sitemap.xml" },
     { "source": "/robots.txt", "destination": "/frontend/robots.txt" },
@@ -7,8 +27,12 @@
     { "source": "/llms.txt", "destination": "/frontend/llms.txt" },
     { "source": "/App.js", "destination": "/frontend/App.js" },
     { "source": "/Style.css", "destination": "/frontend/Style.css" },
+    { "source": "/DashboardRestyle.css", "destination": "/frontend/DashboardRestyle.css" },
+    { "source": "/Theme.css", "destination": "/frontend/Theme.css" },
+    { "source": "/ThemeToggle.js", "destination": "/frontend/ThemeToggle.js" },
     { "source": "/Foods.js", "destination": "/frontend/Foods.js" },
     { "source": "/i18n.js", "destination": "/frontend/i18n.js" },
+    { "source": "/logo-nav.webp", "destination": "/frontend/logo-nav.webp" },
     { "source": "/logo-nav.png", "destination": "/frontend/logo-nav.png" },
     { "source": "/logo-nav.svg", "destination": "/frontend/logo-nav.svg" },
     { "source": "/logo-auth.svg", "destination": "/frontend/logo-auth.svg" },

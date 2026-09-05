@@ -24,17 +24,17 @@ GROQ_VISION_MODEL = "llama-3.2-90b-vision-preview"  # Best vision model on Groq
 GROQ_VISION_MODEL_FALLBACK = "llama-3.2-11b-vision-preview"  # Smaller, faster fallback
 
 # Structured prompt for food identification — forces consistent JSON output
-GROQ_FOOD_PROMPT = """You are a food nutrition analysis AI. Analyze this food image carefully.
+GROQ_FOOD_PROMPT = """You are a food nutrition analysis AI with 3D volumetric depth estimation. Analyze this food image carefully.
 
 RULES:
 - Identify ONLY foods you can clearly and confidently see in the image.
 - Do NOT guess or infer foods that aren't visible.
-- For each food, estimate portion size and nutrition values per the visible portion.
+- Estimate physical 3D dimensions (Length, Width, Depth in cm), volume (cm³), and mass density (g/cm³).
 - Rate your confidence 0-100 based on how clearly you can identify each item.
 - If NO food is visible, return {"not_food": true}
 
 Return ONLY valid JSON in this exact format (no markdown, no explanation):
-{"items": [{"food_name": "<specific name>", "serving_size": "<e.g. 1 cup, 200g>", "confidence": <0-100>, "calories": <number>, "protein_g": <number>, "carbs_g": <number>, "fat_g": <number>, "fiber_g": <number>, "sugar_g": <number>, "sodium_mg": <number>, "cholesterol_mg": <number>}]}"""
+{"items": [{"food_name": "<specific name>", "serving_size": "<e.g. 1 cup, 200g>", "estimated_grams": <number>, "volume_cm3": <number>, "density_g_cm3": <number>, "confidence": <0-100>, "calories": <number>, "protein_g": <number>, "carbs_g": <number>, "fat_g": <number>, "fiber_g": <number>, "sugar_g": <number>, "sodium_mg": <number>, "cholesterol_mg": <number>}]}"""
 
 
 def analyze_food_photo(image_base64, api_key=None):
@@ -155,9 +155,15 @@ def _call_groq_vision(image_base64, api_key, model):
     # Normalize item fields
     normalized_items = []
     for item in items:
+        est_g = _safe_float(item.get("estimated_grams"), 150)
+        vol_cm3 = _safe_float(item.get("volume_cm3"), round(est_g / 0.85, 1))
+        dens = _safe_float(item.get("density_g_cm3"), 0.85)
         normalized_items.append({
             "food_name":      (item.get("food_name") or "Unknown").strip().title(),
             "serving_size":   item.get("serving_size", "1 serving"),
+            "estimated_grams": est_g,
+            "volume_cm3":     vol_cm3,
+            "density_g_cm3":  dens,
             "confidence":     item.get("confidence", 50),
             "calories":       _safe_float(item.get("calories")),
             "protein_g":      _safe_float(item.get("protein_g")),

@@ -23,16 +23,18 @@ GEMINI_15_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-
 
 GEMINI_FOOD_PROMPT = """Analyze this food photo with clinical precision and identify every food item present.
 
-SPATIAL & VOLUMETRIC CALIBRATION RULES:
-1. ANCHOR SCALE: Use visual anchors (standard dinner plate ~10 inches/25cm, standard cup ~240ml, bowl ~350ml, cutlery/hands) to estimate exact volumetric dimensions.
-2. DENSITY & MASS: Compute physical mass (grams) using food density benchmarks:
-   - Cooked Grains/Rice: ~155g per cup
-   - Dense Proteins (Steak, Chicken, Paneer, Fish): ~120-160g per palm-sized portion
-   - Leafy Greens/Salad: ~30-40g per cup (low density)
-   - Cooked Legumes/Dals/Curries: ~200-240g per cup
-   - Liquid/Soups: ~240g per cup
-3. COMPONENT DECONSTRUCTION: Separate mixed plates, thalis, bowls, and combos into individual ingredients.
-4. If the image contains no edible food or beverage, return {"not_food": true}.
+3D VOLUMETRIC RECONSTRUCTION & SPATIAL DEPTH RULES:
+1. ANCHOR SCALE & DEPTH: Use visible anchors (standard dinner plate ~10 inches/25cm, standard cup ~240ml, bowl ~350ml, cutlery/hands, table texture) to estimate physical 3D bounding dimensions (Length, Width, Depth/Height in centimeters).
+2. VOLUMETRIC MODELING: Calculate physical food volume in cubic centimeters (cm³ = ml).
+3. MASS DENSITY ESTIMATION: Apply empirical mass density benchmarks:
+   - Cooked Grains/Rice: ~0.65 - 0.72 g/cm³
+   - Dense Meats/Poultry/Fish: ~1.02 - 1.08 g/cm³
+   - Cooked Legumes/Dals: ~0.90 - 0.98 g/cm³
+   - Soups/Curries: ~1.00 g/cm³
+   - Raw Salad/Leafy Greens: ~0.15 - 0.22 g/cm³ (high air gap)
+   - Baked Goods/Breads: ~0.25 - 0.35 g/cm³
+4. Compute estimated mass in grams: Mass (g) = Volume (cm³) * Density (g/cm³).
+5. If the image contains no edible food or beverage, return {"not_food": true}.
 
 Return ONLY valid JSON in this exact structure:
 {
@@ -41,6 +43,10 @@ Return ONLY valid JSON in this exact structure:
       "food_name": "<specific culinary/scientific name>",
       "serving_size": "<e.g. 1 cup (155g), 2 slices (60g), 1 medium breast (140g)>",
       "estimated_grams": <number>,
+      "volume_cm3": <number>,
+      "density_g_cm3": <number>,
+      "dimensions_cm": {"length": <number>, "width": <number>, "depth": <number>},
+      "uncertainty_range_g": [<min_g>, <max_g>],
       "confidence": <0-100>,
       "calories": <number>,
       "protein_g": <number>,
@@ -144,9 +150,20 @@ def _call_gemini(endpoint_url, api_key, image_base64):
 
     normalized_items = []
     for item in items:
+        est_g = _safe_float(item.get("estimated_grams"), 150)
+        vol_cm3 = _safe_float(item.get("volume_cm3"), round(est_g / 0.85, 1))
+        dens = _safe_float(item.get("density_g_cm3"), 0.85)
+        dims = item.get("dimensions_cm") or {"length": 10.0, "width": 8.0, "depth": 2.2}
+        uncert = item.get("uncertainty_range_g") or [round(est_g * 0.9), round(est_g * 1.1)]
+
         normalized_items.append({
             "food_name": (item.get("food_name") or "Unknown").strip().title(),
             "serving_size": item.get("serving_size", "1 serving"),
+            "estimated_grams": est_g,
+            "volume_cm3": vol_cm3,
+            "density_g_cm3": dens,
+            "dimensions_cm": dims,
+            "uncertainty_range_g": uncert,
             "confidence": item.get("confidence", 85),
             "calories": _safe_float(item.get("calories")),
             "protein_g": _safe_float(item.get("protein_g")),

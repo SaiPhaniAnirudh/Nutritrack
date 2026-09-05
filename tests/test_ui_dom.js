@@ -27,7 +27,14 @@ const requiredHtmlElements = [
   'id="glp1ToggleInput"',
   'onclick="openCoachingModal()"',
   'onclick="exportAppleHealthJSON()"',
-  'onclick="syncGarminActivities()"'
+  'onclick="syncGarminActivities()"',
+  'id="historySummaryGrid"',
+  'id="caloricHeatmap"',
+  'id="caloricHeatmapCard"',
+  'id="dpTab-grocery"',
+  'id="achHeaderStats"',
+  'id="achFilterBar"',
+  'filterAchievements(\'all\', this)'
 ];
 
 requiredHtmlElements.forEach(item => {
@@ -51,7 +58,17 @@ const requiredJsFunctions = [
   'function syncGarminActivities()',
   'window.openCoachingModal = openCoachingModal;',
   'window.exportAppleHealthJSON = exportAppleHealthJSON;',
-  'window.syncGarminActivities = syncGarminActivities;'
+  'window.syncGarminActivities = syncGarminActivities;',
+  'function _generateGroceryList(plan, dietType)',
+  'function copyGroceryList()',
+  'function applyMacroProtocol(protocolKey)',
+  'function filterAchievements(category, btn)',
+  'window.filterAchievements =',
+  'window.copyGroceryList =',
+  'window.applyMacroProtocol =',
+  '60-Day Iron Legend',
+  'Macro Sniper',
+  'Hydration Titan'
 ];
 
 requiredJsFunctions.forEach(fn => {

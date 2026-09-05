@@ -14,19 +14,25 @@
  *   - Images                           → Stale While Revalidate
  */
 
-const CACHE_NAME = 'nutritrack-v36';
+const CACHE_NAME = 'nutritrack-v49';
 const APP_SHELL = [
   '/',
   '/index.html',
   '/Style.css',
+  '/DashboardRestyle.css',
+  '/Theme.css',
   '/App.js',
   '/Foods.js',
   '/i18n.js',
+  '/ThemeToggle.js',
   '/llms.txt',
   '/manifest.json',
+  '/logo-nav.webp',
   '/logo-nav.png',
   '/logo-auth.svg',
   '/logo-loader.svg',
+  '/icons/icon-192.png',
+  '/icons/icon-48.png',
   '/icons/icon.png',
 ];
 
