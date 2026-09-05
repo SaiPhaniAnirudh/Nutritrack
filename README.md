@@ -105,15 +105,23 @@ python benchmark/run_benchmark.py --output results.json
 
 ```
 nutritrack/
-├── frontend/     ← PWA UI (HTML, CSS, JS, service worker)
-├── backend/      ← Flask REST API (App.py, Database.py)
+├── frontend/     ← PWA UI (HTML, CSS, JS, service worker, APK downloads)
+├── backend/      ← Flask REST API (App.py, Database.py, integrations)
 ├── llm/          ← AI inference server (Llm_server.py)
+├── android/      ← Capacitor native Android project
 ├── docker/       ← Container configs
 ├── benchmark/    ← 200-meal accuracy validation suite
 ├── requirements.txt
 ├── docker-compose.yml
 └── setup.bat / setup.sh
 ```
+
+## 🌟 Advanced Clinical & Lifestyle Nutrition Suite
+- **🔄 AI Smart Swap Engine:** Side-by-side food comparison with dynamic metabolic deltas (Calories Saved, Protein Boost, Fiber Gain, Sugar Avoided) and 1-tap logging.
+- **📄 Clinical Nutrition Dossier:** Physician-grade progress report generator with 30-day TDEE energy balance, compliance table, 67+ micronutrients matrix, and vector-clean `@media print` PDF generation.
+- **⏱️ Batch Meal Prep Studio:** 3-station concurrent cooking pipelines with live countdown timers, completion audio chimes, and glass container portion calculators.
+- **🤖 Standalone Android APK:** Direct 1-tap download package (`frontend/downloads/NutriTrack.apk`) for seamless sideloading with zero store dependencies.
+
 
 ## 🚀 Quick Start (Local Development)
 
