@@ -1170,17 +1170,33 @@
 
           <div class="scan-grid">
             <div class="glass-card">
-              <div class="card-title">
-                <div class="dot"></div>✨ Scan Food with AI
+              <div class="card-title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <div class="dot"></div>✨ Scan Food with AI
+                </div>
+                <!-- Instant Auto-Log Toggle -->
+                <div class="auto-log-toggle-wrap" id="autoLogToggleWrap">
+                  <label class="auto-log-switch" title="When enabled, uploading or taking a meal photo automatically identifies foods, estimates portions, and logs calories/macros immediately!">
+                    <input type="checkbox" id="autoLogToggle" checked onchange="handleAutoLogToggle(this.checked)">
+                    <span class="auto-log-slider"></span>
+                    <span class="auto-log-label"><span class="bolt">⚡</span> Instant Auto-Log</span>
+                  </label>
+                </div>
               </div>
 
-              <div class="cam-area" id="camArea">
+              <div class="cam-area" id="camArea" ondragover="handleCamDragOver(event)" ondragleave="handleCamDragLeave(event)" ondrop="handleCamDrop(event)">
                 <div class="cam-placeholder" id="camPlaceholder">
                   <div class="cam-icon">📷</div>
-                  <p>Take a photo or upload one<br>AI will identify the food</p>
+                  <p>Take a photo or upload one<br>AI will identify foods, portions &amp; auto-log</p>
                 </div>
                 <video id="camVideo" autoplay playsinline muted></video>
                 <img id="scanPreview" alt="Food to scan">
+
+                <!-- DRAG & DROP ZONE OVERLAY -->
+                <div class="drag-drop-hud" id="dragDropHud" style="display:none;">
+                  <div class="drag-drop-icon">📥</div>
+                  <div class="drag-drop-text">Drop meal photo here to auto-scan &amp; log</div>
+                </div>
 
                 <!-- HIGH-TECH AR HUD VIEWFINDER OVERLAY -->
                 <div class="ar-hud-overlay" id="arHudOverlay">
@@ -1227,6 +1243,16 @@
                 <button type="button" class="scan-btn purple" onclick="startVoiceLog()">🎙️ Voice Log</button>
                 <button type="button" class="scan-btn emerald" onclick="openLabelOcrModal()" title="Scan Nutrition Facts Label">📋 Label OCR</button>
               </div>
+
+              <!-- QUICK-TEST SAMPLE MEAL PRESETS (1-Click Instant Vision & Auto-Log) -->
+              <div class="scan-preset-tray">
+                <span class="preset-label">⚡ Try Sample Meal:</span>
+                <button type="button" class="preset-chip" onclick="loadSampleMeal('salad')" title="Mediterranean Greek Salad with Olive Oil & Feta">🥗 Greek Salad</button>
+                <button type="button" class="preset-chip" onclick="loadSampleMeal('pancakes')" title="High-Protein Blueberry Pancakes">🥞 Protein Pancakes</button>
+                <button type="button" class="preset-chip" onclick="loadSampleMeal('salmon')" title="Grilled Salmon Teriyaki with Jasmine Rice">🍱 Salmon Bento</button>
+                <button type="button" class="preset-chip" onclick="loadSampleMeal('curry')" title="Chicken Tikka Masala & Basmati Rice">🍛 Curry Bowl</button>
+              </div>
+
               <!-- HIGH-TECH VOICE LOGGING AUDIO WAVEFORM HUD -->
               <div id="voiceStatusRow" class="voice-waveform-hud" style="display:none;">
                 <div class="voice-hud-top">
@@ -1262,10 +1288,9 @@
                 <button type="button" class="scan-btn muted" onclick="stopScanCamera()">✕ Stop</button>
               </div>
               <div class="scan-btn-row" id="scanReadyRow" style="display:none">
-                <button type="button" class="scan-btn gold" id="scanNowBtn" onclick="scanWithAI('food')">✨ Scan
-                  Food</button>
-                <button type="button" class="scan-btn purple" id="scanMenuBtn" onclick="scanWithAI('menu')">📋 Scan
-                  Menu</button>
+                <button type="button" class="scan-btn gold" id="scanNowBtn" onclick="scanWithAI('food')">✨ Scan Food</button>
+                <button type="button" class="scan-btn purple" id="scanMenuBtn" onclick="scanWithAI('menu')">📋 Scan Menu</button>
+                <button type="button" class="scan-btn green" id="autoLogNowBtn" onclick="scanWithAI('food', { autoLog: true })">⚡ Auto-Log Entire Meal</button>
                 <button type="button" class="scan-btn muted" onclick="clearScan()">✕ Clear</button>
               </div>
 
@@ -2066,8 +2091,9 @@
   </script>
   <script src="/i18n.js?v=36" defer></script>
   <script src="/Foods.js?v=36" defer></script>
+  <script src="/sample_meals.js?v=1" defer></script>
   <script src="/IndexedDB.js?v=1" defer></script>
-  <script src="/App.js?v=87" defer></script>
+  <script src="/App.js?v=88" defer></script>
   <script src="/ThemeToggle.js?v=9" defer></script>
 
   <!-- PWA Install Prompt Banner -->

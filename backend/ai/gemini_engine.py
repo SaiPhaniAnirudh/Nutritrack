@@ -20,6 +20,7 @@ import requests
 
 GEMINI_25_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
 GEMINI_15_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
+_GEMINI_INVALID_KEY = False
 
 GEMINI_FOOD_PROMPT = """Analyze this food photo with clinical precision and identify every food item present.
 
@@ -72,6 +73,10 @@ def analyze_food_photo(image_base64, api_key=None):
     Returns:
         dict with keys: success, items, confidence, latency_ms, model, source
     """
+    global _GEMINI_INVALID_KEY
+    if _GEMINI_INVALID_KEY:
+        return {"success": False, "error": "GEMINI_API_KEY invalid or expired", "items": []}
+
     key = api_key or os.getenv('GEMINI_API_KEY') or os.getenv('GOOGLE_API_KEY')
     if not key:
         return {"success": False, "error": "GEMINI_API_KEY not configured", "items": []}
@@ -87,6 +92,8 @@ def analyze_food_photo(image_base64, api_key=None):
                 res["model"] = model_name
                 res["source"] = "gemini"
                 return res
+            elif _GEMINI_INVALID_KEY:
+                break
         except Exception as e:
             print(f"[Gemini {model_name}] notice: {e}")
             continue
@@ -115,9 +122,13 @@ def _call_gemini(endpoint_url, api_key, image_base64):
         }
     }
 
-    resp = requests.post(url, json=payload, timeout=15)
+    global _GEMINI_INVALID_KEY
+    resp = requests.post(url, json=payload, timeout=20)
     if resp.status_code != 200:
-        return {"success": False, "error": f"HTTP {resp.status_code}: {resp.text[:200]}"}
+        err_msg = resp.text[:200]
+        if "API_KEY_INVALID" in err_msg or "API key not valid" in err_msg:
+            _GEMINI_INVALID_KEY = True
+        return {"success": False, "error": f"HTTP {resp.status_code}: {err_msg}"}
 
     data = resp.json()
     candidates = data.get("candidates", [])
@@ -275,5 +286,6 @@ def _safe_float(val, default=0.0):
 
 
 def is_available():
-    return bool(os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"))
+    key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or ""
+    return bool(key and key.startswith("AIzaSy")) and not _GEMINI_INVALID_KEY
 

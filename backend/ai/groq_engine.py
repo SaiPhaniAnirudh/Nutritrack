@@ -37,9 +37,13 @@ Return ONLY valid JSON in this exact format (no markdown, no explanation):
 {"items": [{"food_name": "<specific name>", "serving_size": "<e.g. 1 cup, 200g>", "estimated_grams": <number>, "volume_cm3": <number>, "density_g_cm3": <number>, "confidence": <0-100>, "calories": <number>, "protein_g": <number>, "carbs_g": <number>, "fat_g": <number>, "fiber_g": <number>, "sugar_g": <number>, "sodium_mg": <number>, "cholesterol_mg": <number>}]}"""
 
 
+# Groq decommissioned llama-3.2-90b-vision-preview and 11b-vision-preview models
+_GROQ_VISION_DECOMMISSIONED = True
+
+
 def analyze_food_photo(image_base64, api_key=None):
     """
-    Analyze a food photo using Groq's Llama 3.2 Vision model.
+    Analyze a food photo using Groq's Vision models (with auto-bypass if decommissioned).
     
     Args:
         image_base64: Base64-encoded image string (JPEG/PNG)
@@ -55,6 +59,10 @@ def analyze_food_photo(image_base64, api_key=None):
             "source": "groq"
         }
     """
+    global _GROQ_VISION_DECOMMISSIONED
+    if _GROQ_VISION_DECOMMISSIONED:
+        return {"success": False, "error": "Groq vision models decommissioned", "items": []}
+
     api_key = api_key or os.getenv("GROQ_API_KEY")
     if not api_key:
         return {"success": False, "error": "GROQ_API_KEY not configured", "items": []}
@@ -70,7 +78,14 @@ def analyze_food_photo(image_base64, api_key=None):
                 result["model"] = model
                 result["source"] = "groq"
                 return result
+            elif "decommissioned" in str(result.get("error", "")).lower():
+                _GROQ_VISION_DECOMMISSIONED = True
+                break
         except Exception as e:
+            err_str = str(e).lower()
+            if "decommissioned" in err_str:
+                _GROQ_VISION_DECOMMISSIONED = True
+                break
             print(f"⚡ Groq {model} error: {e}")
             continue
 
@@ -193,5 +208,5 @@ def _safe_float(val, default=0.0):
 
 
 def is_available():
-    """Check if Groq API key is configured."""
-    return bool(os.getenv("GROQ_API_KEY"))
+    """Check if Groq API key is configured and vision model is not decommissioned."""
+    return bool(os.getenv("GROQ_API_KEY")) and not _GROQ_VISION_DECOMMISSIONED

@@ -4444,3 +4444,248 @@ html.theme-light .modal-box {
     grid-template-columns: 1fr !important;
   }
 }
+
+/* ══════════════════════════════════════════════════════════
+   SECTION 33: AI MEAL PHOTO SCANNER & AUTO-LOG SUITE
+   ══════════════════════════════════════════════════════════ */
+.auto-log-toggle-wrap {
+  display: flex;
+  align-items: center;
+}
+
+.auto-log-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(62, 207, 142, 0.3);
+  border-radius: 20px;
+  padding: 4px 10px 4px 6px;
+  transition: all 0.25s ease;
+}
+
+.auto-log-switch:hover {
+  background: rgba(62, 207, 142, 0.08);
+  border-color: rgba(62, 207, 142, 0.6);
+  box-shadow: 0 0 16px rgba(62, 207, 142, 0.2);
+}
+
+.auto-log-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.auto-log-slider {
+  position: relative;
+  width: 28px;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 20px;
+  transition: all 0.25s ease;
+  margin-right: 6px;
+}
+
+.auto-log-slider::before {
+  content: "";
+  position: absolute;
+  height: 12px;
+  width: 12px;
+  left: 2px;
+  bottom: 2px;
+  background-color: #FFFFFF;
+  border-radius: 50%;
+  transition: all 0.25s ease;
+}
+
+.auto-log-switch input:checked + .auto-log-slider {
+  background: #3ECF8E;
+  box-shadow: 0 0 10px rgba(62, 207, 142, 0.5);
+}
+
+.auto-log-switch input:checked + .auto-log-slider::before {
+  transform: translateX(12px);
+  background-color: #0A0F0D;
+}
+
+.auto-log-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #E2E8F0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.auto-log-label .bolt {
+  color: #3ECF8E;
+  font-size: 0.82rem;
+}
+
+/* Drag & Drop Overlays */
+.cam-area.drag-over {
+  border-color: #3ECF8E !important;
+  box-shadow: 0 0 30px rgba(62, 207, 142, 0.4) !important;
+  transform: scale(1.01);
+}
+
+.drag-drop-hud {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(10, 15, 13, 0.88);
+  backdrop-filter: blur(8px);
+  border: 2px dashed #3ECF8E;
+  border-radius: 14px;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  animation: fadeIn 0.2s ease;
+}
+
+.drag-drop-icon {
+  font-size: 2.8rem;
+  animation: bounceDrop 1s infinite alternate;
+}
+
+@keyframes bounceDrop {
+  from { transform: translateY(-4px); }
+  to { transform: translateY(4px); }
+}
+
+.drag-drop-text {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #3ECF8E;
+  margin-top: 8px;
+  text-shadow: 0 0 10px rgba(62, 207, 142, 0.4);
+}
+
+/* Sample Meal Presets Tray */
+.scan-preset-tray {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+}
+
+.preset-label {
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: #3ECF8E;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.preset-chip {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #FFFFFF;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.preset-chip:hover {
+  background: rgba(62, 207, 142, 0.15);
+  border-color: #3ECF8E;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(62, 207, 142, 0.2);
+}
+
+/* Auto-Logged Success Celebration Card */
+.auto-log-card {
+  background: linear-gradient(135deg, rgba(62, 207, 142, 0.08), rgba(10, 15, 13, 0.95)) !important;
+  border: 1px solid rgba(62, 207, 142, 0.45) !important;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.7), 0 0 28px rgba(62, 207, 142, 0.18) !important;
+  border-radius: 18px !important;
+  padding: 1.3rem !important;
+  animation: autoLogSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+@keyframes autoLogSlideIn {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.auto-log-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.8rem;
+  border-bottom: 1px solid rgba(62, 207, 142, 0.2);
+}
+
+.auto-log-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(62, 207, 142, 0.18);
+  border: 1px solid #3ECF8E;
+  color: #3ECF8E;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.auto-log-pulse {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #3ECF8E;
+  box-shadow: 0 0 8px #3ECF8E;
+  animation: pulseDot 1.2s infinite alternate;
+}
+
+.auto-log-undo-btn {
+  background: rgba(244, 97, 58, 0.15);
+  border: 1px solid rgba(244, 97, 58, 0.4);
+  color: #F4613A;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.auto-log-undo-btn:hover {
+  background: rgba(244, 97, 58, 0.3);
+  border-color: #F4613A;
+  color: #FFFFFF;
+}
+
+.auto-log-item-pill {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 10px;
+  padding: 8px 12px;
+  margin-bottom: 6px;
+}

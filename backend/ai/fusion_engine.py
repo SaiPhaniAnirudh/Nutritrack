@@ -41,6 +41,27 @@ def analyze_food_image(image_base64, db_lookup_fn=None):
     route_log = []
     scan_result = None
 
+    if not image_base64 or not str(image_base64).strip():
+        return {
+            "items": [{
+                "food_name": "Scan unavailable — please provide a valid food image",
+                "serving_size": "",
+                "confidence": 0,
+                "calories": 0,
+                "protein_g": 0,
+                "carbs_g": 0,
+                "fat_g": 0,
+                "fiber_g": 0,
+                "sugar_g": 0,
+                "sodium_mg": 0,
+                "cholesterol_mg": 0,
+                "source": "⚠️ Please upload a food photo"
+            }],
+            "scan_failed": True,
+            "route": "empty_input",
+            "latency_ms": 0
+        }
+
     # ─────────────────────────────────────────────────────────────
     # STEP 0: Zero-Latency Image Hash Cache Check (<5ms)
     # ─────────────────────────────────────────────────────────────

@@ -2263,6 +2263,89 @@ function pickScanPhoto() {
   setTimeout(() => input.click(), 50);
 }
 
+function isAutoLogEnabled() {
+  const saved = localStorage.getItem('nutritrack_auto_log_enabled');
+  if (saved !== null) return saved === 'true';
+  const toggle = document.getElementById('autoLogToggle');
+  return toggle ? toggle.checked : true;
+}
+
+function handleAutoLogToggle(checked) {
+  localStorage.setItem('nutritrack_auto_log_enabled', checked ? 'true' : 'false');
+  const toggle = document.getElementById('autoLogToggle');
+  if (toggle) toggle.checked = checked;
+  showToast(checked ? '⚡ Instant Auto-Log ON: Photos will log automatically' : 'Instant Auto-Log OFF: Review before logging', 'info');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const toggle = document.getElementById('autoLogToggle');
+  if (toggle) toggle.checked = isAutoLogEnabled();
+});
+setTimeout(() => {
+  const toggle = document.getElementById('autoLogToggle');
+  if (toggle) toggle.checked = isAutoLogEnabled();
+}, 250);
+
+function handleCamDragOver(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  const area = document.getElementById('camArea');
+  const hud = document.getElementById('dragDropHud');
+  if (area) area.classList.add('drag-over');
+  if (hud) hud.style.display = 'flex';
+}
+
+function handleCamDragLeave(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  const area = document.getElementById('camArea');
+  const hud = document.getElementById('dragDropHud');
+  if (area) area.classList.remove('drag-over');
+  if (hud) hud.style.display = 'none';
+}
+
+function handleCamDrop(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  const area = document.getElementById('camArea');
+  const hud = document.getElementById('dragDropHud');
+  if (area) area.classList.remove('drag-over');
+  if (hud) hud.style.display = 'none';
+
+  const files = e.dataTransfer && e.dataTransfer.files;
+  if (!files || !files[0]) return;
+  const file = files[0];
+  if (!file.type || !file.type.startsWith('image/')) {
+    showToast('⚠️ Please drop an image file (JPEG/PNG/WebP)', 'error');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const dataUrl = ev.target.result;
+    scanImageB64 = dataUrl.split(',')[1];
+    _showScanPreview(dataUrl);
+  };
+  reader.readAsDataURL(file);
+}
+
+function loadSampleMeal(type) {
+  const samples = window._SAMPLE_MEALS || {};
+  const dataUrl = samples[type];
+  if (!dataUrl) {
+    showToast('Sample meal image not available', 'error');
+    return;
+  }
+  scanImageB64 = dataUrl.split(',')[1];
+  _showScanPreview(dataUrl);
+  const names = {
+    salad: '🥗 Greek Salad',
+    pancakes: '🥞 Protein Pancakes',
+    salmon: '🍱 Salmon Bento',
+    curry: '🍛 Curry Bowl'
+  };
+  showToast(`Loaded ${names[type] || 'sample meal'}! ${isAutoLogEnabled() ? '⚡ Running Auto-Log…' : ''}`, 'info');
+}
+
 function _showScanPreview(dataUrl) {
   const preview = document.getElementById('scanPreview');
   const area = document.getElementById('camArea');
@@ -2276,6 +2359,13 @@ function _showScanPreview(dataUrl) {
   document.getElementById('scanCamRow').style.display = 'none';
   document.getElementById('scanReadyRow').style.display = 'flex';
   hideScanStatus();
+
+  // Instant Auto-Log: If enabled, automatically analyze and log the meal!
+  if (isAutoLogEnabled()) {
+    setTimeout(() => {
+      scanWithAI('food', { autoLog: true });
+    }, 280);
+  }
 }
 
 function clearScan() {
@@ -2374,17 +2464,27 @@ function _compressImage(b64, maxBytes = 40000) {
   });
 }
 
-async function scanWithAI(mode = 'food') {
+let _lastAutoLoggedIds = [];
+let _lastAutoLoggedItems = [];
+let _lastAutoLoggedBaseItems = [];
+
+async function scanWithAI(mode = 'food', options = {}) {
   if (!scanImageB64) { showScanStatus('⚠️ Take or upload a photo first', 'error'); return; }
   if (_scanAbortCtrl) { _scanAbortCtrl.abort(); }
   _scanAbortCtrl = new AbortController();
   const signal = _scanAbortCtrl.signal;
 
   const btn = document.getElementById('scanNowBtn');
+  const autoBtn = document.getElementById('autoLogNowBtn');
   const setScanning = on => {
-    if (!btn) return;
-    btn.disabled = on;
-    btn.innerHTML = on ? '<span class="scanning-pulse">⚡</span> Scanning…' : '✨ Scan with AI';
+    if (btn) {
+      btn.disabled = on;
+      btn.innerHTML = on ? '<span class="scanning-pulse">⚡</span> Scanning…' : '✨ Scan Food';
+    }
+    if (autoBtn) {
+      autoBtn.disabled = on;
+      autoBtn.innerHTML = on ? '<span class="scanning-pulse">⚡</span> Auto-Logging…' : '⚡ Auto-Log Entire Meal';
+    }
   };
 
   setScanning(true);
@@ -2422,13 +2522,23 @@ async function scanWithAI(mode = 'food') {
     return;
   }
 
-  showScanStatus(mode === 'menu' ? '📋 Parsing restaurant menu…' : '⚡ Multimodal Vision scanning…', 'info');
+  const isAuto = options.autoLog || isAutoLogEnabled();
+  showScanStatus(
+    mode === 'menu' ? '📋 Parsing restaurant menu…' :
+    isAuto ? '⚡ Vision LLM Scanning & Auto-Logging Meal…' :
+    '⚡ Multimodal Vision scanning…',
+    'info'
+  );
 
   document.getElementById('scanResult').innerHTML = `
     <div class="scan-result-placeholder" style="padding:1.8rem 1rem;">
       <div class="scanning-pulse" style="font-size:2.8rem; filter:drop-shadow(0 0 16px rgba(62,207,142,0.6));">⚡</div>
-      <div style="font-size:0.95rem; font-weight:700; color:#fff; margin-top:0.8rem;">Multimodal Vision Engine Active</div>
-      <div style="font-size:0.75rem; color:#3ecf8e; margin-top:0.3rem; font-weight:600;">Sub-second food identification & 85+ nutrient RAG</div>
+      <div style="font-size:0.95rem; font-weight:700; color:#fff; margin-top:0.8rem;">
+        ${isAuto ? 'Vision LLM Auto-Log In Progress…' : 'Multimodal Vision Engine Active'}
+      </div>
+      <div style="font-size:0.75rem; color:#3ecf8e; margin-top:0.3rem; font-weight:600;">
+        ${isAuto ? 'Identifying foods, portions & logging calories directly to your diary' : 'Sub-second food identification & 85+ nutrient RAG'}
+      </div>
     </div>`;
 
   const imageToSend = await _compressImage(scanImageB64, 35000);
@@ -2456,10 +2566,18 @@ async function scanWithAI(mode = 'food') {
       return;
     }
 
-    _renderScanResult(result);
-    hideScanStatus();
-    setScanning(false);
-    showToast(`⚡ Scanned in ${result.latency_ms ? result.latency_ms + 'ms' : 'sub-second'}!`, 'success');
+    if (isAuto) {
+      await _renderAutoLoggedResult(result);
+      hideScanStatus();
+      setScanning(false);
+      showToast(`⚡ Auto-logged to ${currentMealType || 'meal'}!`, 'success');
+      triggerCelebration('meal');
+    } else {
+      _renderScanResult(result);
+      hideScanStatus();
+      setScanning(false);
+      showToast(`⚡ Scanned in ${result.latency_ms ? result.latency_ms + 'ms' : 'sub-second'}!`, 'success');
+    }
   } catch (e) {
     clearInterval(statusInterval);
     setScanning(false);
@@ -2484,6 +2602,239 @@ async function scanWithAI(mode = 'food') {
       showScanStatus('⚠️ ' + (e.message || 'Scan failed'), 'error');
     }
   }
+}
+
+async function _renderAutoLoggedResult(r) {
+  const items = r.items && r.items.length > 0 ? r.items
+    : [{
+      food_name: r.food_name || 'Scanned Meal',
+      serving_size: r.serving_size || '1 serving',
+      confidence: r.confidence || 85,
+      calories: r.calories || 250,
+      protein_g: r.protein_g || 15,
+      carbs_g: r.carbs_g || 25,
+      fat_g: r.fat_g || 10,
+      fiber_g: r.fiber_g || 3,
+      sugar_g: r.sugar_g || 2,
+      sodium_mg: r.sodium_mg || 300,
+      cholesterol_mg: r.cholesterol_mg || 20
+    }];
+
+  const parsed = items.map(item => {
+    const estG = item.estimated_grams || Math.round((item.calories || 150) * 0.85);
+    const vol = item.volume_cm3 || Math.round(estG / 0.85);
+    return {
+      name: item.food_name || 'Scanned Food',
+      size: item.serving_size || `${estG}g portion`,
+      conf: Math.min(100, Math.max(0, item.confidence || 90)),
+      cal: Math.round(item.calories || item.cal || 0),
+      pro: +(item.protein_g || item.pro || 0).toFixed(1),
+      carb: +(item.carbs_g || item.carb || 0).toFixed(1),
+      fat: +(item.fat_g || item.fat || 0).toFixed(1),
+      fiber: +(item.fiber_g || item.fiber || 0).toFixed(1),
+      sugar: +(item.sugar_g || item.sugar || 0).toFixed(1),
+      sodium: Math.round(item.sodium_mg || item.sodium || 0),
+      chol: Math.round(item.cholesterol_mg || item.chol || 0),
+      vit_d: +(item.vit_d || 0).toFixed(1),
+      iron: +(item.iron || 0).toFixed(1),
+      folate: +(item.folate || 0).toFixed(1),
+      source: item.source || 'AI Vision LLM',
+      estimated_grams: estG,
+      volume_cm3: vol
+    };
+  });
+
+  try { _renderAIBoundingOverlays(parsed); } catch (e) { }
+
+  _lastAutoLoggedIds = [];
+  _lastAutoLoggedItems = [];
+  _lastAutoLoggedBaseItems = [];
+
+  for (const f of parsed) {
+    const foodEntry = {
+      name: f.name,
+      emoji: '🍽️',
+      cal: f.cal,
+      pro: f.pro,
+      carb: f.carb,
+      fat: f.fat,
+      fiber: f.fiber,
+      sugar: f.sugar,
+      sodium: f.sodium,
+      chol: f.chol,
+      vit_d: f.vit_d,
+      iron: f.iron,
+      folate: f.folate,
+      source: f.source,
+      size: f.size,
+      _origCal: f.cal,
+      _origPro: f.pro,
+      _origCarb: f.carb,
+      _origFat: f.fat
+    };
+    _lastAutoLoggedBaseItems.push(foodEntry);
+    _lastAutoLoggedItems.push(foodEntry);
+    await addFoodToLog(foodEntry);
+    if (window._foodLogs && window._foodLogs[0]) {
+      _lastAutoLoggedIds.push(window._foodLogs[0].id);
+    }
+  }
+
+  const totalCal = parsed.reduce((s, f) => s + f.cal, 0);
+  const totalPro = +(parsed.reduce((s, f) => s + f.pro, 0)).toFixed(1);
+  const totalCarb = +(parsed.reduce((s, f) => s + f.carb, 0)).toFixed(1);
+  const totalFat = +(parsed.reduce((s, f) => s + f.fat, 0)).toFixed(1);
+
+  const mealName = (currentMealType || 'meal').toUpperCase();
+
+  const itemRowsHtml = parsed.map(f => `
+    <div class="auto-log-item-pill">
+      <div>
+        <div style="font-size:0.85rem; font-weight:700; color:#fff;">🍽️ ${f.name}</div>
+        <div style="font-size:0.68rem; color:var(--ink-50); margin-top:2px;">
+          ${f.size} · <span style="color:#7fb8d4">⚖️ ~${f.estimated_grams}g</span> · <span style="color:#3ecf8e">📐 ~${f.volume_cm3}cm³</span>
+        </div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:0.92rem; font-weight:800; color:#F5A623;">${f.cal} kcal</div>
+        <div style="font-size:0.64rem; color:#3ecf8e; font-weight:700;">${f.conf}% match</div>
+      </div>
+    </div>
+  `).join('');
+
+  document.getElementById('scanResult').innerHTML = `
+    <div class="scan-result-card auto-log-card" id="autoLogHudCard">
+      <div class="auto-log-header">
+        <div class="auto-log-badge">
+          <span class="auto-log-pulse"></span>
+          <span>⚡ AUTO-LOGGED TO ${mealName}</span>
+        </div>
+        <button type="button" class="auto-log-undo-btn" onclick="undoAutoLoggedMeal()" title="Remove this meal from today's food log">
+          ↩️ Undo Auto-Log
+        </button>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:0.8rem;">
+        <div>
+          <div style="font-size:0.75rem; color:var(--ink-50); font-weight:600;">Vision LLM Telemetry</div>
+          <div style="font-size:1.15rem; font-weight:800; color:#fff; margin-top:2px;">
+            ${parsed.length === 1 ? parsed[0].name : `${parsed.length} Foods Detected &amp; Logged`}
+          </div>
+        </div>
+        <div id="autoLogTotalCal" style="font-size:1.45rem; font-weight:900; color:#F5A623; text-align:right;">
+          ${totalCal} <span style="font-size:0.7rem; font-weight:600; color:var(--ink-50);">kcal</span>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:10px; font-size:0.75rem; color:var(--ink-50); margin-bottom:0.9rem; background:rgba(0,0,0,0.3); padding:6px 12px; border-radius:8px;">
+        <span>💪 Protein: <strong style="color:#7fb8d4">${totalPro}g</strong></span>
+        <span>🌾 Carbs: <strong style="color:#c4a87f">${totalCarb}g</strong></span>
+        <span>🥑 Fat: <strong style="color:#F4613A">${totalFat}g</strong></span>
+      </div>
+
+      <div style="margin-bottom:0.8rem;">
+        ${itemRowsHtml}
+      </div>
+
+      <!-- LIVE RETROACTIVE PORTION SCALING -->
+      <div style="margin:0.8rem 0; padding:10px 12px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.08); border-radius:12px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+          <span style="font-size:0.72rem; font-weight:800; color:#3ecf8e; text-transform:uppercase; letter-spacing:0.04em;">📐 Adjust Logged Portion:</span>
+          <span style="font-size:0.68rem; color:var(--ink-50);">Diary updates in real-time</span>
+        </div>
+        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+          <button type="button" id="scale_chip_50" class="cat-chip auto-scale-chip" style="font-size:0.68rem; padding:3px 10px;" onclick="scaleAutoLoggedMeal(0.5)">🤏 Handful (50%)</button>
+          <button type="button" id="scale_chip_85" class="cat-chip auto-scale-chip" style="font-size:0.68rem; padding:3px 10px;" onclick="scaleAutoLoggedMeal(0.85)">✋ Palm (85%)</button>
+          <button type="button" id="scale_chip_100" class="cat-chip auto-scale-chip active" style="font-size:0.68rem; padding:3px 10px;" onclick="scaleAutoLoggedMeal(1.0)">✊ Standard (100%)</button>
+          <button type="button" id="scale_chip_150" class="cat-chip auto-scale-chip" style="font-size:0.68rem; padding:3px 10px;" onclick="scaleAutoLoggedMeal(1.5)">🍽️ Feast (150%)</button>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:8px; margin-top:0.9rem;">
+        <button type="button" class="scan-btn muted" style="flex:1; font-size:0.78rem;" onclick="clearScan()">📸 Scan Another</button>
+        <button type="button" class="scan-btn green" style="flex:1.4; font-size:0.78rem; font-weight:700;" onclick="showPage('history', document.querySelector('.nav-btn[onclick*=history]'))">📖 View in Diary &rarr;</button>
+      </div>
+    </div>
+  `;
+}
+
+async function undoAutoLoggedMeal() {
+  if (!_lastAutoLoggedIds || _lastAutoLoggedIds.length === 0) {
+    showToast('Nothing to undo', 'info');
+    return;
+  }
+  for (const id of _lastAutoLoggedIds) {
+    await removeLog(id);
+  }
+  _lastAutoLoggedIds = [];
+  refreshDashboard();
+  renderHistory();
+  showToast('↩️ Auto-logged meal removed from diary', 'info');
+
+  const card = document.getElementById('autoLogHudCard');
+  if (card) {
+    card.innerHTML = `
+      <div style="text-align:center; padding:1.2rem;">
+        <div style="font-size:2rem; margin-bottom:6px;">↩️</div>
+        <div style="font-size:0.95rem; font-weight:800; color:#fff;">Meal Undone</div>
+        <div style="font-size:0.75rem; color:var(--ink-50); margin-top:4px;">The meal was removed from your food diary.</div>
+        <button type="button" class="scan-btn gold" style="margin-top:1rem;" onclick="relogAutoLoggedMeal()">⚡ Re-Log to ${currentMealType || 'meal'}</button>
+      </div>
+    `;
+  }
+}
+
+async function relogAutoLoggedMeal() {
+  if (!_lastAutoLoggedItems || _lastAutoLoggedItems.length === 0) return;
+  _lastAutoLoggedIds = [];
+  for (const item of _lastAutoLoggedItems) {
+    await addFoodToLog(item);
+    if (window._foodLogs && window._foodLogs[0]) {
+      _lastAutoLoggedIds.push(window._foodLogs[0].id);
+    }
+  }
+  showToast('✓ Re-logged meal to diary!', 'success');
+  _renderAutoLoggedResult({ items: _lastAutoLoggedItems });
+}
+
+async function scaleAutoLoggedMeal(scaleMult) {
+  if (!_lastAutoLoggedIds || _lastAutoLoggedIds.length === 0 || !_lastAutoLoggedBaseItems) return;
+  const mult = parseFloat(scaleMult) || 1.0;
+
+  window._foodLogs = (window._foodLogs || []).map(entry => {
+    if (_lastAutoLoggedIds.includes(entry.id)) {
+      const base = _lastAutoLoggedBaseItems.find(b => b.name === entry.name) || entry;
+      const baseCal = base._origCal || base.cal;
+      const basePro = base._origPro || base.pro;
+      const baseCarb = base._origCarb || base.carb;
+      const baseFat = base._origFat || base.fat;
+      return {
+        ...entry,
+        cal: Math.round(baseCal * mult),
+        pro: +(basePro * mult).toFixed(1),
+        carb: +(baseCarb * mult).toFixed(1),
+        fat: +(baseFat * mult).toFixed(1),
+        servingSize: `${Math.round(mult * 100)}% portion`
+      };
+    }
+    return entry;
+  });
+
+  try {
+    localStorage.setItem('nutritrack_food_logs', JSON.stringify(window._foodLogs));
+  } catch (e) { }
+
+  refreshDashboard();
+  renderHistory();
+  showToast(`Portion scaled to ${Math.round(mult * 100)}%! Diary updated.`, 'success');
+
+  document.querySelectorAll('.auto-scale-chip').forEach(c => c.classList.remove('active'));
+  const activeBtn = document.getElementById(`scale_chip_${Math.round(mult * 100)}`);
+  if (activeBtn) activeBtn.classList.add('active');
+
+  const totalCal = _lastAutoLoggedBaseItems.reduce((s, it) => s + Math.round((it._origCal || it.cal) * mult), 0);
+  const totalCalEl = document.getElementById('autoLogTotalCal');
+  if (totalCalEl) totalCalEl.innerHTML = `${totalCal} <span style="font-size:0.7rem;font-weight:600;color:var(--ink-50)">kcal</span>`;
 }
 
 function _renderLabelResult(label) {
@@ -2671,6 +3022,7 @@ function _renderAIBoundingOverlays(items) {
 }
 
 function _renderScanResult(r) {
+  window._lastScanRawResult = r;
   const goals = (currentUser && currentUser.goals) || { calories: 2000, protein: 150, carbs: 275, fat: 78, fiber: 28, sugar: 50, sodium: 2300, chol: 300 };
 
   const items = r.items && r.items.length > 0 ? r.items
@@ -2845,7 +3197,10 @@ function _renderScanResult(r) {
       </div>
       ${r.tips ? `<div style="font-size:0.72rem;color:rgba(100,180,110,0.7);background:rgba(100,180,110,0.06);border:1px solid rgba(100,180,110,0.15);border-radius:8px;padding:0.55rem 0.8rem;margin-bottom:0.9rem;line-height:1.4">💡 ${r.tips}</div>` : ''}
       ${isMulti ? `
-        <button type="button" class="scan-add-btn" style="margin-bottom:1rem;" onclick="addFoodById('${allSafeId}')">✓ Add Entire Meal to ${currentMealType || 'meal'}</button>
+        <button type="button" class="scan-add-btn" style="margin-bottom:0.6rem; background:linear-gradient(135deg, #3ecf8e, #10b981); color:#0A0F0D; font-weight:800;" onclick="_renderAutoLoggedResult(window._lastScanRawResult || { items: [] })">
+          ⚡ 1-Tap Auto-Log Entire Meal to ${(currentMealType || 'meal').toUpperCase()}
+        </button>
+        <button type="button" class="scan-add-btn" style="margin-bottom:1rem; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15);" onclick="addFoodById('${allSafeId}')">✓ Add Combined Entry</button>
         <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.07em;color:var(--ink-50);margin-bottom:0.6rem;font-weight:600;">Or add individually:</div>
         ${itemRows}
       ` : `
@@ -2869,7 +3224,10 @@ function _renderScanResult(r) {
           <button type="button" class="cat-chip active" style="font-size:0.68rem;" onclick="scaleScannedPortion('${singleSafeId}', 1.0)">✊ Fist (1.0x)</button>
           <button type="button" class="cat-chip" style="font-size:0.68rem;" onclick="scaleScannedPortion('${singleSafeId}', 1.5)">🍽️ Big Plate (1.5x)</button>
         </div>
-        <button type="button" class="scan-add-btn" onclick="addFoodById('${singleSafeId}')">✓ Add to ${currentMealType || 'meal'}</button>
+        <button type="button" class="scan-add-btn" style="margin-bottom:0.5rem; background:linear-gradient(135deg, #3ecf8e, #10b981); color:#0A0F0D; font-weight:800;" onclick="_renderAutoLoggedResult(window._lastScanRawResult || { items: [] })">
+          ⚡ 1-Tap Auto-Log to ${(currentMealType || 'meal').toUpperCase()}
+        </button>
+        <button type="button" class="scan-add-btn" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15);" onclick="addFoodById('${singleSafeId}')">✓ Add Item</button>
       `}
     </div>`;
 }
@@ -9701,4 +10059,14 @@ if (typeof window !== 'undefined') {
   window.closeMicroDeficitModal = typeof closeMicroDeficitModal !== 'undefined' ? closeMicroDeficitModal : window.closeMicroDeficitModal;
   window.auditMicronutrientGaps = typeof auditMicronutrientGaps !== 'undefined' ? auditMicronutrientGaps : window.auditMicronutrientGaps;
   window.addPrescribedFoodToLog = typeof addPrescribedFoodToLog !== 'undefined' ? addPrescribedFoodToLog : window.addPrescribedFoodToLog;
+  window.handleAutoLogToggle = typeof handleAutoLogToggle !== 'undefined' ? handleAutoLogToggle : window.handleAutoLogToggle;
+  window.isAutoLogEnabled = typeof isAutoLogEnabled !== 'undefined' ? isAutoLogEnabled : window.isAutoLogEnabled;
+  window.handleCamDragOver = typeof handleCamDragOver !== 'undefined' ? handleCamDragOver : window.handleCamDragOver;
+  window.handleCamDragLeave = typeof handleCamDragLeave !== 'undefined' ? handleCamDragLeave : window.handleCamDragLeave;
+  window.handleCamDrop = typeof handleCamDrop !== 'undefined' ? handleCamDrop : window.handleCamDrop;
+  window.loadSampleMeal = typeof loadSampleMeal !== 'undefined' ? loadSampleMeal : window.loadSampleMeal;
+  window.undoAutoLoggedMeal = typeof undoAutoLoggedMeal !== 'undefined' ? undoAutoLoggedMeal : window.undoAutoLoggedMeal;
+  window.relogAutoLoggedMeal = typeof relogAutoLoggedMeal !== 'undefined' ? relogAutoLoggedMeal : window.relogAutoLoggedMeal;
+  window.scaleAutoLoggedMeal = typeof scaleAutoLoggedMeal !== 'undefined' ? scaleAutoLoggedMeal : window.scaleAutoLoggedMeal;
+  window._renderAutoLoggedResult = typeof _renderAutoLoggedResult !== 'undefined' ? _renderAutoLoggedResult : window._renderAutoLoggedResult;
 }
