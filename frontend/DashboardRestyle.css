@@ -745,6 +745,7 @@ body {
   font-size: 3.2rem;
   filter: drop-shadow(0 0 18px rgba(62, 207, 142, 0.6));
   animation: arFloatIcon 3s ease-in-out infinite;
+  will-change: transform;
 }
 
 @keyframes arFloatIcon {
@@ -774,6 +775,7 @@ body {
   pointer-events: none;
   filter: drop-shadow(0 0 8px rgba(62, 207, 142, 0.8));
   animation: arCornerBreathe 2.5s ease-in-out infinite;
+  will-change: transform, opacity;
 }
 
 .ar-corner.ar-tl {
@@ -843,6 +845,7 @@ body {
   border-radius: 50%;
   box-shadow: 0 0 8px #3ECF8E;
   animation: arPulseDot 1.4s infinite;
+  will-change: transform, opacity;
 }
 
 @keyframes arPulseDot {
@@ -900,6 +903,7 @@ body {
   border: 1.5px dashed rgba(62, 207, 142, 0.55);
   box-shadow: 0 0 16px rgba(62, 207, 142, 0.25);
   animation: arSpinReticle 16s linear infinite;
+  will-change: transform;
 }
 
 @keyframes arSpinReticle {
@@ -915,6 +919,7 @@ body {
   border: 1px solid rgba(56, 189, 248, 0.45);
   box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
   animation: arReticlePulse 2s ease-in-out infinite;
+  will-change: transform, opacity;
 }
 
 @keyframes arReticlePulse {
@@ -947,9 +952,10 @@ body {
   box-shadow: 0 0 8px #3ECF8E;
 }
 
-/* Sweeping Holographic Laser Line */
+/* Sweeping Holographic Laser Line — uses transform for compositor-only animation */
 .ar-scan-laser {
   position: absolute;
+  top: 0;
   left: 0;
   right: 0;
   height: 2px;
@@ -959,13 +965,14 @@ body {
   z-index: 4;
   opacity: 0.85;
   animation: arLaserSweep 3.2s ease-in-out infinite;
+  will-change: transform, opacity;
 }
 
 @keyframes arLaserSweep {
-  0% { top: 8%; opacity: 0; }
+  0% { transform: translateY(20px); opacity: 0; }
   15% { opacity: 0.9; }
   85% { opacity: 0.9; }
-  100% { top: 92%; opacity: 0; }
+  100% { transform: translateY(280px); opacity: 0; }
 }
 
 /* Dynamically Generated AR Anchor Reticle in App.js */
@@ -1031,6 +1038,7 @@ body {
   border-radius: 50%;
   border: 1.5px solid rgba(62, 207, 142, 0.4);
   animation: arRadarPulse 2.4s ease-out infinite;
+  will-change: transform, opacity;
 }
 
 @keyframes arRadarPulse {
@@ -1378,6 +1386,7 @@ body {
   box-shadow: 0 0 35px rgba(62, 207, 142, 0.45), 0 0 15px rgba(56, 189, 248, 0.35);
   animation: avatarHaloBreathe 3s ease-in-out infinite;
   pointer-events: none;
+  will-change: transform, opacity;
 }
 
 @keyframes avatarHaloBreathe {
@@ -3125,18 +3134,19 @@ html.theme-light .modal-box {
   content: '';
   position: absolute;
   top: 0;
-  left: -100%;
+  left: 0;
   width: 50%;
   height: 100%;
   background: linear-gradient(90deg, transparent, rgba(62, 207, 142, 0.12), transparent);
-  transform: skewX(-25deg);
+  transform: translateX(-100%) skewX(-25deg);
   animation: achShimmer 6s infinite;
+  will-change: transform;
 }
 
 @keyframes achShimmer {
-  0% { left: -100%; }
-  25% { left: 200%; }
-  100% { left: 200%; }
+  0% { transform: translateX(-100%) skewX(-25deg); }
+  25% { transform: translateX(300%) skewX(-25deg); }
+  100% { transform: translateX(300%) skewX(-25deg); }
 }
 
 .ab-tier-pill {

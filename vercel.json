@@ -31,6 +31,8 @@
     { "source": "/Theme.css", "destination": "/frontend/Theme.css" },
     { "source": "/ThemeToggle.js", "destination": "/frontend/ThemeToggle.js" },
     { "source": "/Foods.js", "destination": "/frontend/Foods.js" },
+    { "source": "/sample_meals.js", "destination": "/frontend/sample_meals.js" },
+    { "source": "/IndexedDB.js", "destination": "/frontend/IndexedDB.js" },
     { "source": "/i18n.js", "destination": "/frontend/i18n.js" },
     { "source": "/logo-nav.webp", "destination": "/frontend/logo-nav.webp" },
     { "source": "/logo-nav.png", "destination": "/frontend/logo-nav.png" },
